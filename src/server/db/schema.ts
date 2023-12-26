@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 // Example model schema from the Drizzle docs
 // https://orm.drizzle.team/docs/sql-schema-declaration
 
-import { sql } from "drizzle-orm";
+import { sql, relations } from "drizzle-orm";
+import type { AnyMySqlColumn } from "drizzle-orm/mysql-core";
 import {
   bigint,
   index,
@@ -16,19 +18,28 @@ import {
  *
  * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
  */
-export const mysqlTable = mysqlTableCreator((name) => `projectx-t3-app_${name}`);
-
-export const posts = mysqlTable(
-  "post",
-  {
-    id: bigint("id", { mode: "number" }).primaryKey().autoincrement(),
-    name: varchar("name", { length: 256 }),
-    createdAt: timestamp("created_at")
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
-    updatedAt: timestamp("updatedAt").onUpdateNow(),
-  },
-  (example) => ({
-    nameIndex: index("name_idx").on(example.name),
-  })
+export const mysqlTable = mysqlTableCreator(
+  (name) => `projectx-t3-app_${name}`,
 );
+
+
+export const notes = mysqlTable("note", {
+  id: varchar("id", { length: 36 })
+    .primaryKey()
+    .default(sql`(UUID())`),
+  title: varchar("title", { length: 256 }),
+  parentId: varchar("parentId", { length: 36 }).references(
+    (): AnyMySqlColumn => notes.id,
+  ), // Typescript limitation
+  createdAt: timestamp("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: timestamp("updatedAt").onUpdateNow(),
+});
+
+export const notesRelations = relations(notes, ({ one }) => ({
+  user: one(notes, {
+    fields: [notes.parentId],
+    references: [notes.id]
+  })
+}));
