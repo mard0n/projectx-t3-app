@@ -1,11 +1,9 @@
 import type { FC, ReactNode } from "react";
-import type { RouterOutputs } from "~/utils/api";
+import type { RouterOutputs, Unpacked } from "~/utils/api";
 
-type Unpacked<T> = T extends (infer U)[] ? U : T;
+type NoteGetAllOutput = RouterOutputs["note"]["getAll"];
 
-type PostByIdInput = RouterOutputs["note"]["getAll"];
-
-type NoteProps = object & Unpacked<PostByIdInput>
+type NoteProps = object & Unpacked<NoteGetAllOutput>;
 
 const Note: FC<NoteProps> = ({ title }) => {
   return (
