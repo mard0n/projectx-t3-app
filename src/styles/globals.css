@@ -11,3 +11,83 @@
 [contenteditable]:focus {
   outline: 0px solid transparent;
 }
+
+
+/* TOOD: I need to move css related to inside the component */
+#editor > .collapsible-paragraph-title {
+  margin-left: 22px;
+}
+
+.collapsible-paragraph-title {
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-left: 20px;
+  position: relative;
+}
+
+.collapsible-paragraph-title:before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  top: calc(1rem - 6px);
+  left: 0px;
+  display: block;
+  background-color: #dddddd;
+  position: absolute;
+  border-radius: 100px;
+}
+
+.collapsible-paragraph-container {
+  /* color: #f00; */
+  position: relative;
+  margin-left: 22px;
+}
+
+.collapsible-paragraph-container.open::before {
+  content: "";
+  display: inline-block;
+  /* width: 8px;
+  height: 8px; */
+  overflow: hidden;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+
+  border-top: 8px solid #dddddd;
+  margin-right: 10px;
+  vertical-align: top;
+  position: absolute;
+  top: calc(1rem - 6px);
+  left: -22px;
+  cursor: pointer;
+}
+.collapsible-paragraph-container.closed::before {
+  content: "";
+  display: inline-block;
+  /* width: 8px;
+  height: 8px; */
+  overflow: hidden;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+
+  border-left: 8px solid #dddddd;
+  margin-right: 14px;
+  vertical-align: top;
+  position: absolute;
+  top: calc(1rem - 8px);
+  left: -20px;
+  cursor: pointer;
+}
+
+.collapsible-paragraph-container.open .collapsible-paragraph-child-container {
+  display: block;
+}
+.collapsible-paragraph-container.closed .collapsible-paragraph-child-container {
+  display: none;
+}
+
+.collapsible-paragraph-child-container {
+  margin-left: 34px;
+}
+.collapsible-paragraph-child-container > p {
+  margin-left: 22px;
+}

@@ -12,7 +12,10 @@
     "start": "next start"
   },
   "dependencies": {
+    "@lexical/clipboard": "^0.12.5",
+    "@lexical/html": "^0.12.5",
     "@lexical/react": "^0.12.5",
+    "@lexical/utils": "^0.12.5",
     "@planetscale/database": "^1.11.0",
     "@t3-oss/env-nextjs": "^0.7.1",
     "@tanstack/react-query": "^4.36.1",

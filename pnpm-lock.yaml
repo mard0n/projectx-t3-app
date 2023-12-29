@@ -5,9 +5,18 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
+  '@lexical/clipboard':
+    specifier: ^0.12.5
+    version: 0.12.5(lexical@0.12.5)
+  '@lexical/html':
+    specifier: ^0.12.5
+    version: 0.12.5(lexical@0.12.5)
   '@lexical/react':
     specifier: ^0.12.5
     version: 0.12.5(lexical@0.12.5)(react-dom@18.2.0)(react@18.2.0)(yjs@13.6.10)
+  '@lexical/utils':
+    specifier: ^0.12.5
+    version: 0.12.5(lexical@0.12.5)
   '@planetscale/database':
     specifier: ^1.11.0
     version: 1.13.0

@@ -4,8 +4,24 @@ import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import LexicalErrorBoundary from "@lexical/react/LexicalErrorBoundary";
+import type { Updates } from "~/components/lexical/CollapsibleParagraphPlugin";
+import {
+  CPChildContainerNode,
+  CPContainerNode,
+  CPTitleNode,
+  CollapsibleParagraphPlugin,
+} from "~/components/lexical/CollapsibleParagraphPlugin";
+import { ParagraphNode } from "lexical";
 
-const theme = {};
+const theme = {
+  paragraph: "custom-paragraph",
+  text: {
+    bold: "editor-textBold",
+    italic: "editor-textItalic",
+    strikethrough: "editor-textStrikethrough",
+    underline: "editor-textUnderline",
+  },
+};
 
 function onError(error: Error) {
   console.error(error);
@@ -26,10 +42,25 @@ export default function Notes() {
   }
   console.log("notes.data", notes.data);
 
+  const handleUpdates = (updates: Updates) => {
+    console.log("updates", JSON.stringify(updates));
+  };
+
   const initialConfig = {
     namespace: "MyEditor",
     theme,
     onError,
+    nodes: [
+      CPContainerNode,
+      CPTitleNode,
+      CPChildContainerNode,
+      {
+        replace: ParagraphNode,
+        with: () => {
+          return new CPContainerNode(true); // TODO: add transformer: wherever empty container add title and childContainer
+        },
+      },
+    ],
     editorState: JSON.stringify({
       root: {
         children: notes.data ?? [
@@ -37,7 +68,7 @@ export default function Notes() {
             children: [],
             direction: null,
             format: "",
-            type: "paragraph",
+            type: "container",
             version: 1,
             title: [],
             childNotes: [],
@@ -64,6 +95,7 @@ export default function Notes() {
             placeholder={<div>Enter some text...</div>}
             ErrorBoundary={LexicalErrorBoundary}
           />
+          <CollapsibleParagraphPlugin handleUpdates={handleUpdates} />
         </LexicalComposer>
       </main>
     </div>

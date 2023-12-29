@@ -7,7 +7,7 @@ export const noteRouter = createTRPCRouter({
     const result = await ctx.db.query.notes.findMany({
       where: isNull(notes.indexWithinParent),
       with: {
-        children: true,
+        childNotes: true,
       },
       orderBy: [asc(notes.indexWithinParent)],
     });

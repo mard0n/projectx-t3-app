@@ -3,8 +3,8 @@
 // https://orm.drizzle.team/docs/sql-schema-declaration
 
 import { sql, relations } from "drizzle-orm";
-import type { AnyMySqlColumn } from "drizzle-orm/mysql-core";
 import {
+  boolean,
   int,
   mysqlEnum,
   mysqlTableCreator,
@@ -26,18 +26,20 @@ export const notes = mysqlTable("note", {
   id: varchar("id", { length: 36 })
     .primaryKey()
     .default(sql`(UUID())`),
-  type: mysqlEnum("type", ["paragraph", "container", "root"]),
-  title: varchar("title", { length: 256 }),
+  type: mysqlEnum("type", ["container"]).notNull().default("container"),
+  title: varchar("title", { length: 256 }), // TODO: Fix the length
   indexWithinParent: int("indexWithinParent"),
   parentId: varchar("parentId", { length: 36 }),
-  createdAt: timestamp("created_at")
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-  updatedAt: timestamp("updatedAt").onUpdateNow(),
+  open: boolean("open").notNull().default(true),
+  version: int("version").notNull().default(0),
+  // createdAt: timestamp("created_at")
+  //   .default(sql`CURRENT_TIMESTAMP`)
+  //   .notNull(),
+  // updatedAt: timestamp("updatedAt").onUpdateNow(),
 });
 
 export const parentIdToNotesRelations = relations(notes, ({ one, many }) => ({
-  children: many(notes, {
+  childNotes: many(notes, {
     relationName: "notesToNotes",
   }),
   parent: one(notes, {
