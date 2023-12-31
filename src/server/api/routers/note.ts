@@ -78,10 +78,18 @@ export const noteRouter = createTRPCRouter({
               const { childNotes, children, ...rest } = note.updatedBlock;
               console.log("rest", rest);
 
-              await ctx.db
-                .update(notes)
-                .set(rest)
-                .where(eq(notes.id, note.updatedBlockId));
+              const isDataExist = await ctx.db.query.notes.findFirst({
+                where: eq(notes.id, note.updatedBlockId),
+              });
+
+              if (isDataExist) {
+                await ctx.db
+                  .update(notes)
+                  .set(rest)
+                  .where(eq(notes.id, note.updatedBlockId));
+              } else {
+                await ctx.db.insert(notes).values(note.updatedBlock);
+              }
             }
             break;
           case "destroyed":

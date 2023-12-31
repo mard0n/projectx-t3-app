@@ -8,5 +8,4 @@ export default {
   dbCredentials: {
     connectionString: env.DATABASE_URL,
   },
-  tablesFilter: ["projectx-t3-app_*"],
 } satisfies Config;

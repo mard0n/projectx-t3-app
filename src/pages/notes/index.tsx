@@ -32,7 +32,6 @@ function onError(error: Error) {
 
 export default function Notes() {
   const notes = api.note.getAll.useQuery();
-  console.log("notes", notes);
   const saveChanges = api.note.saveChanges.useMutation();
 
   if (notes.isLoading) {
@@ -82,19 +81,21 @@ export default function Notes() {
     ],
     editorState: JSON.stringify({
       root: {
-        children: notes.data ?? [
-          {
-            children: [],
-            direction: null,
-            format: "",
-            type: "container",
-            version: 1,
-            title: [],
-            childNotes: [],
-            open: true,
-            id: crypto.randomUUID(),
-          },
-        ],
+        children: notes.data?.length
+          ? notes.data
+          : [
+              {
+                children: [],
+                direction: null,
+                format: "",
+                type: "container",
+                version: 1,
+                title: [],
+                childNotes: [],
+                open: true,
+                id: crypto.randomUUID(),
+              },
+            ],
         direction: null,
         type: "root",
         version: 1,
