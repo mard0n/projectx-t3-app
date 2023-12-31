@@ -7,8 +7,7 @@ import {
   boolean,
   int,
   mysqlEnum,
-  mysqlTableCreator,
-  timestamp,
+  mysqlTable,
   varchar,
 } from "drizzle-orm/mysql-core";
 
@@ -18,11 +17,8 @@ import {
  *
  * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
  */
-export const mysqlTable = mysqlTableCreator(
-  (name) => `projectx-t3-app_${name}`,
-);
 
-export const notes = mysqlTable("note", {
+export const notes = mysqlTable("notes", {
   id: varchar("id", { length: 36 })
     .primaryKey()
     .default(sql`(UUID())`),
@@ -32,11 +28,24 @@ export const notes = mysqlTable("note", {
   parentId: varchar("parentId", { length: 36 }),
   open: boolean("open").notNull().default(true),
   version: int("version").notNull().default(0),
+  direction: mysqlEnum("direction", ["rtl", "ltr"]).default("ltr"),
+  format: mysqlEnum("format", [
+    "left",
+    "start",
+    "center",
+    "right",
+    "end",
+    "justify",
+    "",
+  ]).default(""),
+  indent: int("indent").default(0),
   // createdAt: timestamp("created_at")
   //   .default(sql`CURRENT_TIMESTAMP`)
   //   .notNull(),
   // updatedAt: timestamp("updatedAt").onUpdateNow(),
 });
+
+export type Note = typeof notes.$inferSelect;
 
 export const parentIdToNotesRelations = relations(notes, ({ one, many }) => ({
   childNotes: many(notes, {
@@ -48,3 +57,4 @@ export const parentIdToNotesRelations = relations(notes, ({ one, many }) => ({
     relationName: "notesToNotes",
   }),
 }));
+

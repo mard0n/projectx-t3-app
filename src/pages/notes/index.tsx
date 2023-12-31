@@ -4,7 +4,10 @@ import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import LexicalErrorBoundary from "@lexical/react/LexicalErrorBoundary";
-import type { Updates } from "~/components/lexical/CollapsibleParagraphPlugin";
+import type {
+  UpdatedBlock,
+  Updates,
+} from "~/components/lexical/CollapsibleParagraphPlugin";
 import {
   CPChildContainerNode,
   CPContainerNode,
@@ -29,6 +32,8 @@ function onError(error: Error) {
 
 export default function Notes() {
   const notes = api.note.getAll.useQuery();
+  console.log("notes", notes);
+  const saveChanges = api.note.saveChanges.useMutation();
 
   if (notes.isLoading) {
     return (
@@ -40,10 +45,24 @@ export default function Notes() {
       </div>
     );
   }
-  console.log("notes.data", notes.data);
+
+  if (notes.isError) {
+    <div className="flex min-h-screen px-2">
+      <aside className="min-w-80 border-r pt-8">
+        <Link href="/notes">All notes</Link>
+      </aside>
+      <main className="flex-grow p-8">Failed. Try again later</main>
+    </div>;
+  }
 
   const handleUpdates = (updates: Updates) => {
-    console.log("updates", JSON.stringify(updates));
+    const updatedBlocks: UpdatedBlock[] = [];
+    for (const value of updates.values()) {
+      updatedBlocks.push(value);
+    }
+    console.log("updatedBlocks", updatedBlocks);
+
+    saveChanges.mutate(updatedBlocks);
   };
 
   const initialConfig = {

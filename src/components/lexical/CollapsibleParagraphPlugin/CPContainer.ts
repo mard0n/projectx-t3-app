@@ -30,12 +30,49 @@ import type {
 } from "lexical";
 import { $parseSerializedNode, ElementNode } from "lexical";
 import { $findMatchingParent } from "@lexical/utils";
-import type { RouterOutputs, Unpacked } from "~/utils/api";
+import { z } from "zod";
 
-type NoteGetAllOutput = RouterOutputs["note"]["getAll"];
+export const serializedCPContainerNodeSchema: z.ZodSchema<SerializedCPContainerNode> =
+  z.lazy(() =>
+    z.object({
+      type: z.enum(["container"]),
+      version: z.number(),
+      id: z.string(),
+      open: z.boolean(),
+      title: z.string(),
+      childNotes: z.array(serializedCPContainerNodeSchema),
+      parentId: z.string().nullable(),
+      indexWithinParent: z.number(),
+      children: z.array(
+        z.object({
+          type: z.string(),
+          version: z.number(),
+        }),
+      ),
+      direction: z.union([z.literal("ltr"), z.literal("rtl")]),
+      format: z.union([
+        z.literal("left"),
+        z.literal("start"),
+        z.literal("center"),
+        z.literal("right"),
+        z.literal("end"),
+        z.literal("justify"),
+        z.literal(""),
+      ]),
+      indent: z.number(),
+    }),
+  );
 
 export type SerializedCPContainerNode = Spread<
-  Unpacked<NoteGetAllOutput>,
+  {
+    id: string;
+    open: boolean;
+    title: string;
+    childNotes: SerializedCPContainerNode[]; // HACK: Using it when deserializing (To Not to use children) when passing down from DB
+    parentId: string | null;
+    indexWithinParent: number;
+    type: "container";
+  },
   SerializedElementNode
 >;
 
@@ -210,8 +247,8 @@ export class CPContainerNode extends ElementNode {
     node.setId(serializedNode.id || crypto.randomUUID());
     node.setOpen(serializedNode.open);
     node.setDirection(serializedNode.direction);
-    node.setIndent(serializedNode.indent);
-    node.setFormat(serializedNode.format);
+    node.setIndent(serializedNode?.indent ?? 0);
+    node.setFormat(serializedNode?.format ?? "");
     return node;
   }
 
@@ -252,6 +289,9 @@ export class CPContainerNode extends ElementNode {
       type: "container",
       id: this.getId(),
       version: 1,
+      direction: super.exportJSON().direction ?? "ltr",
+      format: super.exportJSON().format ?? "left",
+      indent: super.exportJSON().indent ?? 0,
     };
   }
 

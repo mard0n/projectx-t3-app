@@ -19,7 +19,7 @@ import type {
   GridSelection,
   LexicalEditor,
   LexicalNode,
-  NodeKey,
+  NodeMutation,
   RangeSelection,
   SerializedLexicalNode,
 } from "lexical";
@@ -61,14 +61,13 @@ import {
 import { $findMatchingParent, mergeRegister } from "@lexical/utils";
 import { selectTopLevelNodes, throttle } from "./utils";
 
-export type UpdateNode = {
-  type: string;
-  key: NodeKey;
-  id: string;
-  node: SerializedCPContainerNode | null;
+export type UpdatedBlock = {
+  updateType: NodeMutation;
+  updatedBlockId: string;
+  updatedBlock: SerializedCPContainerNode | null;
 };
 
-export type Updates = Map<string, UpdateNode>;
+export type Updates = Map<string, UpdatedBlock>;
 
 const is_PARAGRAGRAPH = (node: LexicalNode): node is CPContainerNode =>
   $isCPContainerNode(node);
@@ -170,20 +169,18 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
                   if (!prevNode) return;
 
                   updatesRef.current.set(`${nodeKey}:destroyed`, {
-                    type: "destroyed",
-                    id: prevNode.getId(),
-                    key: nodeKey,
-                    node: null,
+                    updateType: "destroyed",
+                    updatedBlockId: prevNode.getId(),
+                    updatedBlock: null,
                   });
                 });
                 continue;
               }
 
               updatesRef.current.set(`${nodeKey}:${mutation}`, {
-                type: mutation,
-                id: node.getId(),
-                key: nodeKey,
-                node: node.exportJSON(),
+                updateType: mutation,
+                updatedBlockId: node.getId(),
+                updatedBlock: node.exportJSON(),
               });
             }
             // First setupdates then debounce Promise/async
@@ -617,7 +614,7 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
         COMMAND_PRIORITY_NORMAL,
       ),
     );
-  }, [editor, handleUpdates]);
+  }, [editor]);
 
   return <></>;
 };
