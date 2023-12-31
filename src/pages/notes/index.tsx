@@ -31,7 +31,9 @@ function onError(error: Error) {
 }
 
 export default function Notes() {
-  const notes = api.note.getAll.useQuery();
+  const notes = api.note.getAll.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
   const saveChanges = api.note.saveChanges.useMutation();
 
   if (notes.isLoading) {
