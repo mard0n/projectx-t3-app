@@ -2,7 +2,7 @@
 
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { mergeRegister } from "@lexical/utils";
-import type { LexicalEditor, LexicalNode } from "lexical";
+import type { ElementNode, LexicalEditor, LexicalNode } from "lexical";
 import {
   $getNearestNodeFromDOMNode,
   $getNodeByKey,
@@ -55,7 +55,7 @@ function getCollapsedMargins(elem: HTMLElement): {
 }
 
 function getBlockElement(
-  anchorElem: HTMLElement,
+  draggingBlock: string | false,
   editor: LexicalEditor,
   event: MouseEvent,
   useEdgeAsDefault = false,
@@ -180,6 +180,33 @@ function getBlockElement(
     }
   });
 
+  if (draggingBlock && blockElem) {
+    const draggingBlockNode = $getNodeByKey<CPContainerNode>(draggingBlock);
+    const targetBlockToDrop = $getNearestNodeFromDOMNode(blockElem);
+
+    const isDescendantsContain = (
+      parentNode: ElementNode | LexicalNode,
+      targetNode: LexicalNode,
+    ): boolean => {
+      if (parentNode.getKey() === targetNode.getKey()) {
+        return true;
+      }
+
+      const children =
+        "getChildren" in parentNode
+          ? (parentNode as ElementNode).getChildren()
+          : [];
+      for (const block of children) {
+        if (isDescendantsContain(block, targetNode)) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    if (isDescendantsContain(draggingBlockNode!, targetBlockToDrop!))
+      return null;
+  }
   return blockElem;
 }
 
@@ -253,7 +280,7 @@ function useDraggableBlockMenu(
 
   const dragBoxRef = useRef<HTMLDivElement>(null);
   const targetLineRef = useRef<HTMLDivElement>(null);
-  const isDraggingBlockRef = useRef<boolean>(false);
+  const draggingBlockRef = useRef<string | false>(false);
   const [draggableBlockElem, setDraggableBlockElem] =
     useState<HTMLElement | null>(null);
 
@@ -267,7 +294,11 @@ function useDraggableBlockMenu(
         return;
       }
 
-      const _draggableBlockElem = getBlockElement(anchorElem, editor, event);
+      const _draggableBlockElem = getBlockElement(
+        draggingBlockRef.current,
+        editor,
+        event,
+      );
 
       setDraggableBlockElem(_draggableBlockElem);
     }
@@ -293,7 +324,7 @@ function useDraggableBlockMenu(
 
   useEffect(() => {
     function onDragover(event: DragEvent): boolean {
-      if (!isDraggingBlockRef.current) {
+      if (!draggingBlockRef.current) {
         return false;
       }
       const [isFileTransfer] = eventFiles(event);
@@ -304,7 +335,12 @@ function useDraggableBlockMenu(
       if (!isHTMLElement(target)) {
         return false;
       }
-      const targetBlockElem = getBlockElement(anchorElem, editor, event, true);
+      const targetBlockElem = getBlockElement(
+        draggingBlockRef.current,
+        editor,
+        event,
+        true,
+      );
 
       const targetLineElem = targetLineRef.current;
       if (targetBlockElem === null || targetLineElem === null) {
@@ -317,7 +353,7 @@ function useDraggableBlockMenu(
     }
 
     function onDrop(event: DragEvent): boolean {
-      if (!isDraggingBlockRef.current) {
+      if (!draggingBlockRef.current) {
         return false;
       }
       const [isFileTransfer] = eventFiles(event);
@@ -333,7 +369,12 @@ function useDraggableBlockMenu(
       if (!isHTMLElement(target)) {
         return false;
       }
-      const targetBlockElem = getBlockElement(anchorElem, editor, event, true);
+      const targetBlockElem = getBlockElement(
+        draggingBlockRef.current,
+        editor,
+        event,
+        true,
+      );
       if (!targetBlockElem) {
         return false;
       }
@@ -386,12 +427,12 @@ function useDraggableBlockMenu(
         nodeKey = node.getKey();
       }
     });
-    isDraggingBlockRef.current = true;
+    draggingBlockRef.current = nodeKey;
     dataTransfer.setData(DRAG_DATA_FORMAT, nodeKey);
   }
 
   function onDragEnd(): void {
-    isDraggingBlockRef.current = false;
+    draggingBlockRef.current = false;
     if (targetLineRef.current) {
       targetLineRef.current.style.opacity = "0";
       targetLineRef.current.style.transform = "translate(-10000px, -10000px)";
