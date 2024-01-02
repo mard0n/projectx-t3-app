@@ -55,7 +55,7 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
           editor.registerMutationListener(
             Node,
             (mutations, { prevEditorState }) => {
-              editor.update(() => {
+              editor.getEditorState().read(() => {
                 for (const [nodeKey, mutation] of mutations) {
                   const node = $getNodeByKey(nodeKey);
                   if (!node || mutation === "destroyed") {
@@ -69,8 +69,20 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
                       ) as CPContainerNode;
 
                       const parentKey = parentContainer.getKey();
-                      editor.update(() => {
-                        $getNodeByKey(parentKey)?.markDirty();
+                      editor.getEditorState().read(() => {
+                        const updatedParentNode =
+                          $getNodeByKey<CPContainerNode>(parentKey);
+
+                        if (updatedParentNode) {
+                          updatesRef.current.set(
+                            `${updatedParentNode.getKey()}:destroyed`,
+                            {
+                              updateType: "destroyed",
+                              updatedBlockId: updatedParentNode.getId(),
+                              updatedBlock: null,
+                            },
+                          );
+                        }
                       });
                     });
                     continue;
@@ -81,8 +93,17 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
                     is_PARAGRAGRAPH,
                   ) as CPContainerNode;
 
-                  parentContainer?.markDirty();
+                  updatesRef.current.set(
+                    `${parentContainer.getKey()}:${mutation}`,
+                    {
+                      updateType: mutation,
+                      updatedBlockId: parentContainer.getId(),
+                      updatedBlock: parentContainer.exportJSON(),
+                    },
+                  );
                 }
+
+                throttleUpdate(updatesRef.current, updatesRef);
               });
             },
           ),

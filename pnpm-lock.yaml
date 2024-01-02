@@ -8,6 +8,9 @@ dependencies:
   '@lexical/clipboard':
     specifier: ^0.12.5
     version: 0.12.5(lexical@0.12.5)
+  '@lexical/history':
+    specifier: ^0.12.5
+    version: 0.12.5(lexical@0.12.5)
   '@lexical/html':
     specifier: ^0.12.5
     version: 0.12.5(lexical@0.12.5)

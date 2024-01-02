@@ -7,15 +7,17 @@ import LexicalErrorBoundary from "@lexical/react/LexicalErrorBoundary";
 import type {
   UpdatedBlock,
   Updates,
-} from "~/components/lexical/CollapsibleParagraphPlugin";
+} from "~/components/lexical/CollapsibleParagraphPlugin/plugins/SendingUpdatesPlugin";
+import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
+import TreeViewPlugin from "~/components/lexical/TreeViewPlugin";
 import {
   CPChildContainerNode,
   CPContainerNode,
   CPTitleNode,
   CollapsibleParagraphPlugin,
 } from "~/components/lexical/CollapsibleParagraphPlugin";
-import { ParagraphNode } from "lexical";
 import { useRef } from "react";
+import { ParagraphNode } from "lexical";
 
 const theme = {
   paragraph: "custom-paragraph",
@@ -129,6 +131,8 @@ export default function Notes() {
             handleUpdates={handleUpdates}
             anchorElem={anchorElemRef.current!}
           />
+          <HistoryPlugin />
+          <TreeViewPlugin />
         </LexicalComposer>
       </main>
     </div>
