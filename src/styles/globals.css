@@ -12,7 +12,6 @@
   outline: 0px solid transparent;
 }
 
-
 /* TOOD: I need to move css related to inside the component */
 #editor > .collapsible-paragraph-title {
   margin-left: 22px;
@@ -92,40 +91,22 @@
   margin-left: 22px;
 }
 
-
-
-
 .draggable-block-menu {
   cursor: grab;
   opacity: 0;
   position: absolute;
-  left: -12px;
-  top: 2px;
   will-change: transform;
+  top: 0;
+  left: 0;
   width: 16px;
   height: 16px;
-}
-
-.draggable-block-menu .icon {
-  width: 16px;
-  height: 16px;
-  top: 2px;
-  left: -12px;
-  cursor: grab;
-  display: block;
-  /* background-color: rgb(255, 36, 36); */
-  position: absolute;
+  background-color: rgb(255, 36, 36);
   border-radius: 100px;
-  opacity: 1;
 }
 
 .draggable-block-menu:active {
   cursor: grabbing;
 }
-
-/* .draggable-block-menu:hover {
-  background-color: #efefef;
-} */
 
 .draggable-block-target-line {
   pointer-events: none;

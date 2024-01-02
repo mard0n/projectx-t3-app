@@ -13,13 +13,13 @@ import {
   DROP_COMMAND,
 } from "lexical";
 import * as React from "react";
-import { eventFiles, isHTMLElement, Point, Rect } from "./utils";
+import { eventFiles, isHTMLElement, Point, Rect } from "../utils";
 import type { DragEvent as ReactDragEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import type { CPContainerNode } from "./CPContainer";
-import { is_PARAGRAGRAPH } from ".";
+import type { CPContainerNode } from "../CPContainer";
+import { is_PARAGRAGRAPH } from "..";
 
 const DRAG_DATA_FORMAT = "application/x-lexical-drag-block";
 
@@ -225,7 +225,7 @@ function setDragBoxPosition(
 
   const top = targetRect.top;
 
-  const left = targetRect.left + 22;
+  const left = targetRect.left;
   floatingElem.style.opacity = "1";
   floatingElem.style.transform = `translate(${left}px, ${top}px)`;
 }
@@ -442,14 +442,12 @@ function useDraggableBlockMenu(
   return createPortal(
     <>
       <div
-        className="icon draggable-block-menu"
+        className="draggable-block-menu"
         ref={dragBoxRef}
         draggable={true}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
-      >
-        <div className={isEditable ? "icon" : ""} />
-      </div>
+      ></div>
       <div className="draggable-block-target-line" ref={targetLineRef} />
     </>,
     anchorElem,

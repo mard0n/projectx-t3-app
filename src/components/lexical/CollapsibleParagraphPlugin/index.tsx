@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 import {
   $createCPChildContainerNode,
@@ -12,14 +12,12 @@ import {
   CPContainerNode,
 } from "./CPContainer";
 import { $createCPTitleNode, $isCPTitleNode, CPTitleNode } from "./CPTitle";
-import type { SerializedCPContainerNode } from "./CPContainer";
 import type {
   BaseSelection,
   ElementNode,
   GridSelection,
   LexicalEditor,
   LexicalNode,
-  NodeMutation,
   RangeSelection,
   SerializedLexicalNode,
 } from "lexical";
@@ -32,9 +30,9 @@ import {
   $insertDataTransferForPlainText,
 } from "@lexical/clipboard";
 import { $generateNodesFromDOM } from "@lexical/html";
+import type { LineBreakNode, TextNode } from "lexical";
 import {
   ParagraphNode,
-  LineBreakNode,
   COMMAND_PRIORITY_NORMAL,
   $isTextNode,
   DELETE_CHARACTER_COMMAND,
@@ -45,7 +43,6 @@ import {
   OUTDENT_CONTENT_COMMAND,
   KEY_TAB_COMMAND,
   $getNodeByKey,
-  TextNode,
   $getRoot,
   COPY_COMMAND,
   $isNodeSelection,
@@ -59,49 +56,43 @@ import {
   isSelectionWithinEditor,
 } from "lexical";
 import { $findMatchingParent, mergeRegister } from "@lexical/utils";
-import { selectTopLevelNodes, throttle } from "./utils";
-import DraggableBlockPlugin from "./DraggableBlockPlugin";
+import DraggableBlockPlugin from "./plugins/DraggableBlockPlugin";
+import { SendingUpdatesPlugin, Updates } from "./plugins/SendingUpdatesPlugin";
 
-export type UpdatedBlock = {
-  updateType: NodeMutation;
-  updatedBlockId: string;
-  updatedBlock: SerializedCPContainerNode | null;
+const selectTopLevelNodes = (nodes: CPContainerNode[]) => {
+  const commonAncesstor = nodes.reduce<CPContainerNode | undefined | null>(
+    (acc, current) => {
+      if (!acc) return current;
+      if (acc === current) {
+        return acc.getParent();
+      }
+      return acc.getCommonAncestor(current);
+    },
+    nodes[0],
+  );
+
+  const onlyTopLevelNodes = nodes.filter((node) => {
+    return commonAncesstor
+      ?.getChildren<ParagraphNode>()
+      .some((child) => child.getKey() === node.getKey());
+  });
+
+  return onlyTopLevelNodes;
 };
-
-export type Updates = Map<string, UpdatedBlock>;
 
 export const is_PARAGRAGRAPH = (node: LexicalNode): node is CPContainerNode =>
   $isCPContainerNode(node);
 
-const $getAllChildParagraphs = (nodes: LexicalNode[]) => {
-  const paragraphs = [
-    ...new Set(
-      nodes
-        .map((node) => {
-          const ancestor = $findMatchingParent(
-            node,
-            is_PARAGRAGRAPH,
-          ) as CPContainerNode | null;
-          return ancestor;
-        })
-        .filter((node) => !!node),
-    ),
-  ] as CPContainerNode[];
-
-  return paragraphs;
-};
-
 interface CollapsibleParagraphPluginProps {
-  handleUpdates: (updates: Updates) => void;
   anchorElem: HTMLElement;
+  handleUpdates: (updates: Updates) => void;
 }
 
 const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
-  handleUpdates,
   anchorElem,
+  handleUpdates,
 }) => {
   const [editor] = useLexicalComposerContext();
-  const updatesRef = useRef<Updates>(new Map());
 
   useEffect(() => {
     if (
@@ -112,85 +103,7 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
       );
     }
 
-    const throttleUpdate = throttle(
-      (updates: Updates, updatesRef: React.MutableRefObject<Updates>) => {
-        handleUpdates(updates);
-        updatesRef.current.clear();
-      },
-      500,
-    );
-
     return mergeRegister(
-      // To send updates
-      ...[CPTitleNode, CPChildContainerNode, TextNode, LineBreakNode].map(
-        (Node) =>
-          editor.registerMutationListener(
-            Node,
-            (mutations, { prevEditorState }) => {
-              editor.update(() => {
-                for (const [nodeKey, mutation] of mutations) {
-                  const node = $getNodeByKey(nodeKey);
-                  if (!node || mutation === "destroyed") {
-                    prevEditorState.read(() => {
-                      const prevNode = $getNodeByKey(nodeKey);
-                      if (!prevNode) return;
-
-                      const parentContainer = $findMatchingParent(
-                        prevNode,
-                        is_PARAGRAGRAPH,
-                      ) as CPContainerNode;
-
-                      const parentKey = parentContainer.getKey();
-                      editor.update(() => {
-                        $getNodeByKey(parentKey)?.markDirty();
-                      });
-                    });
-                    continue;
-                  }
-
-                  const parentContainer = $findMatchingParent(
-                    node,
-                    is_PARAGRAGRAPH,
-                  ) as CPContainerNode;
-
-                  parentContainer?.markDirty();
-                }
-              });
-            },
-          ),
-      ),
-      editor.registerMutationListener(
-        CPContainerNode,
-        (mutations, { prevEditorState }) => {
-          editor.getEditorState().read(() => {
-            for (const [nodeKey, mutation] of mutations) {
-              const node = $getNodeByKey<CPContainerNode>(nodeKey);
-
-              if (!node || mutation === "destroyed") {
-                prevEditorState.read(() => {
-                  const prevNode = $getNodeByKey<CPContainerNode>(nodeKey);
-                  if (!prevNode) return;
-
-                  updatesRef.current.set(`${nodeKey}:destroyed`, {
-                    updateType: "destroyed",
-                    updatedBlockId: prevNode.getId(),
-                    updatedBlock: null,
-                  });
-                });
-                continue;
-              }
-
-              updatesRef.current.set(`${nodeKey}:${mutation}`, {
-                updateType: mutation,
-                updatedBlockId: node.getId(),
-                updatedBlock: node.exportJSON(),
-              });
-            }
-            // First setupdates then debounce Promise/async
-            throttleUpdate(updatesRef.current, updatesRef);
-          });
-        },
-      ),
       // To make sure all the Editor is never empty
       editor.registerMutationListener(CPContainerNode, () => {
         editor.update(() => {
@@ -418,7 +331,19 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
           }
 
           const nodes = selection.getNodes();
-          const paragraphs = $getAllChildParagraphs(nodes);
+          const paragraphs = [
+            ...new Set(
+              nodes
+                .map((node) => {
+                  const ancestor = $findMatchingParent(
+                    node,
+                    is_PARAGRAGRAPH,
+                  ) as CPContainerNode | null;
+                  return ancestor;
+                })
+                .filter((node) => !!node),
+            ),
+          ] as CPContainerNode[];
 
           const onlyTopLevelNodes = selectTopLevelNodes(paragraphs);
 
@@ -464,7 +389,19 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
           const nodes = selection.getNodes();
 
           // Whatever nodes you select, their parents will connect and will have common parent and siblings
-          const paragraphs = $getAllChildParagraphs(nodes);
+          const paragraphs = [
+            ...new Set(
+              nodes
+                .map((node) => {
+                  const ancestor = $findMatchingParent(
+                    node,
+                    is_PARAGRAGRAPH,
+                  ) as CPContainerNode | null;
+                  return ancestor;
+                })
+                .filter((node) => !!node),
+            ),
+          ] as CPContainerNode[];
 
           let onlyTopLevelNodes = selectTopLevelNodes(paragraphs);
 
@@ -619,7 +556,13 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
     );
   }, [editor]);
 
-  return <>{anchorElem && <DraggableBlockPlugin anchorElem={anchorElem} />}</>;
+  return (
+    <>
+      {anchorElem && <DraggableBlockPlugin anchorElem={anchorElem} />}
+      <SendingUpdatesPlugin handleUpdates={handleUpdates} />
+      
+    </>
+  );
 };
 
 type COPIABLE_NODES =
