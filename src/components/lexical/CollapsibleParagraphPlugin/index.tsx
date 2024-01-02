@@ -60,6 +60,7 @@ import {
 } from "lexical";
 import { $findMatchingParent, mergeRegister } from "@lexical/utils";
 import { selectTopLevelNodes, throttle } from "./utils";
+import DraggableBlockPlugin from "./DraggableBlockPlugin";
 
 export type UpdatedBlock = {
   updateType: NodeMutation;
@@ -69,7 +70,7 @@ export type UpdatedBlock = {
 
 export type Updates = Map<string, UpdatedBlock>;
 
-const is_PARAGRAGRAPH = (node: LexicalNode): node is CPContainerNode =>
+export const is_PARAGRAGRAPH = (node: LexicalNode): node is CPContainerNode =>
   $isCPContainerNode(node);
 
 const $getAllChildParagraphs = (nodes: LexicalNode[]) => {
@@ -92,10 +93,12 @@ const $getAllChildParagraphs = (nodes: LexicalNode[]) => {
 
 interface CollapsibleParagraphPluginProps {
   handleUpdates: (updates: Updates) => void;
+  anchorElem: HTMLElement;
 }
 
 const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
   handleUpdates,
+  anchorElem,
 }) => {
   const [editor] = useLexicalComposerContext();
   const updatesRef = useRef<Updates>(new Map());
@@ -616,7 +619,7 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
     );
   }, [editor]);
 
-  return <></>;
+  return <>{anchorElem && <DraggableBlockPlugin anchorElem={anchorElem} />}</>;
 };
 
 type COPIABLE_NODES =

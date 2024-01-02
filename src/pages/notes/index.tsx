@@ -15,6 +15,7 @@ import {
   CollapsibleParagraphPlugin,
 } from "~/components/lexical/CollapsibleParagraphPlugin";
 import { ParagraphNode } from "lexical";
+import { useRef } from "react";
 
 const theme = {
   paragraph: "custom-paragraph",
@@ -31,6 +32,7 @@ function onError(error: Error) {
 }
 
 export default function Notes() {
+  const anchorElemRef = useRef<HTMLDivElement>(null);
   const notes = api.note.getAll.useQuery(undefined, {
     refetchOnWindowFocus: false,
   });
@@ -113,11 +115,20 @@ export default function Notes() {
       <main className="flex-grow p-8">
         <LexicalComposer initialConfig={initialConfig}>
           <PlainTextPlugin
-            contentEditable={<ContentEditable />}
+            contentEditable={
+              <div className="editor-scroller">
+                <div className="editor" ref={anchorElemRef}>
+                  <ContentEditable />
+                </div>
+              </div>
+            }
             placeholder={<div>Enter some text...</div>}
             ErrorBoundary={LexicalErrorBoundary}
           />
-          <CollapsibleParagraphPlugin handleUpdates={handleUpdates} />
+          <CollapsibleParagraphPlugin
+            handleUpdates={handleUpdates}
+            anchorElem={anchorElemRef.current!}
+          />
         </LexicalComposer>
       </main>
     </div>
