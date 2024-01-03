@@ -213,7 +213,6 @@ export class CPContainerNode extends ElementNode {
     serializedNode: SerializedCPContainerNode,
   ): CPContainerNode {
     let node;
-
     // To avoid issues with parseSerializedNode. In some cases (when PASTING for example), children exist
     if (serializedNode.children?.length) {
       node = $createCPContainerNode({ prepopulateChildren: false });
@@ -279,6 +278,8 @@ export class CPContainerNode extends ElementNode {
     }
     const indexWithinParent = this.getIndexWithinParent();
 
+    const children = this.getChildren().map((node) => node.exportJSON());
+
     return {
       ...super.exportJSON(),
       title: JSON.stringify(titleNodeContent),
@@ -292,6 +293,7 @@ export class CPContainerNode extends ElementNode {
       direction: super.exportJSON().direction ?? "ltr",
       format: super.exportJSON().format ?? "left",
       indent: super.exportJSON().indent ?? 0,
+      children,
     };
   }
 

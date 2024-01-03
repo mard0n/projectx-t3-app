@@ -93,14 +93,16 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
                     is_PARAGRAGRAPH,
                   ) as CPContainerNode;
 
-                  updatesRef.current.set(
-                    `${parentContainer?.getKey()}:${mutation}`,
-                    {
-                      updateType: mutation,
-                      updatedBlockId: parentContainer?.getId(),
-                      updatedBlock: parentContainer?.exportJSON(),
-                    },
-                  );
+                  if (parentContainer) {
+                    updatesRef.current.set(
+                      `${parentContainer.getKey()}:${mutation}`,
+                      {
+                        updateType: mutation,
+                        updatedBlockId: parentContainer.getId(),
+                        updatedBlock: parentContainer.exportJSON(),
+                      },
+                    );
+                  }
                 }
 
                 throttleUpdate(updatesRef.current, updatesRef);

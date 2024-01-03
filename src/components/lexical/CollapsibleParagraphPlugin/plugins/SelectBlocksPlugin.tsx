@@ -4,6 +4,7 @@ import React, {
   type Dispatch,
   useEffect,
   useRef,
+  MutableRefObject,
 } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $findMatchingParent, mergeRegister } from "@lexical/utils";
@@ -22,14 +23,15 @@ import {
 import { selectOnlyTopNotes } from "../utils";
 
 interface SelectBlocksPluginProps {
-  setSelectedBlocks: Dispatch<SetStateAction<CPContainerNode[] | null>>;
+  selectedBlocks: MutableRefObject<CPContainerNode[] | null>;
+  updateSelectedBlocks: (blocks: CPContainerNode[] | null) => void;
 }
 
 const SelectBlocksPlugin: FC<SelectBlocksPluginProps> = ({
-  setSelectedBlocks,
+  selectedBlocks,
+  updateSelectedBlocks,
 }) => {
   const [editor] = useLexicalComposerContext();
-  const selectedElements = useRef<HTMLElement[]>([]);
 
   useEffect(() => {
     if (
@@ -46,10 +48,15 @@ const SelectBlocksPlugin: FC<SelectBlocksPluginProps> = ({
         () => {
           const selection = $getSelection();
 
-          selectedElements.current.forEach((elem) =>
-            elem.classList.remove("selected"),
-          );
-          setSelectedBlocks(null);
+          selectedBlocks.current?.forEach((node) => {
+            const elem = editor.getElementByKey(node.getKey());
+            if (elem) {
+              return elem.classList.remove("selected");
+            }
+            return;
+          });
+
+          updateSelectedBlocks(null);
 
           if (!$isRangeSelection(selection)) {
             return false;
@@ -60,6 +67,11 @@ const SelectBlocksPlugin: FC<SelectBlocksPluginProps> = ({
           }
 
           const selectedNodes = selection.getNodes();
+
+          if (selectedNodes.length <= 1) {
+            // Don't add selected class if only one line is selected
+            return false;
+          }
 
           const cPContainers = [
             ...new Set(
@@ -73,19 +85,13 @@ const SelectBlocksPlugin: FC<SelectBlocksPluginProps> = ({
 
           const onlyTopLevelNodes = selectOnlyTopNotes(cPContainers);
 
-          if (onlyTopLevelNodes.length <= 1) {
-            // Don't add selected class if only one line is selected
-            return false;
-          }
-
           const selectedElement = onlyTopLevelNodes
             .map((node) => editor.getElementByKey(node.getKey()))
             .filter(Boolean) as HTMLElement[];
 
           selectedElement.forEach((elem) => elem?.classList.add("selected"));
 
-          selectedElements.current.push(...selectedElement);
-          setSelectedBlocks(onlyTopLevelNodes);
+          updateSelectedBlocks(onlyTopLevelNodes);
 
           return true;
         },

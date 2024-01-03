@@ -14,7 +14,7 @@ import {
 } from "lexical";
 import * as React from "react";
 import { eventFiles, isHTMLElement, Point, Rect } from "../utils";
-import type { DragEvent as ReactDragEvent } from "react";
+import type { MutableRefObject, DragEvent as ReactDragEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -285,7 +285,7 @@ export default function DraggableBlockPlugin({
   selectedBlocks,
 }: {
   anchorElem: HTMLElement;
-  selectedBlocks: CPContainerNode[];
+  selectedBlocks: MutableRefObject<CPContainerNode[] | null>;
 }): JSX.Element {
   const [editor] = useLexicalComposerContext();
   // console.log("anchorElem", anchorElem);
@@ -440,7 +440,9 @@ export default function DraggableBlockPlugin({
     if (!dataTransfer || !draggableBlockElem) {
       return;
     }
-    const selectedBlockElems = selectedBlocks?.map((node) => node.getKey());
+    const selectedBlockElems = selectedBlocks.current?.map((node) =>
+      node.getKey(),
+    );
 
     setDragImage(dataTransfer, draggableBlockElem);
     let nodeKey = "";
@@ -450,10 +452,9 @@ export default function DraggableBlockPlugin({
         nodeKey = node.getKey();
       }
     });
-    draggingBlockRef.current = selectedBlockElems.length
+    draggingBlockRef.current = selectedBlockElems?.length
       ? selectedBlockElems
       : [nodeKey];
-    // dataTransfer.setData(DRAG_DATA_FORMAT, nodeKey);
   }
 
   function onDragEnd(): void {

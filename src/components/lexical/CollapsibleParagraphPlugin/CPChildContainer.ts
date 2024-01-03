@@ -104,10 +104,15 @@ export class CPChildContainerNode extends ElementNode {
   }
 
   exportJSON(): SerializedCPChildContainerNode {
+    const children = this.getLatest()
+      .getChildren()
+      .map((node) => node.exportJSON());
+
     return {
       ...super.exportJSON(),
       type: "child-container",
       version: 1,
+      children,
     };
   }
 

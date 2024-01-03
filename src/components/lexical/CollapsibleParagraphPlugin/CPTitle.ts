@@ -95,10 +95,15 @@ export class CPTitleNode extends ElementNode {
   }
 
   exportJSON(): SerializedCPTitleNode {
+    const children = this.getLatest()
+      .getChildren()
+      .map((node) => node.exportJSON());
+
     return {
       ...super.exportJSON(),
       type: "title",
       version: 1,
+      children,
     };
   }
 

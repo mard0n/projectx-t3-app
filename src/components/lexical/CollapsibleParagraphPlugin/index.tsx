@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   $createCPChildContainerNode,
@@ -54,6 +54,7 @@ import {
   $getSelection,
   $isRangeSelection,
   isSelectionWithinEditor,
+  COMMAND_PRIORITY_CRITICAL,
 } from "lexical";
 import { $findMatchingParent, mergeRegister } from "@lexical/utils";
 import DraggableBlockPlugin from "./plugins/DraggableBlockPlugin";
@@ -77,9 +78,11 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
   handleUpdates,
 }) => {
   const [editor] = useLexicalComposerContext();
-  const [selectedBlocks, setSelectedBlocks] = useState<
-    CPContainerNode[] | null
-  >([]);
+  const selectedBlocks = useRef<CPContainerNode[] | null>(null);
+
+  const handleSelectedBlocks = (blocks: CPContainerNode[] | null) => {
+    selectedBlocks.current = blocks;
+  };
 
   useEffect(() => {
     if (
@@ -424,16 +427,20 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
       editor.registerCommand(
         COPY_COMMAND,
         (event) => {
-          return copy(event, editor);
+          return copy(event, editor, selectedBlocks.current);
         },
         COMMAND_PRIORITY_NORMAL,
       ),
       editor.registerCommand(
         CUT_COMMAND,
         (event) => {
-          copy(event, editor);
+          copy(event, editor, selectedBlocks.current);
 
           editor.update(() => {
+            if (selectedBlocks.current) {
+              selectedBlocks.current.forEach((node) => node.remove());
+              return;
+            }
             const selection = $getSelection();
             if ($isRangeSelection(selection)) {
               selection.removeText();
@@ -456,7 +463,6 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
             event instanceof InputEvent || event instanceof KeyboardEvent
               ? null
               : event.clipboardData;
-          console.log("clipboardData", clipboardData);
 
           if (clipboardData === null) return false;
 
@@ -548,11 +554,14 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
       {anchorElem && (
         <DraggableBlockPlugin
           anchorElem={anchorElem}
-          selectedBlocks={selectedBlocks!}
+          selectedBlocks={selectedBlocks}
         />
       )}
       <SendingUpdatesPlugin handleUpdates={handleUpdates} />
-      <SelectBlocksPlugin setSelectedBlocks={setSelectedBlocks} />
+      <SelectBlocksPlugin
+        selectedBlocks={selectedBlocks}
+        updateSelectedBlocks={handleSelectedBlocks}
+      />
     </>
   );
 };
@@ -579,7 +588,6 @@ function insertGeneratedNodes(
   const nodeToSelect = $isElementNode(last)
     ? last.getLastDescendant() ?? last
     : last;
-  console.log("nodeToSelect", nodeToSelect);
 
   const nodeToSelectSize = nodeToSelect.getTextContentSize();
 
@@ -590,7 +598,16 @@ function insertGeneratedNodes(
       anchorContainer.getTitleNode()?.append(node);
     } else if ($isCPContainerNode(node)) {
       if (!anchorNextSibling) {
-        anchorContainer.insertAfter(node);
+        const isTextEmpty = anchorContainer
+          .getChildAtIndex(0)
+          ?.getTextContentSize();
+
+        if (!isTextEmpty) {
+          anchorContainer.insertAfter(node);
+          anchorContainer.remove();
+        } else {
+          anchorContainer.insertAfter(node);
+        }
       } else {
         anchorNextSibling.insertAfter(node);
       }
@@ -614,6 +631,7 @@ function insertGeneratedNodes(
 function copy(
   event: KeyboardEvent | ClipboardEvent | null,
   editor: LexicalEditor,
+  customData: CPContainerNode[] | null,
 ) {
   if (!event) return false;
   event.preventDefault();
@@ -642,6 +660,17 @@ function copy(
   const selection = $getSelection();
   if (selection === null) {
     return false;
+  }
+
+  if (customData?.length) {
+    const json = customData.map((node) => node.exportJSON());
+
+    clipboardData.setData(
+      "application/x-lexical-editor",
+      JSON.stringify({ namespace: editor._config.namespace, nodes: json }),
+    );
+
+    return true;
   }
 
   const htmlString = $getHtmlContent(editor);
