@@ -81,8 +81,6 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
     CPContainerNode[] | null
   >([]);
 
-  console.log("selectedBlocks", selectedBlocks);
-
   useEffect(() => {
     if (
       !editor.hasNodes([CPContainerNode, CPTitleNode, CPChildContainerNode])
