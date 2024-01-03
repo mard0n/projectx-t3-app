@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import {
   $createCPChildContainerNode,
@@ -57,28 +57,12 @@ import {
 } from "lexical";
 import { $findMatchingParent, mergeRegister } from "@lexical/utils";
 import DraggableBlockPlugin from "./plugins/DraggableBlockPlugin";
-import { SendingUpdatesPlugin, Updates } from "./plugins/SendingUpdatesPlugin";
-
-const selectTopLevelNodes = (nodes: CPContainerNode[]) => {
-  const commonAncesstor = nodes.reduce<CPContainerNode | undefined | null>(
-    (acc, current) => {
-      if (!acc) return current;
-      if (acc === current) {
-        return acc.getParent();
-      }
-      return acc.getCommonAncestor(current);
-    },
-    nodes[0],
-  );
-
-  const onlyTopLevelNodes = nodes.filter((node) => {
-    return commonAncesstor
-      ?.getChildren<ParagraphNode>()
-      .some((child) => child.getKey() === node.getKey());
-  });
-
-  return onlyTopLevelNodes;
-};
+import {
+  SendingUpdatesPlugin,
+  type Updates,
+} from "./plugins/SendingUpdatesPlugin";
+import { SelectBlocksPlugin } from "./plugins/SelectBlocksPlugin";
+import { selectOnlyTopNotes } from "./utils";
 
 export const is_PARAGRAGRAPH = (node: LexicalNode): node is CPContainerNode =>
   $isCPContainerNode(node);
@@ -93,6 +77,11 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
   handleUpdates,
 }) => {
   const [editor] = useLexicalComposerContext();
+  const [selectedBlocks, setSelectedBlocks] = useState<
+    CPContainerNode[] | null
+  >([]);
+
+  console.log("selectedBlocks", selectedBlocks);
 
   useEffect(() => {
     if (
@@ -345,7 +334,7 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
             ),
           ] as CPContainerNode[];
 
-          const onlyTopLevelNodes = selectTopLevelNodes(paragraphs);
+          const onlyTopLevelNodes = selectOnlyTopNotes(paragraphs);
 
           let commonPrevSibling: CPContainerNode | undefined;
           for (const node of onlyTopLevelNodes) {
@@ -403,7 +392,7 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
             ),
           ] as CPContainerNode[];
 
-          let onlyTopLevelNodes = selectTopLevelNodes(paragraphs);
+          let onlyTopLevelNodes = selectOnlyTopNotes(paragraphs);
 
           onlyTopLevelNodes = onlyTopLevelNodes.reverse(); // To work with insertAfter
 
@@ -558,9 +547,14 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
 
   return (
     <>
-      {anchorElem && <DraggableBlockPlugin anchorElem={anchorElem} />}
+      {anchorElem && (
+        <DraggableBlockPlugin
+          anchorElem={anchorElem}
+          selectedBlocks={selectedBlocks!}
+        />
+      )}
       <SendingUpdatesPlugin handleUpdates={handleUpdates} />
-      
+      <SelectBlocksPlugin setSelectedBlocks={setSelectedBlocks} />
     </>
   );
 };

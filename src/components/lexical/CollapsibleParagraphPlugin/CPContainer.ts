@@ -274,7 +274,7 @@ export class CPContainerNode extends ElementNode {
           $isCPContainerNode(node),
       ) as CPContainerNode | null;
       if (parentContainer) {
-        parentId = parentContainer.getId();
+        parentId = parentContainer?.getId();
       }
     }
     const indexWithinParent = this.getIndexWithinParent();

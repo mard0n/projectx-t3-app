@@ -21,8 +21,6 @@ import { createPortal } from "react-dom";
 import type { CPContainerNode } from "../CPContainer";
 import { is_PARAGRAGRAPH } from "..";
 
-const DRAG_DATA_FORMAT = "application/x-lexical-drag-block";
-
 function getCollapsedMargins(elem: HTMLElement): {
   marginTop: number;
   marginBottom: number;
@@ -55,7 +53,7 @@ function getCollapsedMargins(elem: HTMLElement): {
 }
 
 function getBlockElement(
-  draggingBlock: string | false,
+  draggingBlock: string[] | false,
   editor: LexicalEditor,
   event: MouseEvent,
   useEdgeAsDefault = false,
@@ -181,30 +179,43 @@ function getBlockElement(
   });
 
   if (draggingBlock && blockElem) {
-    const draggingBlockNode = $getNodeByKey<CPContainerNode>(draggingBlock);
+    const draggingBlockNodes = draggingBlock.map((node) => {
+      return $getNodeByKey(node);
+    }) as LexicalNode[];
     const targetBlockToDrop = $getNearestNodeFromDOMNode(blockElem);
 
     const isDescendantsContain = (
-      parentNode: ElementNode | LexicalNode,
+      parentNode: (ElementNode | LexicalNode)[],
       targetNode: LexicalNode,
     ): boolean => {
-      if (parentNode.getKey() === targetNode.getKey()) {
-        return true;
-      }
-
-      const children =
-        "getChildren" in parentNode
-          ? (parentNode as ElementNode).getChildren()
-          : [];
-      for (const block of children) {
-        if (isDescendantsContain(block, targetNode)) {
+      for (const block of parentNode) {
+        if (block.getKey() === targetNode.getKey()) {
           return true;
         }
+
+        if (
+          "getChildren" in block &&
+          (block as ElementNode).getChildren().length > 0
+        ) {
+          // Recursively check in the children
+          if (
+            isDescendantsContain(
+              (block as ElementNode).getChildren(),
+              targetNode,
+            )
+          ) {
+            return true;
+          }
+        }
       }
+
       return false;
     };
 
-    if (isDescendantsContain(draggingBlockNode!, targetBlockToDrop!))
+    if (
+      draggingBlockNodes.length &&
+      isDescendantsContain(draggingBlockNodes, targetBlockToDrop!)
+    )
       return null;
   }
   return blockElem;
@@ -269,18 +280,21 @@ function setTargetLine(
   targetLineElem.style.opacity = ".4";
 }
 
-function useDraggableBlockMenu(
-  editor: LexicalEditor,
-  anchorElem: HTMLElement,
-  isEditable: boolean,
-): JSX.Element {
+export default function DraggableBlockPlugin({
+  anchorElem = document.body,
+  selectedBlocks,
+}: {
+  anchorElem: HTMLElement;
+  selectedBlocks: CPContainerNode[];
+}): JSX.Element {
+  const [editor] = useLexicalComposerContext();
   // console.log("anchorElem", anchorElem);
 
   const scrollerElem = anchorElem.parentElement;
 
   const dragBoxRef = useRef<HTMLDivElement>(null);
   const targetLineRef = useRef<HTMLDivElement>(null);
-  const draggingBlockRef = useRef<string | false>(false);
+  const draggingBlockRef = useRef<string[] | false>(false); // To prevent parent to dropping into its child
   const [draggableBlockElem, setDraggableBlockElem] =
     useState<HTMLElement | null>(null);
 
@@ -361,9 +375,16 @@ function useDraggableBlockMenu(
         return false;
       }
       const { target, dataTransfer, pageY } = event;
-      const dragData = dataTransfer?.getData(DRAG_DATA_FORMAT) ?? "";
-      const draggedNode = $getNodeByKey(dragData);
-      if (!draggedNode) {
+      // const dragData = dataTransfer?.getData(DRAG_DATA_FORMAT) ?? "";
+
+      const draggedNodes = draggingBlockRef.current?.length
+        ? (draggingBlockRef.current
+            .map((key) => {
+              return $getNodeByKey(key);
+            })
+            .filter(Boolean) as LexicalNode[])
+        : null;
+      if (!draggedNodes) {
         return false;
       }
       if (!isHTMLElement(target)) {
@@ -382,15 +403,14 @@ function useDraggableBlockMenu(
       if (!targetNode) {
         return false;
       }
-      if (targetNode === draggedNode) {
+      if (draggedNodes.includes(targetNode)) {
         return true;
       }
-      const targetBlockElemTop = targetBlockElem.getBoundingClientRect().top;
-      if (pageY >= targetBlockElemTop) {
-        targetNode.insertAfter(draggedNode);
-      } else {
-        targetNode.insertBefore(draggedNode);
-      }
+
+      draggedNodes.forEach((node) => {
+        targetNode.insertAfter(node);
+      });
+
       setDraggableBlockElem(null);
 
       return true;
@@ -416,9 +436,12 @@ function useDraggableBlockMenu(
 
   function onDragStart(event: ReactDragEvent<HTMLDivElement>): void {
     const dataTransfer = event.dataTransfer;
+
     if (!dataTransfer || !draggableBlockElem) {
       return;
     }
+    const selectedBlockElems = selectedBlocks?.map((node) => node.getKey());
+
     setDragImage(dataTransfer, draggableBlockElem);
     let nodeKey = "";
     editor.update(() => {
@@ -427,8 +450,10 @@ function useDraggableBlockMenu(
         nodeKey = node.getKey();
       }
     });
-    draggingBlockRef.current = nodeKey;
-    dataTransfer.setData(DRAG_DATA_FORMAT, nodeKey);
+    draggingBlockRef.current = selectedBlockElems.length
+      ? selectedBlockElems
+      : [nodeKey];
+    // dataTransfer.setData(DRAG_DATA_FORMAT, nodeKey);
   }
 
   function onDragEnd(): void {
@@ -452,13 +477,4 @@ function useDraggableBlockMenu(
     </>,
     anchorElem,
   );
-}
-
-export default function DraggableBlockPlugin({
-  anchorElem = document.body,
-}: {
-  anchorElem: HTMLElement;
-}): JSX.Element {
-  const [editor] = useLexicalComposerContext();
-  return useDraggableBlockMenu(editor, anchorElem, editor._editable);
 }
