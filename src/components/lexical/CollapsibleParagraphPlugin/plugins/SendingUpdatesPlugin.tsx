@@ -68,7 +68,7 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
                         is_PARAGRAGRAPH,
                       ) as CPContainerNode;
 
-                      const parentKey = parentContainer.getKey();
+                      const parentKey = parentContainer?.getKey();
                       editor.getEditorState().read(() => {
                         const updatedParentNode =
                           $getNodeByKey<CPContainerNode>(parentKey);
@@ -94,11 +94,11 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
                   ) as CPContainerNode;
 
                   updatesRef.current.set(
-                    `${parentContainer.getKey()}:${mutation}`,
+                    `${parentContainer?.getKey()}:${mutation}`,
                     {
                       updateType: mutation,
-                      updatedBlockId: parentContainer.getId(),
-                      updatedBlock: parentContainer.exportJSON(),
+                      updatedBlockId: parentContainer?.getId(),
+                      updatedBlock: parentContainer?.exportJSON(),
                     },
                   );
                 }

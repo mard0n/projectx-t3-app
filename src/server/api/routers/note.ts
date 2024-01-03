@@ -1,6 +1,6 @@
 import { asc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
-import type { UpdatedBlock } from "~/components/lexical/CollapsibleParagraphPlugin";
+import type { UpdatedBlock } from "~/components/lexical/CollapsibleParagraphPlugin/plugins/SendingUpdatesPlugin";
 import { serializedCPContainerNodeSchema } from "~/components/lexical/CollapsibleParagraphPlugin/CPContainer";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import type { Note } from "~/server/db/schema";
