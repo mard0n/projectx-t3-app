@@ -23,7 +23,7 @@ export const notes = mysqlTable("notes", {
     .primaryKey()
     .default(sql`(UUID())`),
   type: mysqlEnum("type", ["container"]).notNull().default("container"),
-  title: varchar("title", { length: 256 }), // TODO: Fix the length
+  title: varchar("title", { length: 10000 }), // TODO: Fix the length
   indexWithinParent: int("indexWithinParent"),
   parentId: varchar("parentId", { length: 36 }),
   open: boolean("open").notNull().default(true),
@@ -57,4 +57,3 @@ export const parentIdToNotesRelations = relations(notes, ({ one, many }) => ({
     relationName: "notesToNotes",
   }),
 }));
-

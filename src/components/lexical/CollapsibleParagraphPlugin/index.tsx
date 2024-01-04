@@ -20,6 +20,7 @@ import type {
   LexicalNode,
   RangeSelection,
   SerializedLexicalNode,
+  TextFormatType,
 } from "lexical";
 import type { FC } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
@@ -54,7 +55,8 @@ import {
   $getSelection,
   $isRangeSelection,
   isSelectionWithinEditor,
-  COMMAND_PRIORITY_CRITICAL,
+  COMMAND_PRIORITY_EDITOR,
+  FORMAT_TEXT_COMMAND,
 } from "lexical";
 import { $findMatchingParent, mergeRegister } from "@lexical/utils";
 import DraggableBlockPlugin from "./plugins/DraggableBlockPlugin";
@@ -554,6 +556,18 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
           return true;
         },
         COMMAND_PRIORITY_NORMAL,
+      ),
+      editor.registerCommand<TextFormatType>(
+        FORMAT_TEXT_COMMAND,
+        (format) => {
+          const selection = $getSelection();
+          if (!$isRangeSelection(selection)) {
+            return false;
+          }
+          selection.formatText(format);
+          return true;
+        },
+        COMMAND_PRIORITY_EDITOR,
       ),
     );
   }, [editor]);

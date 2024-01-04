@@ -123,6 +123,19 @@
   background-color: #7a7a7a33;
 }
 
-.selected ::selection{
+.selected ::selection {
   background-color: transparent;
+}
+
+.editor-textBold {
+  font-weight: bold;
+}
+.editor-textItalic {
+  font-style: italic;
+}
+.editor-textStrikethrough {
+  text-decoration: line-through;
+}
+.editor-textUnderline {
+  text-decoration: underline;
 }
