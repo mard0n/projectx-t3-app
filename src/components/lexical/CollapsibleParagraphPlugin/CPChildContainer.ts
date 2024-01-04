@@ -117,8 +117,12 @@ export class CPChildContainerNode extends ElementNode {
   }
 
   // Mutation
-  getParentCPContainer() {
-    return this.getLatest().getParent<CPContainerNode>();
+  getParent<T extends ElementNode = CPContainerNode>(): T | null {
+    return super.getParent();
+  }
+
+  getChildren<T extends LexicalNode = CPContainerNode>(): T[] {
+    return super.getChildren();
   }
 }
 

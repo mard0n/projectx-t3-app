@@ -71,7 +71,7 @@ function getBlockElement(
       if (!child) continue;
       result.push(child);
       const cPContainerChildren = child
-        .getChildContainerNode()
+        .getCPChildContainerNode()
         ?.getChildren<CPContainerNode>();
 
       if (cPContainerChildren?.length) {

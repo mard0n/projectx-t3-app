@@ -134,8 +134,8 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
       // When title is deleted, upwrap the childContent into a sibling or parent or root
       editor.registerNodeTransform(CPContainerNode, (node) => {
         const containerNode = node;
-        const childContainerNode = containerNode.getChildContainerNode();
-        const titleNode = containerNode.getTitleNode();
+        const childContainerNode = containerNode.getCPChildContainerNode();
+        const titleNode = containerNode.getCPTitleNode();
 
         if (!childContainerNode) return;
 
@@ -147,7 +147,7 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
 
           if (prevSiblingNode && $isCPContainerNode(prevSiblingNode)) {
             const prevSiblingChildContainerNode =
-              prevSiblingNode.getChildContainerNode();
+              prevSiblingNode.getCPChildContainerNode();
 
             // HACK: somehow when a sibling title of a node is getting deleted, the empty childContainer of the node is also getting deleted
             if (prevSiblingChildContainerNode) {
@@ -291,7 +291,7 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
           const insertedNode = selection.insertParagraph();
 
           if (insertedNode && $isCPTitleNode(insertedNode)) {
-            const containerNode = insertedNode.getParentCPContainer();
+            const containerNode = insertedNode.getParent();
             if (!containerNode) return false;
 
             const insertedNodeContent = insertedNode.getChildren();
@@ -306,9 +306,10 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
               return true;
             }
 
-            const childContainer = containerNode.getChildContainerNode();
+            const childContainer = containerNode.getCPChildContainerNode();
             if (childContainer?.getChildren().length) {
-              childContainer.getFirstChild()?.insertBefore(newParagraph);
+              const firstChild = childContainer.getChildren()[0];
+              firstChild?.insertBefore(newParagraph);
               newParagraph.selectStart();
               insertedNode.remove();
               return true;
@@ -365,7 +366,7 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
 
           if (!commonPrevSibling) return false;
 
-          const childContainer = commonPrevSibling.getChildContainerNode();
+          const childContainer = commonPrevSibling.getCPChildContainerNode();
           if (!childContainer) {
             const childContainerNode = $createCPChildContainerNode().append(
               ...onlyTopLevelNodes,
@@ -409,13 +410,7 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
           onlyTopLevelNodes = onlyTopLevelNodes.reverse(); // To work with insertAfter
 
           for (const paragraph of onlyTopLevelNodes) {
-            const parentNode = paragraph.getParent<LexicalNode>();
-            if (!parentNode) continue;
-            const parentContainerNode = $findMatchingParent(
-              parentNode,
-              (node: LexicalNode): node is CPContainerNode =>
-                $isCPContainerNode(node),
-            );
+            const parentContainerNode = paragraph.getParentCPContainer();
             parentContainerNode?.insertAfter(paragraph);
           }
           return true;
@@ -618,7 +613,7 @@ function insertGeneratedNodes(
   // Wrap text and inline nodes in paragraph nodes so we have all blocks at the top-level
   for (const node of nodes) {
     if ($isLineBreakNode(node) || $isTextNode(node)) {
-      anchorContainer.getTitleNode()?.append(node);
+      anchorContainer.getCPTitleNode()?.append(node);
     } else if ($isCPContainerNode(node)) {
       if (!anchorNextSibling) {
         const isTextEmpty = anchorContainer
@@ -636,9 +631,9 @@ function insertGeneratedNodes(
       }
       anchorNextSibling = node;
     } else if ($isCPTitleNode(node)) {
-      anchorContainer.getTitleNode()?.append(...node.getChildren());
+      anchorContainer.getCPTitleNode()?.append(...node.getChildren());
     } else if ($isCPChildContainerNode(node)) {
-      anchorContainer.getChildContainerNode()?.append(...node.getChildren());
+      anchorContainer.getCPChildContainerNode()?.append(...node.getChildren());
     }
   }
 

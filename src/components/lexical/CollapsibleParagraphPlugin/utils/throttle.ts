@@ -1,4 +1,4 @@
-import type { Updates } from "..";
+import type { Updates } from "../plugins/SendingUpdatesPlugin";
 
 export const throttle = (
   fn: (updates: Updates, updatesRef: React.MutableRefObject<Updates>) => void,

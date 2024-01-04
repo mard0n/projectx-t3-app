@@ -108,9 +108,12 @@ export class CPTitleNode extends ElementNode {
   }
 
   // Mutation
+  getParent<T extends ElementNode = CPContainerNode>(): T | null {
+    return super.getParent();
+  }
 
-  getParentCPContainer() {
-    return this.getLatest().getParent<CPContainerNode>();
+  getChildren<T extends LexicalNode = TextNode | LineBreakNode>(): T[] {
+    return super.getChildren();
   }
 
   insertNewAfter(_: RangeSelection, restoreSelection: boolean): CPTitleNode {

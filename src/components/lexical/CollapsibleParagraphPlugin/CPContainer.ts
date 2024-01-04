@@ -27,9 +27,9 @@ import type {
   TextNode,
   SerializedTextNode,
   SerializedLineBreakNode,
+  RootNode,
 } from "lexical";
 import { $parseSerializedNode, ElementNode } from "lexical";
-import { $findMatchingParent } from "@lexical/utils";
 import { z } from "zod";
 
 export const serializedCPContainerNodeSchema: z.ZodSchema<SerializedCPContainerNode> =
@@ -252,30 +252,18 @@ export class CPContainerNode extends ElementNode {
   }
 
   exportJSON(): SerializedCPContainerNode {
-    const titleNode = this.getTitleNode();
+    const titleNode = this.getCPTitleNode();
     const titleNodeContent =
-      titleNode
-        ?.getChildren<TextNode | LineBreakNode>()
-        .map((node) => node.exportJSON()) ?? [];
+      titleNode?.getChildren().map((node) => node.exportJSON()) ?? [];
 
-    const childContainerNode = this.getChildContainerNode();
+    const childContainerNode = this.getCPChildContainerNode();
     const childContainerNodeContent =
       childContainerNode
         ?.getChildren<CPContainerNode>()
         .map((node) => node.exportJSON()) ?? [];
 
-    const parentNode = this.getParent<LexicalNode>();
-    let parentId: string | null = null;
-    if (parentNode) {
-      const parentContainer = $findMatchingParent(
-        parentNode,
-        (node: LexicalNode): node is CPContainerNode =>
-          $isCPContainerNode(node),
-      ) as CPContainerNode | null;
-      if (parentContainer) {
-        parentId = parentContainer?.getId();
-      }
-    }
+    const parentCPContainerNodeId = this.getParentCPContainer()?.getId();
+
     const indexWithinParent = this.getIndexWithinParent();
 
     const children = this.getChildren().map((node) => node.exportJSON());
@@ -284,7 +272,7 @@ export class CPContainerNode extends ElementNode {
       ...super.exportJSON(),
       title: JSON.stringify(titleNodeContent),
       childNotes: childContainerNodeContent, // Used only for debugging purposes
-      parentId,
+      parentId: parentCPContainerNodeId ?? null,
       indexWithinParent,
       open: this.getOpen(),
       type: "container",
@@ -298,18 +286,36 @@ export class CPContainerNode extends ElementNode {
   }
 
   // Mutation
-  getTitleNode() {
+  getCPTitleNode() {
     return this.getLatest()
       .getChildren()
-      .find((node) => $isCPTitleNode(node)) as CPTitleNode | undefined;
+      .find((node): node is CPTitleNode => $isCPTitleNode(node));
   }
 
-  getChildContainerNode() {
+  getCPChildContainerNode() {
     return this.getLatest()
       .getChildren()
-      .find((node) => $isCPChildContainerNode(node)) as
-      | CPChildContainerNode
-      | undefined;
+      .find((node): node is CPChildContainerNode =>
+        $isCPChildContainerNode(node),
+      );
+  }
+
+  getParent<
+    T extends ElementNode = CPChildContainerNode | RootNode,
+  >(): T | null {
+    return super.getParent();
+  }
+
+  getParentCPContainer(): CPContainerNode | undefined {
+    const parent = this.getLatest().getParent<
+      CPChildContainerNode | RootNode
+    >();
+    if ($isCPChildContainerNode(parent)) {
+      const parentContainer = parent.getParent<CPContainerNode>();
+      if (parentContainer) {
+        return parentContainer;
+      }
+    }
   }
 
   getId(): string {
