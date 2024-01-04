@@ -437,28 +437,45 @@ export default function DraggableBlockPlugin({
   function onDragStart(event: ReactDragEvent<HTMLDivElement>): void {
     const dataTransfer = event.dataTransfer;
 
-    if (!dataTransfer || !draggableBlockElem) {
+    if (!selectedBlocks.current?.length) {
       return;
     }
-    const selectedBlockElems = selectedBlocks.current?.map((node) =>
-      node.getKey(),
-    );
 
-    setDragImage(dataTransfer, draggableBlockElem);
+    const wrapperDiv = document.getElementById("drag-image-wrapper")!;
+
+    const selectedBlockElems = selectedBlocks.current
+      .map((node) => editor.getElementByKey(node.getKey()))
+      .filter(Boolean) as HTMLElement[];
+
+    selectedBlockElems.forEach((element) => {
+      const clonedDiv = element.cloneNode(true) as HTMLElement;
+      clonedDiv?.classList?.remove("selected");
+
+      wrapperDiv.appendChild(clonedDiv);
+    });
+
+    setDragImage(dataTransfer, wrapperDiv);
+
     let nodeKey = "";
     editor.update(() => {
-      const node = $getNearestNodeFromDOMNode(draggableBlockElem);
+      const node = $getNearestNodeFromDOMNode(wrapperDiv);
       if (node) {
         nodeKey = node.getKey();
       }
     });
-    draggingBlockRef.current = selectedBlockElems?.length
-      ? selectedBlockElems
+
+    const selectedBlockKeys = selectedBlocks.current?.map((node) =>
+      node.getKey(),
+    );
+    draggingBlockRef.current = selectedBlockKeys?.length
+      ? selectedBlockKeys
       : [nodeKey];
   }
 
   function onDragEnd(): void {
     draggingBlockRef.current = false;
+    const wrapperDiv = document.getElementById("drag-image-wrapper")!;
+    wrapperDiv.innerHTML = ""; // To clean up dragImage
     if (targetLineRef.current) {
       targetLineRef.current.style.opacity = "0";
       targetLineRef.current.style.transform = "translate(-10000px, -10000px)";
@@ -475,6 +492,10 @@ export default function DraggableBlockPlugin({
         onDragEnd={onDragEnd}
       ></div>
       <div className="draggable-block-target-line" ref={targetLineRef} />
+      <div id="drag-image-wrapper" className=" translate-x-[100000px]">
+        Wrapper Div
+      </div>
+      {/* HACK: to show multiple dragImages */}
     </>,
     anchorElem,
   );
