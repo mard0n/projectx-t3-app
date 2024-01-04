@@ -221,6 +221,10 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
       editor.registerCommand<InputEvent | string>(
         CONTROLLED_TEXT_INSERTION_COMMAND,
         (eventOrText) => {
+          if (selectedBlocks.current?.length) {
+            return true;
+          }
+
           const selection = $getSelection();
 
           if (!$isRangeSelection(selection)) {
@@ -254,6 +258,11 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
 
           if (!$isRangeSelection(selection)) {
             return false;
+          }
+
+          if (selectedBlocks.current?.length) {
+            const lastNode = selectedBlocks.current.slice(-1)[0]; // TODO: Not the best method. is not ordered any specific way
+            lastNode?.selectEnd();
           }
 
           if (event !== null) {
