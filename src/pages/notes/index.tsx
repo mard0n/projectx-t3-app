@@ -133,7 +133,7 @@ export default function Notes() {
             anchorElem={anchorElemRef.current!}
           />
           <HistoryPlugin />
-          <TreeViewPlugin />
+          {/* <TreeViewPlugin /> */}
         </LexicalComposer>
       </main>
     </div>
