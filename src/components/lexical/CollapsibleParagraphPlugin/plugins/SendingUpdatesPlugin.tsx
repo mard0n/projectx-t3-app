@@ -3,14 +3,16 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { mergeRegister } from "@lexical/utils";
 import type { NodeMutation } from "lexical";
 import { $getNodeByKey, TextNode, LineBreakNode } from "lexical";
-import { $findMatchingParent } from "@lexical/utils";
 import {
   CPTitleNode,
   CPChildContainerNode,
   is_PARAGRAGRAPH,
   CPContainerNode,
 } from "..";
-import type { SerializedCPContainerNode } from "../CPContainer";
+import {
+  $findParentCPContainer,
+  type SerializedCPContainerNode,
+} from "../CPContainer";
 import { throttle } from "../utils";
 
 export type UpdatedBlock = {
@@ -50,7 +52,7 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
 
     return mergeRegister(
       // To send updates
-      ...[CPTitleNode, CPChildContainerNode, TextNode, LineBreakNode].map(
+      ...[TextNode, LineBreakNode, CPTitleNode, CPChildContainerNode].map(
         (Node) =>
           editor.registerMutationListener(
             Node,
@@ -63,21 +65,20 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
                       const prevNode = $getNodeByKey(nodeKey);
                       if (!prevNode) return;
 
-                      const parentContainer = $findMatchingParent(
-                        prevNode,
-                        is_PARAGRAGRAPH,
-                      ) as CPContainerNode;
+                      const parentContainer = $findParentCPContainer(prevNode);
 
                       const parentKey = parentContainer?.getKey();
+
+                      if (!parentKey) return;
                       editor.getEditorState().read(() => {
                         const updatedParentNode =
                           $getNodeByKey<CPContainerNode>(parentKey);
 
                         if (updatedParentNode) {
                           updatesRef.current.set(
-                            `${updatedParentNode.getKey()}:destroyed`,
+                            `${updatedParentNode.getKey()}:updated`,
                             {
-                              updateType: "destroyed",
+                              updateType: "updated",
                               updatedBlockId: updatedParentNode.getId(),
                               updatedBlock: null,
                             },
@@ -88,10 +89,7 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
                     continue;
                   }
 
-                  const parentContainer = $findMatchingParent(
-                    node,
-                    is_PARAGRAGRAPH,
-                  ) as CPContainerNode;
+                  const parentContainer = $findParentCPContainer(node);
 
                   if (parentContainer) {
                     updatesRef.current.set(
