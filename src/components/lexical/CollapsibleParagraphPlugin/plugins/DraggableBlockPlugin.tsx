@@ -18,38 +18,10 @@ import type { MutableRefObject, DragEvent as ReactDragEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { $isBlockContainerNode, type BlockContainerNode } from "../BlockContainer";
-
-function getCollapsedMargins(elem: HTMLElement): {
-  marginTop: number;
-  marginBottom: number;
-} {
-  const getMargin = (
-    element: Element | null,
-    margin: "marginTop" | "marginBottom",
-  ): number =>
-    element ? parseFloat(window.getComputedStyle(element)[margin]) : 0;
-
-  const { marginTop, marginBottom } = window.getComputedStyle(elem);
-  const prevElemSiblingMarginBottom = getMargin(
-    elem.previousElementSibling,
-    "marginBottom",
-  );
-  const nextElemSiblingMarginTop = getMargin(
-    elem.nextElementSibling,
-    "marginTop",
-  );
-  const collapsedTopMargin = Math.max(
-    parseFloat(marginTop),
-    prevElemSiblingMarginBottom,
-  );
-  const collapsedBottomMargin = Math.max(
-    parseFloat(marginBottom),
-    nextElemSiblingMarginTop,
-  );
-
-  return { marginBottom: collapsedBottomMargin, marginTop: collapsedTopMargin };
-}
+import {
+  $isBlockContainerNode,
+  type BlockContainerNode,
+} from "../BlockContainer";
 
 function getBlockElement(
   draggingBlock: string[] | false,
@@ -66,7 +38,9 @@ function getBlockElement(
 
     const children = $getRoot()
       .getChildren()
-      .filter((node): node is BlockContainerNode => $isBlockContainerNode(node));
+      .filter((node): node is BlockContainerNode =>
+        $isBlockContainerNode(node),
+      );
     while (children.length) {
       const child = children[0];
       if (!child) continue;
@@ -299,7 +273,7 @@ export default function DraggableBlockPlugin({
   const [draggableBlockElem, setDraggableBlockElem] =
     useState<HTMLElement | null>(null);
 
-  // console.log('draggableBlockElem', draggableBlockElem);
+  console.log("draggableBlockElem", draggableBlockElem);
 
   useEffect(() => {
     function onMouseMove(event: MouseEvent) {
@@ -438,39 +412,41 @@ export default function DraggableBlockPlugin({
   function onDragStart(event: ReactDragEvent<HTMLDivElement>): void {
     const dataTransfer = event.dataTransfer;
 
-    if (!selectedBlocks.current?.length) {
+    if (selectedBlocks.current?.length) {
+      const wrapperDiv = document.getElementById("drag-image-wrapper")!;
+      const selectedBlockElems = selectedBlocks.current.flatMap((node) => {
+        const result = editor.getElementByKey(node.getKey());
+        return !!result ? [result] : [];
+      });
+      selectedBlockElems.forEach((element) => {
+        const clonedDiv = element.cloneNode(true) as HTMLElement;
+        clonedDiv?.classList?.remove("selected");
+        wrapperDiv.appendChild(clonedDiv);
+      });
+      setDragImage(dataTransfer, wrapperDiv);
+
+      const selectedBlockKeys = selectedBlocks.current.map((node) =>
+        node.getKey(),
+      );
+      draggingBlockRef.current = selectedBlockKeys;
+
       return;
     }
 
-    const wrapperDiv = document.getElementById("drag-image-wrapper")!;
+    if (draggableBlockElem) {
+      setDragImage(dataTransfer, draggableBlockElem);
 
-    const selectedBlockElems = selectedBlocks.current
-      .map((node) => editor.getElementByKey(node.getKey()))
-      .filter(Boolean) as HTMLElement[];
+      let nodeKey = "";
+      editor.update(() => {
+        const node = $getNearestNodeFromDOMNode(draggableBlockElem);
+        if (node) {
+          nodeKey = node.getKey();
+        }
+      });
 
-    selectedBlockElems.forEach((element) => {
-      const clonedDiv = element.cloneNode(true) as HTMLElement;
-      clonedDiv?.classList?.remove("selected");
-
-      wrapperDiv.appendChild(clonedDiv);
-    });
-
-    setDragImage(dataTransfer, wrapperDiv);
-
-    let nodeKey = "";
-    editor.update(() => {
-      const node = $getNearestNodeFromDOMNode(wrapperDiv);
-      if (node) {
-        nodeKey = node.getKey();
-      }
-    });
-
-    const selectedBlockKeys = selectedBlocks.current?.map((node) =>
-      node.getKey(),
-    );
-    draggingBlockRef.current = selectedBlockKeys?.length
-      ? selectedBlockKeys
-      : [nodeKey];
+      draggingBlockRef.current = [nodeKey];
+      return;
+    }
   }
 
   function onDragEnd(): void {
@@ -500,4 +476,35 @@ export default function DraggableBlockPlugin({
     </>,
     anchorElem,
   );
+}
+
+function getCollapsedMargins(elem: HTMLElement): {
+  marginTop: number;
+  marginBottom: number;
+} {
+  const getMargin = (
+    element: Element | null,
+    margin: "marginTop" | "marginBottom",
+  ): number =>
+    element ? parseFloat(window.getComputedStyle(element)[margin]) : 0;
+
+  const { marginTop, marginBottom } = window.getComputedStyle(elem);
+  const prevElemSiblingMarginBottom = getMargin(
+    elem.previousElementSibling,
+    "marginBottom",
+  );
+  const nextElemSiblingMarginTop = getMargin(
+    elem.nextElementSibling,
+    "marginTop",
+  );
+  const collapsedTopMargin = Math.max(
+    parseFloat(marginTop),
+    prevElemSiblingMarginBottom,
+  );
+  const collapsedBottomMargin = Math.max(
+    parseFloat(marginBottom),
+    nextElemSiblingMarginTop,
+  );
+
+  return { marginBottom: collapsedBottomMargin, marginTop: collapsedTopMargin };
 }
