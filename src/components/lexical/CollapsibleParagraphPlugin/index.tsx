@@ -684,7 +684,7 @@ function insertGeneratedNodes(
 function copy(
   event: KeyboardEvent | ClipboardEvent | null,
   editor: LexicalEditor,
-  customData: BlockContainerNode[] | null,
+  selectedBlocks: BlockContainerNode[] | null,
 ) {
   if (!event) return false;
   event.preventDefault();
@@ -715,8 +715,8 @@ function copy(
     return false;
   }
 
-  if (customData?.length) {
-    const json = customData.map((node) => node.exportJSON());
+  if (selectedBlocks?.length) {
+    const json = selectedBlocks.map((node) => node.exportJSON());
 
     clipboardData.setData(
       "application/x-lexical-editor",
@@ -726,13 +726,22 @@ function copy(
     return true;
   }
 
+  const selectedNodes = selection.extract();
+  const jsonNodes = selectedNodes.map((node) => node.exportJSON());
+
+  const lexicalString = {
+    namespace: editor._config.namespace,
+    nodes: jsonNodes,
+  };
+  if (lexicalString !== null) {
+    clipboardData.setData(
+      "application/x-lexical-editor",
+      JSON.stringify(lexicalString),
+    );
+  }
+
   const htmlString = $getHtmlContent(editor);
   clipboardData.setData("text/html", htmlString);
-
-  const lexicalString = $getLexicalContent(editor);
-  if (lexicalString !== null) {
-    clipboardData.setData("application/x-lexical-editor", lexicalString);
-  }
 
   const plainString = selection.getTextContent();
   clipboardData.setData("text/plain", plainString);
