@@ -18,6 +18,7 @@ import {
 } from "~/components/lexical/CollapsibleParagraphPlugin";
 import { useRef } from "react";
 import { ParagraphNode } from "lexical";
+import { CONTAINER_BLOCK_TYPE } from "~/components/lexical/CollapsibleParagraphPlugin/CPContainer";
 
 const theme = {
   paragraph: "custom-paragraph",
@@ -94,7 +95,7 @@ export default function Notes() {
                 children: [],
                 direction: null,
                 format: "",
-                type: "container",
+                type: CONTAINER_BLOCK_TYPE,
                 version: 1,
                 title: [],
                 childNotes: [],

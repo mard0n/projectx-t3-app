@@ -22,6 +22,8 @@ import { ElementNode } from "lexical";
 
 type SerializedCPChildContainerNode = Spread<object, SerializedElementNode>;
 
+const CHILD_CONTAINER_BLOCK_TYPE = 'block-child-container' as const
+
 /** @noInheritDoc */
 export class CPChildContainerNode extends ElementNode {
   constructor(key?: NodeKey) {
@@ -29,7 +31,7 @@ export class CPChildContainerNode extends ElementNode {
   }
 
   static getType(): string {
-    return "child-container";
+    return CHILD_CONTAINER_BLOCK_TYPE;
   }
 
   static clone(node: CPChildContainerNode): CPChildContainerNode {
@@ -40,7 +42,7 @@ export class CPChildContainerNode extends ElementNode {
 
   createDOM(): HTMLElement {
     const dom = document.createElement("div");
-    dom.classList.add("collapsible-paragraph-child-container");
+    dom.classList.add(CHILD_CONTAINER_BLOCK_TYPE);
     const children = this.getChildren();
     if (!children.length) {
       dom.style.display = "none";
@@ -110,7 +112,7 @@ export class CPChildContainerNode extends ElementNode {
 
     return {
       ...super.exportJSON(),
-      type: "child-container",
+      type: CHILD_CONTAINER_BLOCK_TYPE,
       version: 1,
       children,
     };

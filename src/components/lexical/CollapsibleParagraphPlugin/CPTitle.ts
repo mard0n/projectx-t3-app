@@ -24,6 +24,8 @@ import { ElementNode, $isTextNode } from "lexical";
 
 type SerializedCPTitleNode = Spread<object, SerializedParagraphNode>;
 
+const TEXT_BLOCK_TYPE = "block-text" as const;
+
 /** @noInheritDoc */
 export class CPTitleNode extends ElementNode {
   constructor(key?: NodeKey) {
@@ -31,7 +33,7 @@ export class CPTitleNode extends ElementNode {
   }
 
   static getType(): string {
-    return "title";
+    return TEXT_BLOCK_TYPE;
   }
 
   static clone(node: CPTitleNode): CPTitleNode {
@@ -41,7 +43,7 @@ export class CPTitleNode extends ElementNode {
   // View
   createDOM(): HTMLElement {
     const dom = document.createElement("p");
-    dom.classList.add("collapsible-paragraph-title");
+    dom.classList.add(TEXT_BLOCK_TYPE);
     return dom;
   }
   // prevNode: CPTitleNode,
@@ -101,7 +103,7 @@ export class CPTitleNode extends ElementNode {
 
     return {
       ...super.exportJSON(),
-      type: "title",
+      type: TEXT_BLOCK_TYPE,
       version: 1,
       children,
     };

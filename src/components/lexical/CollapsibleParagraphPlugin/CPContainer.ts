@@ -36,7 +36,7 @@ import { z } from "zod";
 export const serializedCPContainerNodeSchema: z.ZodSchema<SerializedCPContainerNode> =
   z.lazy(() =>
     z.object({
-      type: z.enum(["container"]),
+      type: z.enum([CONTAINER_BLOCK_TYPE]),
       version: z.number(),
       id: z.string(),
       open: z.boolean(),
@@ -72,10 +72,12 @@ export type SerializedCPContainerNode = Spread<
     childNotes: SerializedCPContainerNode[]; // HACK: Using it when deserializing (To Not to use children) when passing down from DB
     parentId: string | null;
     indexWithinParent: number;
-    type: "container";
+    type: typeof CONTAINER_BLOCK_TYPE;
   },
   SerializedElementNode
 >;
+
+export const CONTAINER_BLOCK_TYPE = "block-container" as const;
 
 function convertCPContainerElement(): DOMConversionOutput {
   const node = $createCPContainerNode();
@@ -101,7 +103,7 @@ export class CPContainerNode extends ElementNode {
   }
 
   static getType(): string {
-    return "container";
+    return CONTAINER_BLOCK_TYPE;
   }
 
   static clone({ __open, __key, __id }: CPContainerNode): CPContainerNode {
@@ -111,7 +113,7 @@ export class CPContainerNode extends ElementNode {
   // View
   createDOM(config: EditorConfig, editor: LexicalEditor): HTMLDivElement {
     const dom = document.createElement("div");
-    dom.classList.add("collapsible-paragraph-container");
+    dom.classList.add(CONTAINER_BLOCK_TYPE);
     if (this.__open) {
       dom.classList.add("open");
     } else {
@@ -276,7 +278,7 @@ export class CPContainerNode extends ElementNode {
       parentId: parentCPContainerNodeId ?? null,
       indexWithinParent,
       open: this.getOpen(),
-      type: "container",
+      type: CONTAINER_BLOCK_TYPE,
       id: this.getId(),
       version: 1,
       direction: super.exportJSON().direction ?? "ltr",

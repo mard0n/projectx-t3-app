@@ -13,18 +13,18 @@
 }
 
 /* TOOD: I need to move css related to inside the component */
-#editor > .collapsible-paragraph-title {
+#editor > .block-text {
   margin-left: 22px;
 }
 
-.collapsible-paragraph-title {
+.block-text {
   margin-top: 0;
   margin-bottom: 0;
   padding-left: 20px;
   position: relative;
 }
 
-.collapsible-paragraph-title:before {
+.block-text:before {
   content: "";
   width: 8px;
   height: 8px;
@@ -36,13 +36,13 @@
   border-radius: 100px;
 }
 
-.collapsible-paragraph-container {
+.block-container {
   /* color: #f00; */
   position: relative;
   margin-left: 22px;
 }
 
-.collapsible-paragraph-container.open::before {
+.block-container.open::before {
   content: "";
   display: inline-block;
   /* width: 8px;
@@ -59,7 +59,7 @@
   left: -22px;
   cursor: pointer;
 }
-.collapsible-paragraph-container.closed::before {
+.block-container.closed::before {
   content: "";
   display: inline-block;
   /* width: 8px;
@@ -77,17 +77,17 @@
   cursor: pointer;
 }
 
-.collapsible-paragraph-container.open .collapsible-paragraph-child-container {
+.block-container.open .block-child-container {
   display: block;
 }
-.collapsible-paragraph-container.closed .collapsible-paragraph-child-container {
+.block-container.closed .block-child-container {
   display: none;
 }
 
-.collapsible-paragraph-child-container {
+.block-child-container {
   margin-left: 34px;
 }
-.collapsible-paragraph-child-container > p {
+.block-child-container > p {
   margin-left: 22px;
 }
 
