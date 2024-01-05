@@ -62,6 +62,7 @@ import {
   isSelectionWithinEditor,
   COMMAND_PRIORITY_EDITOR,
   FORMAT_TEXT_COMMAND,
+  DELETE_LINE_COMMAND,
 } from "lexical";
 import { mergeRegister } from "@lexical/utils";
 import DraggableBlockPlugin from "./plugins/DraggableBlockPlugin";
@@ -132,7 +133,10 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
       // To make sure there is always childContainer
       editor.registerNodeTransform(BlockContainerNode, (node) => {
         const children = node.getChildren<LexicalNode>();
-        if (children.length !== 2 || !$isBlockChildContainerNode(children[1])) {
+        const blockChildContainer = children.find((node) =>
+          $isBlockChildContainerNode(node),
+        );
+        if (!blockChildContainer) {
           const newChildContainerNode = $createBlockChildContainerNode();
           node.append(newChildContainerNode);
         }
@@ -189,9 +193,31 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
         }
       }),
       editor.registerCommand<boolean>(
+        DELETE_LINE_COMMAND,
+        (isBackward) => {
+          const selection = $getSelection();
+          if (!$isRangeSelection(selection)) {
+            return false;
+          }
+          const textNode = selection.focus.getNode() as TextNode | ElementNode;
+
+          const blockContainer = $findParentCPContainer(textNode);
+
+          selection.deleteLine(isBackward); // if text is the whole line it deletes the parent as well. which we don't want
+          const blockTextNode = blockContainer?.getChildBlockTextNode();
+
+          if (!blockTextNode) {
+            const newBlockTextNode = $createBlockTextNode();
+            blockContainer?.getChildAtIndex(0)?.insertBefore(newBlockTextNode);
+            newBlockTextNode.selectEnd();
+          }
+          return true;
+        },
+        COMMAND_PRIORITY_NORMAL,
+      ),
+      editor.registerCommand<boolean>(
         DELETE_CHARACTER_COMMAND,
         (isBackward) => {
-
           if (selectedBlocks.current?.length) {
             selectedBlocks.current.forEach((node) => node.remove());
             handleSelectedBlocks(null);
