@@ -16,40 +16,47 @@ const updatedBlocksSchema: z.ZodSchema<UpdatedBlock> = z.object({
   updatedBlock: serializedCPContainerNodeSchema.nullable(),
 });
 
-function buildHierarchy(
-  items: (Note & { childNotes?: Note[] })[],
-  parentId: string | null = null,
-) {
-  const result = [];
+function buildHierarchy(items: (Note & { childNotes?: Note[] })[]) {
+  const tree: (Note & { childNotes: Note[] })[] = [];
+  const mappedArr: Record<string, Note & { childNotes: Note[] }> = {};
 
   for (const item of items) {
-    if (item.parentId === parentId) {
-      const children = buildHierarchy(items, item.id);
-      if (children.length) {
-        item.childNotes = children;
-      }
-      result.push(item);
+    const id = item.id;
+    if (!mappedArr.hasOwnProperty(id)) {
+      mappedArr[id] = { ...item, childNotes: [] };
     }
   }
 
-  return result.sort((a, b) => a.indexWithinParent! - b.indexWithinParent!);
+  // Loop over hash table
+  for (const id in mappedArr) {
+    if (mappedArr.hasOwnProperty(id)) {
+      const mappedElem = mappedArr[id]!;
+
+      if (mappedElem?.parentId) {
+        const parentId = mappedElem?.parentId;
+        const parentNote = mappedArr[parentId];
+        if (parentNote) {
+          // TODO: Need to find a better way of sorting
+          const childNotes = parentNote.childNotes;
+          childNotes.push(mappedElem);
+          const sortedChildNotes = childNotes.sort(
+            (a, b) => a.indexWithinParent! - b.indexWithinParent!,
+          );
+          parentNote.childNotes = sortedChildNotes;
+        }
+      } else {
+        tree.push(mappedElem);
+      }
+    }
+  }
+
+  return tree.sort((a, b) => a.indexWithinParent! - b.indexWithinParent!); // TODO: Better way of sorting
 }
 
 export const noteRouter = createTRPCRouter({
   getAll: publicProcedure.query(async ({ ctx }) => {
-    // const result1 = await ctx.db.query.notes.findMany({
-    //   where: isNull(notes.parentId),
-    //   with: {
-    //     childNotes: true,
-    //   },
-    //   orderBy: [asc(notes.indexWithinParent)],
-    // });
-
     const result = await ctx.db.query.notes.findMany();
-    console.log("result", result);
-    const hierarchicalObj = buildHierarchy(result);
-    console.log("hierarchicalObj", hierarchicalObj);
-    return hierarchicalObj;
+    return buildHierarchy(result);
   }),
   saveChanges: publicProcedure
     .input(updatedBlocksSchema.array())
@@ -76,7 +83,6 @@ export const noteRouter = createTRPCRouter({
           case "updated":
             if (note.updatedBlock) {
               const { childNotes, children, ...rest } = note.updatedBlock;
-              console.log("rest", rest);
 
               const isDataExist = await ctx.db.query.notes.findFirst({
                 where: eq(notes.id, note.updatedBlockId),
