@@ -41,7 +41,7 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
       !editor.hasNodes([BlockContainerNode, BlockTextNode, BlockChildContainerNode])
     ) {
       throw new Error(
-        "CollapsibleParagraphPlugin: BlockContainerNode, BlockTextNode, or BlockChildContainerNode not registered on editor",
+        "HierarchicalBlockPlugin: BlockContainerNode, BlockTextNode, or BlockChildContainerNode not registered on editor",
       );
     }
 

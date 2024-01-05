@@ -73,12 +73,12 @@ import {
 import { SelectBlocksPlugin } from "./plugins/SelectBlocksPlugin";
 import { selectOnlyTopNotes } from "./utils";
 
-interface CollapsibleParagraphPluginProps {
+interface HierarchicalBlockPluginProps {
   anchorElem: HTMLElement;
   handleUpdates: (updates: Updates) => void;
 }
 
-const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
+const HierarchicalBlockPlugin: FC<HierarchicalBlockPluginProps> = ({
   anchorElem,
   handleUpdates,
 }) => {
@@ -98,7 +98,7 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
       ])
     ) {
       throw new Error(
-        "CollapsibleParagraphPlugin: BlockContainerNode, BlockTextNode, or BlockChildContainerNode not registered on editor",
+        "HierarchicalBlockPlugin: BlockContainerNode, BlockTextNode, or BlockChildContainerNode not registered on editor",
       );
     }
 
@@ -749,7 +749,7 @@ function copy(
   return true;
 }
 
-export { CollapsibleParagraphPlugin };
+export { HierarchicalBlockPlugin };
 export { $createBlockContainerNode, $isBlockContainerNode, BlockContainerNode };
 export { $createBlockTextNode, $isBlockTextNode, BlockTextNode };
 export {

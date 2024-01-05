@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import type { UpdatedBlock } from "~/components/lexical/CollapsibleParagraphPlugin/plugins/SendingUpdatesPlugin";
-import { serializedBlockContainerNodeSchema } from "~/components/lexical/CollapsibleParagraphPlugin/BlockContainer";
+import type { UpdatedBlock } from "~/components/lexical/HierarchicalBlockPlugin/plugins/SendingUpdatesPlugin";
+import { serializedBlockContainerNodeSchema } from "~/components/lexical/HierarchicalBlockPlugin/BlockContainer";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import type { Note } from "~/server/db/schema";
 import { notes } from "~/server/db/schema";

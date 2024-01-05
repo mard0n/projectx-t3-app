@@ -7,18 +7,18 @@ import LexicalErrorBoundary from "@lexical/react/LexicalErrorBoundary";
 import type {
   UpdatedBlock,
   Updates,
-} from "~/components/lexical/CollapsibleParagraphPlugin/plugins/SendingUpdatesPlugin";
+} from "~/components/lexical/HierarchicalBlockPlugin/plugins/SendingUpdatesPlugin";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import TreeViewPlugin from "~/components/lexical/TreeViewPlugin";
 import {
   BlockChildContainerNode,
   BlockContainerNode,
   BlockTextNode,
-  CollapsibleParagraphPlugin,
-} from "~/components/lexical/CollapsibleParagraphPlugin";
+  HierarchicalBlockPlugin,
+} from "~/components/lexical/HierarchicalBlockPlugin";
 import { useRef } from "react";
 import { ParagraphNode } from "lexical";
-import { CONTAINER_BLOCK_TYPE } from "~/components/lexical/CollapsibleParagraphPlugin/BlockContainer";
+import { CONTAINER_BLOCK_TYPE } from "~/components/lexical/HierarchicalBlockPlugin/BlockContainer";
 
 const theme = {
   paragraph: "custom-paragraph",
@@ -128,7 +128,7 @@ export default function Notes() {
             placeholder={<div>Enter some text...</div>}
             ErrorBoundary={LexicalErrorBoundary}
           />
-          <CollapsibleParagraphPlugin
+          <HierarchicalBlockPlugin
             handleUpdates={handleUpdates}
             anchorElem={anchorElemRef.current!}
           />
