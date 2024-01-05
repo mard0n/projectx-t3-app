@@ -1,18 +1,10 @@
-import React, {
-  type FC,
-  type SetStateAction,
-  type Dispatch,
-  useEffect,
-  useRef,
-  MutableRefObject,
-} from "react";
+import React, { type FC, useEffect, type MutableRefObject } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { $findMatchingParent, mergeRegister } from "@lexical/utils";
+import { mergeRegister } from "@lexical/utils";
 import {
   CPTitleNode,
   CPChildContainerNode,
   CPContainerNode,
-  is_PARAGRAGRAPH,
 } from "..";
 import {
   $getSelection,
@@ -21,6 +13,7 @@ import {
   SELECTION_CHANGE_COMMAND,
 } from "lexical";
 import { selectOnlyTopNotes } from "../utils";
+import { $findParentCPContainer } from "../CPContainer";
 
 interface SelectBlocksPluginProps {
   selectedBlocks: MutableRefObject<CPContainerNode[] | null>;
@@ -75,11 +68,10 @@ const SelectBlocksPlugin: FC<SelectBlocksPluginProps> = ({
 
           const cPContainers = [
             ...new Set(
-              selectedNodes
-                .map((node) => {
-                  return $findMatchingParent(node, is_PARAGRAGRAPH);
-                })
-                .filter(Boolean) as CPContainerNode[],
+              selectedNodes.flatMap((node) => {
+                const result = $findParentCPContainer(node);
+                return !!result ? [result] : [];
+              }),
             ),
           ];
 

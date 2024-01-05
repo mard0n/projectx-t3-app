@@ -8,6 +8,7 @@ import {
 } from "./CPChildContainer";
 import {
   $createCPContainerNode,
+  $findParentCPContainer,
   $isCPContainerNode,
   CPContainerNode,
 } from "./CPContainer";
@@ -58,7 +59,7 @@ import {
   COMMAND_PRIORITY_EDITOR,
   FORMAT_TEXT_COMMAND,
 } from "lexical";
-import { $findMatchingParent, mergeRegister } from "@lexical/utils";
+import { mergeRegister } from "@lexical/utils";
 import DraggableBlockPlugin from "./plugins/DraggableBlockPlugin";
 import {
   SendingUpdatesPlugin,
@@ -66,9 +67,6 @@ import {
 } from "./plugins/SendingUpdatesPlugin";
 import { SelectBlocksPlugin } from "./plugins/SelectBlocksPlugin";
 import { selectOnlyTopNotes } from "./utils";
-
-export const is_PARAGRAGRAPH = (node: LexicalNode): node is CPContainerNode =>
-  $isCPContainerNode(node);
 
 interface CollapsibleParagraphPluginProps {
   anchorElem: HTMLElement;
@@ -189,14 +187,15 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
           }
 
           if (selection.isCollapsed()) {
+            // To prevent deleting when CPContainer is closed and cursor is at the end
             const currentNode = selection.focus.getNode() as
               | ElementNode
               | TextNode;
-            const titleNode = $findMatchingParent(
+
+            const containerNode = $findParentCPContainer(
               currentNode,
-              (node): node is CPTitleNode => $isCPTitleNode(node),
             );
-            const containerNode = titleNode?.getParent<CPContainerNode>();
+            const titleNode = containerNode?.getCPTitleNode();
 
             const offset = selection.anchor.offset;
             const node = selection.anchor.getNode() as ElementNode | TextNode;
@@ -335,17 +334,12 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
           const nodes = selection.getNodes();
           const paragraphs = [
             ...new Set(
-              nodes
-                .map((node) => {
-                  const ancestor = $findMatchingParent(
-                    node,
-                    is_PARAGRAGRAPH,
-                  ) as CPContainerNode | null;
-                  return ancestor;
-                })
-                .filter((node) => !!node),
+              nodes.flatMap((node) => {
+                const result = $findParentCPContainer(node);
+                return !!result ? [result] : [];
+              }),
             ),
-          ] as CPContainerNode[];
+          ];
 
           const onlyTopLevelNodes = selectOnlyTopNotes(paragraphs);
 
@@ -353,7 +347,7 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
           for (const node of onlyTopLevelNodes) {
             const prevNode = node.getPreviousSibling();
 
-            if (!prevNode || !is_PARAGRAGRAPH(prevNode)) continue;
+            if (!prevNode || !$isCPContainerNode(prevNode)) continue;
 
             if (
               !onlyTopLevelNodes.some(
@@ -393,17 +387,12 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
           // Whatever nodes you select, their parents will connect and will have common parent and siblings
           const paragraphs = [
             ...new Set(
-              nodes
-                .map((node) => {
-                  const ancestor = $findMatchingParent(
-                    node,
-                    is_PARAGRAGRAPH,
-                  ) as CPContainerNode | null;
-                  return ancestor;
-                })
-                .filter((node) => !!node),
+              nodes.flatMap((node) => {
+                const result = $findParentCPContainer(node);
+                return !!result ? [result] : [];
+              }),
             ),
-          ] as CPContainerNode[];
+          ];
 
           let onlyTopLevelNodes = selectOnlyTopNotes(paragraphs);
 
@@ -596,18 +585,10 @@ function insertGeneratedNodes(
   nodes: COPIABLE_NODES[],
   selection: RangeSelection | GridSelection,
 ): void {
-  const anchorContainer = $findMatchingParent(
-    selection.anchor.getNode() as LexicalNode,
-    is_PARAGRAGRAPH,
-  )! as CPContainerNode;
+  const currentNode = selection.anchor.getNode() as TextNode | ElementNode;
+  const anchorContainer = $findParentCPContainer(currentNode);
 
-  // TO set selection at the end
-  const last = nodes[nodes.length - 1]!;
-  const nodeToSelect = $isElementNode(last)
-    ? last.getLastDescendant() ?? last
-    : last;
-
-  const nodeToSelectSize = nodeToSelect.getTextContentSize();
+  if (!anchorContainer) return;
 
   let anchorNextSibling = null;
   // Wrap text and inline nodes in paragraph nodes so we have all blocks at the top-level
@@ -636,6 +617,14 @@ function insertGeneratedNodes(
       anchorContainer.getCPChildContainerNode()?.append(...node.getChildren());
     }
   }
+
+  // TO set selection at the end
+  const last = nodes[nodes.length - 1]!;
+  const nodeToSelect = $isElementNode(last)
+    ? last.getLastDescendant() ?? last
+    : last;
+
+  const nodeToSelectSize = nodeToSelect.getTextContentSize();
 
   if ($isElementNode(nodeToSelect)) {
     nodeToSelect.select(nodeToSelectSize, nodeToSelectSize);

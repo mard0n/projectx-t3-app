@@ -6,6 +6,7 @@
  *
  */
 
+import { $findMatchingParent } from "@lexical/utils";
 import {
   $createCPChildContainerNode,
   $createCPTitleNode,
@@ -368,4 +369,13 @@ export function $isCPContainerNode(
   node: LexicalNode | null | undefined,
 ): node is CPContainerNode {
   return node instanceof CPContainerNode;
+}
+
+export function $findParentCPContainer(node: LexicalNode) {
+  return $findMatchingParent(
+    node,
+    (node: LexicalNode): node is CPContainerNode => {
+      return $isCPContainerNode(node);
+    },
+  ) as CPContainerNode | null;
 }

@@ -3,12 +3,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { mergeRegister } from "@lexical/utils";
 import type { NodeMutation } from "lexical";
 import { $getNodeByKey, TextNode, LineBreakNode } from "lexical";
-import {
-  CPTitleNode,
-  CPChildContainerNode,
-  is_PARAGRAGRAPH,
-  CPContainerNode,
-} from "..";
+import { CPTitleNode, CPChildContainerNode, CPContainerNode } from "..";
 import {
   $findParentCPContainer,
   type SerializedCPContainerNode,

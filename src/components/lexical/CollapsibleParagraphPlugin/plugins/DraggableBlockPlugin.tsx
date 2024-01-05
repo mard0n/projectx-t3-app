@@ -18,8 +18,7 @@ import type { MutableRefObject, DragEvent as ReactDragEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import type { CPContainerNode } from "../CPContainer";
-import { is_PARAGRAGRAPH } from "..";
+import { $isCPContainerNode, type CPContainerNode } from "../CPContainer";
 
 function getCollapsedMargins(elem: HTMLElement): {
   marginTop: number;
@@ -65,7 +64,9 @@ function getBlockElement(
   const allCPContainerNodes = editor.getEditorState().read(() => {
     const result: LexicalNode[] = [];
 
-    const children = $getRoot().getChildren().filter(is_PARAGRAGRAPH);
+    const children = $getRoot()
+      .getChildren()
+      .filter((node): node is CPContainerNode => $isCPContainerNode(node));
     while (children.length) {
       const child = children[0];
       if (!child) continue;
