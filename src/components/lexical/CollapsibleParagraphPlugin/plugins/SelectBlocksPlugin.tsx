@@ -41,13 +41,7 @@ const SelectBlocksPlugin: FC<SelectBlocksPluginProps> = ({
         () => {
           const selection = $getSelection();
 
-          selectedBlocks.current?.forEach((node) => {
-            const elem = editor.getElementByKey(node.getKey());
-            if (elem) {
-              return elem.classList.remove("selected");
-            }
-            return;
-          });
+          selectedBlocks.current?.forEach((node) => node.setSelected(false));
 
           updateSelectedBlocks(null);
 
@@ -77,13 +71,9 @@ const SelectBlocksPlugin: FC<SelectBlocksPluginProps> = ({
 
           const onlyTopLevelNodes = selectOnlyTopNotes(cPContainers);
 
-          const selectedElement = onlyTopLevelNodes
-            .map((node) => editor.getElementByKey(node.getKey()))
-            .filter(Boolean) as HTMLElement[];
-
-          selectedElement.forEach((elem) => elem?.classList.add("selected"));
-
           updateSelectedBlocks(onlyTopLevelNodes);
+
+          onlyTopLevelNodes.forEach((node) => node.setSelected(true));
 
           return true;
         },

@@ -95,29 +95,40 @@ function convertCPContainerElement(): DOMConversionOutput {
 export class BlockContainerNode extends ElementNode {
   __open: boolean;
   __id: string;
+  __selected: boolean;
 
-  constructor(open: boolean, key?: NodeKey, id?: string) {
-    super(key);
-    this.__open = open;
-    this.__id = id ?? crypto.randomUUID();
+  constructor(props: {__open: boolean, __selected?: boolean, __key?: NodeKey,  __id?: string}) {
+    const {__open, __key, __id, __selected} = props;
+    super(__key); 
+    this.__open = __open ?? true
+    this.__id = __id ?? crypto.randomUUID();
+    this.__selected = __selected ?? false
   }
 
   static getType(): string {
     return CONTAINER_BLOCK_TYPE;
   }
 
-  static clone({ __open, __key, __id }: BlockContainerNode): BlockContainerNode {
-    return new BlockContainerNode(__open, __key, __id);
+  static clone({ __open, __key, __id, __selected }: BlockContainerNode): BlockContainerNode {
+    return new BlockContainerNode({__open, __key, __id, __selected});
   }
 
   // View
   createDOM(config: EditorConfig, editor: LexicalEditor): HTMLDivElement {
     const dom = document.createElement("div");
     dom.classList.add(CONTAINER_BLOCK_TYPE);
+
     if (this.__open) {
       dom.classList.add("open");
     } else {
       dom.classList.add("closed");
+    }
+
+
+    if (this.__selected) {
+      dom.classList.add("selected");
+    } else {
+      dom.classList.remove("selected");
     }
 
     const hasPseudoElemClicked = (e: MouseEvent): boolean => {
@@ -161,9 +172,10 @@ export class BlockContainerNode extends ElementNode {
           this.toggleOpen();
         });
       }
-    });
+    }); // TODO: Make this event more efficient. RN all dom events have own eventhandler
     return dom;
   }
+
   updateDOM(prevNode: BlockContainerNode, dom: HTMLDivElement): boolean {
     if (prevNode.__open !== this.__open) {
       dom.classList.remove("open");
@@ -172,6 +184,14 @@ export class BlockContainerNode extends ElementNode {
         dom.classList.add("open");
       } else {
         dom.classList.add("closed");
+      }
+    }
+    
+    if (prevNode.__selected !== this.__selected) {
+      if (this.__selected) {
+        dom.classList.add("selected");
+      } else {
+        dom.classList.remove("selected");
       }
     }
     return false;
@@ -337,9 +357,17 @@ export class BlockContainerNode extends ElementNode {
   setOpen(open: boolean) {
     this.getWritable().__open = open;
   }
-
+  
   toggleOpen(): void {
     this.setOpen(!this.getOpen());
+  }
+
+  getSelected(): boolean {
+    return this.getLatest().__selected;
+  }
+
+  setSelected(selected: boolean) {
+    this.getWritable().__selected = selected;
   }
 }
 
@@ -360,10 +388,10 @@ export function $createBlockContainerNode({
   if (prepopulateChildren) {
     const title = $createBlockTextNode(titleNode);
     const childContainer = $createBlockChildContainerNode(childContainerNodes);
-    const container = new BlockContainerNode(open);
+    const container = new BlockContainerNode({__open: open});
     return container.append(title, childContainer);
   } else {
-    const container = new BlockContainerNode(open);
+    const container = new BlockContainerNode({__open: open});
     return container;
   }
 }
