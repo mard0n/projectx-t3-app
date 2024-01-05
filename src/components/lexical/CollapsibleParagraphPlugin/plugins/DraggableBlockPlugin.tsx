@@ -18,7 +18,7 @@ import type { MutableRefObject, DragEvent as ReactDragEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { $isCPContainerNode, type CPContainerNode } from "../CPContainer";
+import { $isBlockContainerNode, type BlockContainerNode } from "../BlockContainer";
 
 function getCollapsedMargins(elem: HTMLElement): {
   marginTop: number;
@@ -61,19 +61,19 @@ function getBlockElement(
   const topLevelNodeKeys = editor
     .getEditorState()
     .read(() => $getRoot().getChildrenKeys());
-  const allCPContainerNodes = editor.getEditorState().read(() => {
+  const allBlockContainerNodes = editor.getEditorState().read(() => {
     const result: LexicalNode[] = [];
 
     const children = $getRoot()
       .getChildren()
-      .filter((node): node is CPContainerNode => $isCPContainerNode(node));
+      .filter((node): node is BlockContainerNode => $isBlockContainerNode(node));
     while (children.length) {
       const child = children[0];
       if (!child) continue;
       result.push(child);
       const cPContainerChildren = child
-        .getCPChildContainerNode()
-        ?.getChildren<CPContainerNode>();
+        .getChildBlockChildContainerNode()
+        ?.getChildren<BlockContainerNode>();
 
       if (cPContainerChildren?.length) {
         children.push(...cPContainerChildren);
@@ -114,13 +114,13 @@ function getBlockElement(
     }
 
     let index = 0;
-    // let index = getCurrentIndex(allCPContainerNodes.length);
+    // let index = getCurrentIndex(allBlockContainerNodes.length);
     // let direction = Indeterminate;
 
     const paragraphsContainingPoint: HTMLElement[] = [];
 
-    while (index >= 0 && index < allCPContainerNodes.length) {
-      const paragraph = allCPContainerNodes[index];
+    while (index >= 0 && index < allBlockContainerNodes.length) {
+      const paragraph = allBlockContainerNodes[index];
       const elem = paragraph
         ? editor.getElementByKey(paragraph.getKey())
         : null;
@@ -286,7 +286,7 @@ export default function DraggableBlockPlugin({
   selectedBlocks,
 }: {
   anchorElem: HTMLElement;
-  selectedBlocks: MutableRefObject<CPContainerNode[] | null>;
+  selectedBlocks: MutableRefObject<BlockContainerNode[] | null>;
 }): JSX.Element {
   const [editor] = useLexicalComposerContext();
   // console.log("anchorElem", anchorElem);

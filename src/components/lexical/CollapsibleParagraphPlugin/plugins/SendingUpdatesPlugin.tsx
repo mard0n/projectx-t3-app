@@ -3,17 +3,17 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { mergeRegister } from "@lexical/utils";
 import type { NodeMutation } from "lexical";
 import { $getNodeByKey, TextNode, LineBreakNode } from "lexical";
-import { CPTitleNode, CPChildContainerNode, CPContainerNode } from "..";
+import { BlockTextNode, BlockChildContainerNode, BlockContainerNode } from "..";
 import {
   $findParentCPContainer,
-  type SerializedCPContainerNode,
-} from "../CPContainer";
+  type SerializedBlockContainerNode,
+} from "../BlockContainer";
 import { throttle } from "../utils";
 
 export type UpdatedBlock = {
   updateType: NodeMutation;
   updatedBlockId: string;
-  updatedBlock: SerializedCPContainerNode | null;
+  updatedBlock: SerializedBlockContainerNode | null;
 };
 
 export type Updates = Map<string, UpdatedBlock>;
@@ -38,16 +38,16 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
 
   useEffect(() => {
     if (
-      !editor.hasNodes([CPContainerNode, CPTitleNode, CPChildContainerNode])
+      !editor.hasNodes([BlockContainerNode, BlockTextNode, BlockChildContainerNode])
     ) {
       throw new Error(
-        "CollapsibleParagraphPlugin: CPContainerNode, CPTitleNode, or CPChildContainerNode not registered on editor",
+        "CollapsibleParagraphPlugin: BlockContainerNode, BlockTextNode, or BlockChildContainerNode not registered on editor",
       );
     }
 
     return mergeRegister(
       // To send updates
-      ...[TextNode, LineBreakNode, CPTitleNode, CPChildContainerNode].map(
+      ...[TextNode, LineBreakNode, BlockTextNode, BlockChildContainerNode].map(
         (Node) =>
           editor.registerMutationListener(
             Node,
@@ -67,7 +67,7 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
                       if (!parentKey) return;
                       editor.getEditorState().read(() => {
                         const updatedParentNode =
-                          $getNodeByKey<CPContainerNode>(parentKey);
+                          $getNodeByKey<BlockContainerNode>(parentKey);
 
                         if (updatedParentNode) {
                           updatesRef.current.set(
@@ -104,15 +104,15 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
           ),
       ),
       editor.registerMutationListener(
-        CPContainerNode,
+        BlockContainerNode,
         (mutations, { prevEditorState }) => {
           editor.getEditorState().read(() => {
             for (const [nodeKey, mutation] of mutations) {
-              const node = $getNodeByKey<CPContainerNode>(nodeKey);
+              const node = $getNodeByKey<BlockContainerNode>(nodeKey);
 
               if (!node || mutation === "destroyed") {
                 prevEditorState.read(() => {
-                  const prevNode = $getNodeByKey<CPContainerNode>(nodeKey);
+                  const prevNode = $getNodeByKey<BlockContainerNode>(nodeKey);
                   if (!prevNode) return;
 
                   updatesRef.current.set(`${nodeKey}:destroyed`, {

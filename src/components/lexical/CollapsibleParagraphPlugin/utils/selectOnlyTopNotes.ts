@@ -1,13 +1,13 @@
 import { type RootNode } from "lexical";
-import { type CPChildContainerNode, type CPContainerNode } from "..";
+import { type BlockChildContainerNode, type BlockContainerNode } from "..";
 
-export const selectOnlyTopNotes = (nodes: CPContainerNode[]) => {
+export const selectOnlyTopNotes = (nodes: BlockContainerNode[]) => {
   const commonAncesstor = nodes.reduce<
-    CPContainerNode | CPChildContainerNode | RootNode | undefined | null
+    BlockContainerNode | BlockChildContainerNode | RootNode | undefined | null
   >((acc, current) => {
     if (!acc) return current;
     if (acc === current) {
-      return acc.getParent<CPChildContainerNode | RootNode>();
+      return acc.getParent<BlockChildContainerNode | RootNode>();
     }
 
     return acc.getCommonAncestor(current);

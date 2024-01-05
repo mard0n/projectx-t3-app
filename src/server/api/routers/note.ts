@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import type { UpdatedBlock } from "~/components/lexical/CollapsibleParagraphPlugin/plugins/SendingUpdatesPlugin";
-import { serializedCPContainerNodeSchema } from "~/components/lexical/CollapsibleParagraphPlugin/CPContainer";
+import { serializedBlockContainerNodeSchema } from "~/components/lexical/CollapsibleParagraphPlugin/BlockContainer";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import type { Note } from "~/server/db/schema";
 import { notes } from "~/server/db/schema";
@@ -13,7 +13,7 @@ const updatedBlocksSchema: z.ZodSchema<UpdatedBlock> = z.object({
     z.literal("destroyed"),
   ]),
   updatedBlockId: z.string().uuid(),
-  updatedBlock: serializedCPContainerNodeSchema.nullable(),
+  updatedBlock: serializedBlockContainerNodeSchema.nullable(),
 });
 
 function buildHierarchy(items: (Note & { childNotes?: Note[] })[]) {

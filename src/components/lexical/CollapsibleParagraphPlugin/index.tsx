@@ -2,17 +2,21 @@
 import { useEffect, useRef, useState } from "react";
 
 import {
-  $createCPChildContainerNode,
-  $isCPChildContainerNode,
-  CPChildContainerNode,
-} from "./CPChildContainer";
+  $createBlockChildContainerNode,
+  $isBlockChildContainerNode,
+  BlockChildContainerNode,
+} from "./BlockChildContainer";
 import {
-  $createCPContainerNode,
+  $createBlockContainerNode,
   $findParentCPContainer,
-  $isCPContainerNode,
-  CPContainerNode,
-} from "./CPContainer";
-import { $createCPTitleNode, $isCPTitleNode, CPTitleNode } from "./CPTitle";
+  $isBlockContainerNode,
+  BlockContainerNode,
+} from "./BlockContainer";
+import {
+  $createBlockTextNode,
+  $isBlockTextNode,
+  BlockTextNode,
+} from "./BlockText";
 import type {
   BaseSelection,
   ElementNode,
@@ -78,34 +82,38 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
   handleUpdates,
 }) => {
   const [editor] = useLexicalComposerContext();
-  const selectedBlocks = useRef<CPContainerNode[] | null>(null);
+  const selectedBlocks = useRef<BlockContainerNode[] | null>(null);
 
-  const handleSelectedBlocks = (blocks: CPContainerNode[] | null) => {
+  const handleSelectedBlocks = (blocks: BlockContainerNode[] | null) => {
     selectedBlocks.current = blocks;
   };
 
   useEffect(() => {
     if (
-      !editor.hasNodes([CPContainerNode, CPTitleNode, CPChildContainerNode])
+      !editor.hasNodes([
+        BlockContainerNode,
+        BlockTextNode,
+        BlockChildContainerNode,
+      ])
     ) {
       throw new Error(
-        "CollapsibleParagraphPlugin: CPContainerNode, CPTitleNode, or CPChildContainerNode not registered on editor",
+        "CollapsibleParagraphPlugin: BlockContainerNode, BlockTextNode, or BlockChildContainerNode not registered on editor",
       );
     }
 
     return mergeRegister(
       // To make sure all the Editor is never empty
-      editor.registerMutationListener(CPContainerNode, () => {
+      editor.registerMutationListener(BlockContainerNode, () => {
         editor.update(() => {
           if ($getRoot().isEmpty()) {
-            const collapsible = $createCPContainerNode();
+            const collapsible = $createBlockContainerNode();
             $getRoot().append(collapsible);
             const firstDecendent = collapsible.getFirstDescendant();
             $isElementNode(firstDecendent) && firstDecendent.select();
           }
         });
       }),
-      // To make sure all ParagraphNodes are replaced by CPContainerNode
+      // To make sure all ParagraphNodes are replaced by BlockContainerNode
       editor.registerMutationListener(ParagraphNode, (mutations) => {
         editor.update(() => {
           for (const [nodeKey, mutation] of mutations) {
@@ -113,7 +121,7 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
               const paragraph = $getNodeByKey<ParagraphNode>(nodeKey);
               if (!paragraph) return;
               const textContent = paragraph.getChildren();
-              const collapsible = $createCPContainerNode({
+              const collapsible = $createBlockContainerNode({
                 titleNode: textContent,
               });
               paragraph.insertBefore(collapsible);
@@ -122,30 +130,31 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
         });
       }),
       // To make sure there is always childContainer
-      editor.registerNodeTransform(CPContainerNode, (node) => {
+      editor.registerNodeTransform(BlockContainerNode, (node) => {
         const children = node.getChildren<LexicalNode>();
-        if (children.length !== 2 || !$isCPChildContainerNode(children[1])) {
-          const newChildContainerNode = $createCPChildContainerNode();
+        if (children.length !== 2 || !$isBlockChildContainerNode(children[1])) {
+          const newChildContainerNode = $createBlockChildContainerNode();
           node.append(newChildContainerNode);
         }
       }),
       // When title is deleted, upwrap the childContent into a sibling or parent or root
-      editor.registerNodeTransform(CPContainerNode, (node) => {
+      editor.registerNodeTransform(BlockContainerNode, (node) => {
         const containerNode = node;
-        const childContainerNode = containerNode.getCPChildContainerNode();
-        const titleNode = containerNode.getCPTitleNode();
+        const childContainerNode =
+          containerNode.getChildBlockChildContainerNode();
+        const titleNode = containerNode.getChildBlockTextNode();
 
         if (!childContainerNode) return;
 
         if (!titleNode) {
           const childContainerChildren =
-            childContainerNode.getChildren<CPContainerNode>();
+            childContainerNode.getChildren<BlockContainerNode>();
           const prevSiblingNode =
-            containerNode.getPreviousSibling<CPContainerNode>();
+            containerNode.getPreviousSibling<BlockContainerNode>();
 
-          if (prevSiblingNode && $isCPContainerNode(prevSiblingNode)) {
+          if (prevSiblingNode && $isBlockContainerNode(prevSiblingNode)) {
             const prevSiblingChildContainerNode =
-              prevSiblingNode.getCPChildContainerNode();
+              prevSiblingNode.getChildBlockChildContainerNode();
 
             // HACK: somehow when a sibling title of a node is getting deleted, the empty childContainer of the node is also getting deleted
             if (prevSiblingChildContainerNode) {
@@ -154,7 +163,9 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
               return;
             } else {
               const newChildContainerNode =
-                $createCPChildContainerNode().append(...childContainerChildren);
+                $createBlockChildContainerNode().append(
+                  ...childContainerChildren,
+                );
               prevSiblingNode.append(newChildContainerNode);
               containerNode.remove();
               return;
@@ -192,10 +203,8 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
               | ElementNode
               | TextNode;
 
-            const containerNode = $findParentCPContainer(
-              currentNode,
-            );
-            const titleNode = containerNode?.getCPTitleNode();
+            const containerNode = $findParentCPContainer(currentNode);
+            const titleNode = containerNode?.getChildBlockTextNode();
 
             const offset = selection.anchor.offset;
             const node = selection.anchor.getNode() as ElementNode | TextNode;
@@ -204,8 +213,8 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
               $isTextNode(node) && node.getTextContentSize() === offset;
 
             if (
-              $isCPTitleNode(titleNode) &&
-              $isCPContainerNode(containerNode) &&
+              $isBlockTextNode(titleNode) &&
+              $isBlockContainerNode(containerNode) &&
               !containerNode.getOpen() &&
               !isBackward &&
               isSelectionAtTheEndOfText
@@ -289,12 +298,12 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
 
           const insertedNode = selection.insertParagraph();
 
-          if (insertedNode && $isCPTitleNode(insertedNode)) {
+          if (insertedNode && $isBlockTextNode(insertedNode)) {
             const containerNode = insertedNode.getParent();
             if (!containerNode) return false;
 
             const insertedNodeContent = insertedNode.getChildren();
-            const newParagraph = $createCPContainerNode({
+            const newParagraph = $createBlockContainerNode({
               titleNode: insertedNodeContent,
             });
 
@@ -305,7 +314,8 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
               return true;
             }
 
-            const childContainer = containerNode.getCPChildContainerNode();
+            const childContainer =
+              containerNode.getChildBlockChildContainerNode();
             if (childContainer?.getChildren().length) {
               const firstChild = childContainer.getChildren()[0];
               firstChild?.insertBefore(newParagraph);
@@ -343,11 +353,11 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
 
           const onlyTopLevelNodes = selectOnlyTopNotes(paragraphs);
 
-          let commonPrevSibling: CPContainerNode | undefined;
+          let commonPrevSibling: BlockContainerNode | undefined;
           for (const node of onlyTopLevelNodes) {
             const prevNode = node.getPreviousSibling();
 
-            if (!prevNode || !$isCPContainerNode(prevNode)) continue;
+            if (!prevNode || !$isBlockContainerNode(prevNode)) continue;
 
             if (
               !onlyTopLevelNodes.some(
@@ -360,9 +370,10 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
 
           if (!commonPrevSibling) return false;
 
-          const childContainer = commonPrevSibling.getCPChildContainerNode();
+          const childContainer =
+            commonPrevSibling.getChildBlockChildContainerNode();
           if (!childContainer) {
-            const childContainerNode = $createCPChildContainerNode().append(
+            const childContainerNode = $createBlockChildContainerNode().append(
               ...onlyTopLevelNodes,
             );
             commonPrevSibling.append(childContainerNode);
@@ -523,7 +534,7 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
               }
               for (const part of parts) {
                 if (part === "\n" || part === "\r\n") {
-                  const newContainer = $createCPContainerNode();
+                  const newContainer = $createBlockContainerNode();
                   selection.insertNodes([newContainer]);
                   // selection.insertParagraph()
                 } else if (part === "\t") {
@@ -576,9 +587,9 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
 type COPIABLE_NODES =
   | TextNode
   | LineBreakNode
-  | CPContainerNode
-  | CPTitleNode
-  | CPChildContainerNode;
+  | BlockContainerNode
+  | BlockTextNode
+  | BlockChildContainerNode;
 
 function insertGeneratedNodes(
   editor: LexicalEditor,
@@ -594,8 +605,8 @@ function insertGeneratedNodes(
   // Wrap text and inline nodes in paragraph nodes so we have all blocks at the top-level
   for (const node of nodes) {
     if ($isLineBreakNode(node) || $isTextNode(node)) {
-      anchorContainer.getCPTitleNode()?.append(node);
-    } else if ($isCPContainerNode(node)) {
+      anchorContainer.getChildBlockTextNode()?.append(node);
+    } else if ($isBlockContainerNode(node)) {
       if (!anchorNextSibling) {
         const isTextEmpty = anchorContainer
           .getChildAtIndex(0)
@@ -611,10 +622,12 @@ function insertGeneratedNodes(
         anchorNextSibling.insertAfter(node);
       }
       anchorNextSibling = node;
-    } else if ($isCPTitleNode(node)) {
-      anchorContainer.getCPTitleNode()?.append(...node.getChildren());
-    } else if ($isCPChildContainerNode(node)) {
-      anchorContainer.getCPChildContainerNode()?.append(...node.getChildren());
+    } else if ($isBlockTextNode(node)) {
+      anchorContainer.getChildBlockTextNode()?.append(...node.getChildren());
+    } else if ($isBlockChildContainerNode(node)) {
+      anchorContainer
+        .getChildBlockChildContainerNode()
+        ?.append(...node.getChildren());
     }
   }
 
@@ -638,7 +651,7 @@ function insertGeneratedNodes(
 function copy(
   event: KeyboardEvent | ClipboardEvent | null,
   editor: LexicalEditor,
-  customData: CPContainerNode[] | null,
+  customData: BlockContainerNode[] | null,
 ) {
   if (!event) return false;
   event.preventDefault();
@@ -695,10 +708,10 @@ function copy(
 }
 
 export { CollapsibleParagraphPlugin };
-export { $createCPContainerNode, $isCPContainerNode, CPContainerNode };
-export { $createCPTitleNode, $isCPTitleNode, CPTitleNode };
+export { $createBlockContainerNode, $isBlockContainerNode, BlockContainerNode };
+export { $createBlockTextNode, $isBlockTextNode, BlockTextNode };
 export {
-  $createCPChildContainerNode,
-  $isCPChildContainerNode,
-  CPChildContainerNode,
+  $createBlockChildContainerNode,
+  $isBlockChildContainerNode,
+  BlockChildContainerNode,
 };

@@ -11,14 +11,14 @@ import type {
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import TreeViewPlugin from "~/components/lexical/TreeViewPlugin";
 import {
-  CPChildContainerNode,
-  CPContainerNode,
-  CPTitleNode,
+  BlockChildContainerNode,
+  BlockContainerNode,
+  BlockTextNode,
   CollapsibleParagraphPlugin,
 } from "~/components/lexical/CollapsibleParagraphPlugin";
 import { useRef } from "react";
 import { ParagraphNode } from "lexical";
-import { CONTAINER_BLOCK_TYPE } from "~/components/lexical/CollapsibleParagraphPlugin/CPContainer";
+import { CONTAINER_BLOCK_TYPE } from "~/components/lexical/CollapsibleParagraphPlugin/BlockContainer";
 
 const theme = {
   paragraph: "custom-paragraph",
@@ -76,13 +76,13 @@ export default function Notes() {
     theme,
     onError,
     nodes: [
-      CPContainerNode,
-      CPTitleNode,
-      CPChildContainerNode,
+      BlockContainerNode,
+      BlockTextNode,
+      BlockChildContainerNode,
       {
         replace: ParagraphNode,
         with: () => {
-          return new CPContainerNode(true); // TODO: add transformer: wherever empty container add title and childContainer
+          return new BlockContainerNode(true); // TODO: add transformer: wherever empty container add title and childContainer
         },
       },
     ],

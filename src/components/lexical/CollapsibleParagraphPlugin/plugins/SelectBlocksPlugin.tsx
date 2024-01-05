@@ -2,9 +2,9 @@ import React, { type FC, useEffect, type MutableRefObject } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { mergeRegister } from "@lexical/utils";
 import {
-  CPTitleNode,
-  CPChildContainerNode,
-  CPContainerNode,
+  BlockTextNode,
+  BlockChildContainerNode,
+  BlockContainerNode,
 } from "..";
 import {
   $getSelection,
@@ -13,11 +13,11 @@ import {
   SELECTION_CHANGE_COMMAND,
 } from "lexical";
 import { selectOnlyTopNotes } from "../utils";
-import { $findParentCPContainer } from "../CPContainer";
+import { $findParentCPContainer } from "../BlockContainer";
 
 interface SelectBlocksPluginProps {
-  selectedBlocks: MutableRefObject<CPContainerNode[] | null>;
-  updateSelectedBlocks: (blocks: CPContainerNode[] | null) => void;
+  selectedBlocks: MutableRefObject<BlockContainerNode[] | null>;
+  updateSelectedBlocks: (blocks: BlockContainerNode[] | null) => void;
 }
 
 const SelectBlocksPlugin: FC<SelectBlocksPluginProps> = ({
@@ -28,10 +28,10 @@ const SelectBlocksPlugin: FC<SelectBlocksPluginProps> = ({
 
   useEffect(() => {
     if (
-      !editor.hasNodes([CPContainerNode, CPTitleNode, CPChildContainerNode])
+      !editor.hasNodes([BlockContainerNode, BlockTextNode, BlockChildContainerNode])
     ) {
       throw new Error(
-        "CollapsibleParagraphPlugin: CPContainerNode, CPTitleNode, or CPChildContainerNode not registered on editor",
+        "CollapsibleParagraphPlugin: BlockContainerNode, BlockTextNode, or BlockChildContainerNode not registered on editor",
       );
     }
 

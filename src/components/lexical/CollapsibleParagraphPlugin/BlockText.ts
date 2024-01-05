@@ -6,7 +6,7 @@
  *
  */
 
-import type { CPContainerNode } from ".";
+import type { BlockContainerNode } from ".";
 import type {
   LexicalEditor,
   NodeKey,
@@ -22,12 +22,12 @@ import type {
 } from "lexical";
 import { ElementNode, $isTextNode } from "lexical";
 
-type SerializedCPTitleNode = Spread<object, SerializedParagraphNode>;
+type SerializedBlockTextNode = Spread<object, SerializedParagraphNode>;
 
 const TEXT_BLOCK_TYPE = "block-text" as const;
 
 /** @noInheritDoc */
-export class CPTitleNode extends ElementNode {
+export class BlockTextNode extends ElementNode {
   constructor(key?: NodeKey) {
     super(key);
   }
@@ -36,8 +36,8 @@ export class CPTitleNode extends ElementNode {
     return TEXT_BLOCK_TYPE;
   }
 
-  static clone(node: CPTitleNode): CPTitleNode {
-    return new CPTitleNode(node.__key);
+  static clone(node: BlockTextNode): BlockTextNode {
+    return new BlockTextNode(node.__key);
   }
 
   // View
@@ -46,7 +46,7 @@ export class CPTitleNode extends ElementNode {
     dom.classList.add(TEXT_BLOCK_TYPE);
     return dom;
   }
-  // prevNode: CPTitleNode,
+  // prevNode: BlockTextNode,
   // dom: HTMLElement,
   // config: EditorConfig
   updateDOM(): boolean {
@@ -56,7 +56,7 @@ export class CPTitleNode extends ElementNode {
   static importDOM(): DOMConversionMap | null {
     return {
       div: () => ({
-        conversion: convertCPTitleElement,
+        conversion: convertBlockTextElement,
         priority: 0,
       }),
     };
@@ -88,15 +88,15 @@ export class CPTitleNode extends ElementNode {
     };
   }
 
-  static importJSON(serializedNode: SerializedCPTitleNode): CPTitleNode {
-    const node = $createCPTitleNode();
+  static importJSON(serializedNode: SerializedBlockTextNode): BlockTextNode {
+    const node = $createBlockTextNode();
     node.setFormat(serializedNode.format);
     node.setIndent(serializedNode.indent);
     node.setDirection(serializedNode.direction);
     return node;
   }
 
-  exportJSON(): SerializedCPTitleNode {
+  exportJSON(): SerializedBlockTextNode {
     const children = this.getLatest()
       .getChildren()
       .map((node) => node.exportJSON());
@@ -110,7 +110,7 @@ export class CPTitleNode extends ElementNode {
   }
 
   // Mutation
-  getParent<T extends ElementNode = CPContainerNode>(): T | null {
+  getParent<T extends ElementNode = BlockContainerNode>(): T | null {
     return super.getParent();
   }
 
@@ -118,8 +118,8 @@ export class CPTitleNode extends ElementNode {
     return super.getChildren();
   }
 
-  insertNewAfter(_: RangeSelection, restoreSelection: boolean): CPTitleNode {
-    const newElement = $createCPTitleNode();
+  insertNewAfter(_: RangeSelection, restoreSelection: boolean): BlockTextNode {
+    const newElement = $createBlockTextNode();
     const direction = this.getDirection();
     newElement.setDirection(direction);
     this.insertAfter(newElement, restoreSelection);
@@ -151,8 +151,8 @@ export class CPTitleNode extends ElementNode {
   }
 }
 
-function convertCPTitleElement(): DOMConversionOutput {
-  const node = $createCPTitleNode();
+function convertBlockTextElement(): DOMConversionOutput {
+  const node = $createBlockTextNode();
   // if (element.style) {
   //   node.setFormat(element.style.textAlign as ElementFormatType);
   //   const indent = parseInt(element.style.textIndent, 10) / 20;
@@ -163,16 +163,16 @@ function convertCPTitleElement(): DOMConversionOutput {
   return { node };
 }
 
-export function $createCPTitleNode(
+export function $createBlockTextNode(
   content?: (TextNode | LineBreakNode | LexicalNode)[],
-): CPTitleNode {
+): BlockTextNode {
   return content?.length
-    ? new CPTitleNode().append(...content)
-    : new CPTitleNode();
+    ? new BlockTextNode().append(...content)
+    : new BlockTextNode();
 }
 
-export function $isCPTitleNode(
+export function $isBlockTextNode(
   node: LexicalNode | null | undefined,
-): node is CPTitleNode {
-  return node instanceof CPTitleNode;
+): node is BlockTextNode {
+  return node instanceof BlockTextNode;
 }

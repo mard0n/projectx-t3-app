@@ -6,7 +6,7 @@
  *
  */
 
-import type { CPContainerNode } from ".";
+import type { BlockContainerNode } from ".";
 import type {
   SerializedElementNode,
   LexicalEditor,
@@ -20,12 +20,12 @@ import type {
 } from "lexical";
 import { ElementNode } from "lexical";
 
-type SerializedCPChildContainerNode = Spread<object, SerializedElementNode>;
+type SerializedBlockChildContainerNode = Spread<object, SerializedElementNode>;
 
 const CHILD_CONTAINER_BLOCK_TYPE = 'block-child-container' as const
 
 /** @noInheritDoc */
-export class CPChildContainerNode extends ElementNode {
+export class BlockChildContainerNode extends ElementNode {
   constructor(key?: NodeKey) {
     super(key);
   }
@@ -34,8 +34,8 @@ export class CPChildContainerNode extends ElementNode {
     return CHILD_CONTAINER_BLOCK_TYPE;
   }
 
-  static clone(node: CPChildContainerNode): CPChildContainerNode {
-    return new CPChildContainerNode(node.__key);
+  static clone(node: BlockChildContainerNode): BlockChildContainerNode {
+    return new BlockChildContainerNode(node.__key);
   }
 
   // View
@@ -63,7 +63,7 @@ export class CPChildContainerNode extends ElementNode {
   static importDOM(): DOMConversionMap | null {
     return {
       div: () => ({
-        conversion: convertCPChildContainerElement,
+        conversion: convertBlockChildContainerElement,
         priority: 0,
       }),
     };
@@ -96,16 +96,16 @@ export class CPChildContainerNode extends ElementNode {
   }
 
   static importJSON(
-    serializedNode: SerializedCPChildContainerNode,
-  ): CPChildContainerNode {
-    const node = $createCPChildContainerNode();
+    serializedNode: SerializedBlockChildContainerNode,
+  ): BlockChildContainerNode {
+    const node = $createBlockChildContainerNode();
     node.setFormat(serializedNode.format);
     node.setIndent(serializedNode.indent);
     node.setDirection(serializedNode.direction);
     return node;
   }
 
-  exportJSON(): SerializedCPChildContainerNode {
+  exportJSON(): SerializedBlockChildContainerNode {
     const children = this.getLatest()
       .getChildren()
       .map((node) => node.exportJSON());
@@ -119,17 +119,17 @@ export class CPChildContainerNode extends ElementNode {
   }
 
   // Mutation
-  getParent<T extends ElementNode = CPContainerNode>(): T | null {
+  getParent<T extends ElementNode = BlockContainerNode>(): T | null {
     return super.getParent();
   }
 
-  getChildren<T extends LexicalNode = CPContainerNode>(): T[] {
+  getChildren<T extends LexicalNode = BlockContainerNode>(): T[] {
     return super.getChildren();
   }
 }
 
-function convertCPChildContainerElement(): DOMConversionOutput {
-  const node = $createCPChildContainerNode();
+function convertBlockChildContainerElement(): DOMConversionOutput {
+  const node = $createBlockChildContainerNode();
   // if (element.style) {
   //   node.setFormat(element.style.textAlign as ElementFormatType);
   //   const indent = parseInt(element.style.textIndent, 10) / 20;
@@ -140,18 +140,18 @@ function convertCPChildContainerElement(): DOMConversionOutput {
   return { node };
 }
 
-export function $createCPChildContainerNode(
-  children?: CPContainerNode[],
-): CPChildContainerNode {
+export function $createBlockChildContainerNode(
+  children?: BlockContainerNode[],
+): BlockChildContainerNode {
   if (children?.length) {
-    return new CPChildContainerNode().append(...children);
+    return new BlockChildContainerNode().append(...children);
   } else {
-    return new CPChildContainerNode().append();
+    return new BlockChildContainerNode().append();
   }
 }
 
-export function $isCPChildContainerNode(
+export function $isBlockChildContainerNode(
   node: LexicalNode | null | undefined,
-): node is CPChildContainerNode {
-  return node instanceof CPChildContainerNode;
+): node is BlockChildContainerNode {
+  return node instanceof BlockChildContainerNode;
 }

@@ -8,12 +8,12 @@
 
 import { $findMatchingParent } from "@lexical/utils";
 import {
-  $createCPChildContainerNode,
-  $createCPTitleNode,
-  $isCPChildContainerNode,
-  $isCPTitleNode,
+  $createBlockChildContainerNode,
+  $createBlockTextNode,
+  $isBlockChildContainerNode,
+  $isBlockTextNode,
 } from ".";
-import type { CPChildContainerNode, CPTitleNode } from ".";
+import type { BlockChildContainerNode, BlockTextNode } from ".";
 import type {
   SerializedElementNode,
   EditorConfig,
@@ -33,7 +33,7 @@ import type {
 import { $parseSerializedNode, ElementNode } from "lexical";
 import { z } from "zod";
 
-export const serializedCPContainerNodeSchema: z.ZodSchema<SerializedCPContainerNode> =
+export const serializedBlockContainerNodeSchema: z.ZodSchema<SerializedBlockContainerNode> =
   z.lazy(() =>
     z.object({
       type: z.enum([CONTAINER_BLOCK_TYPE]),
@@ -41,7 +41,7 @@ export const serializedCPContainerNodeSchema: z.ZodSchema<SerializedCPContainerN
       id: z.string(),
       open: z.boolean(),
       title: z.string(),
-      childNotes: z.array(serializedCPContainerNodeSchema),
+      childNotes: z.array(serializedBlockContainerNodeSchema),
       parentId: z.string().nullable(),
       indexWithinParent: z.number(),
       children: z.array(
@@ -64,12 +64,12 @@ export const serializedCPContainerNodeSchema: z.ZodSchema<SerializedCPContainerN
     }),
   );
 
-export type SerializedCPContainerNode = Spread<
+export type SerializedBlockContainerNode = Spread<
   {
     id: string;
     open: boolean;
     title: string;
-    childNotes: SerializedCPContainerNode[]; // HACK: Using it when deserializing (To Not to use children) when passing down from DB
+    childNotes: SerializedBlockContainerNode[]; // HACK: Using it when deserializing (To Not to use children) when passing down from DB
     parentId: string | null;
     indexWithinParent: number;
     type: typeof CONTAINER_BLOCK_TYPE;
@@ -80,7 +80,7 @@ export type SerializedCPContainerNode = Spread<
 export const CONTAINER_BLOCK_TYPE = "block-container" as const;
 
 function convertCPContainerElement(): DOMConversionOutput {
-  const node = $createCPContainerNode();
+  const node = $createBlockContainerNode();
   // if (element.style) {
   //   node.setFormat(element.style.textAlign as ElementFormatType);
   //   const indent = parseInt(element.style.textIndent, 10) / 20;
@@ -92,7 +92,7 @@ function convertCPContainerElement(): DOMConversionOutput {
 }
 
 /** @noInheritDoc */
-export class CPContainerNode extends ElementNode {
+export class BlockContainerNode extends ElementNode {
   __open: boolean;
   __id: string;
 
@@ -106,8 +106,8 @@ export class CPContainerNode extends ElementNode {
     return CONTAINER_BLOCK_TYPE;
   }
 
-  static clone({ __open, __key, __id }: CPContainerNode): CPContainerNode {
-    return new CPContainerNode(__open, __key, __id);
+  static clone({ __open, __key, __id }: BlockContainerNode): BlockContainerNode {
+    return new BlockContainerNode(__open, __key, __id);
   }
 
   // View
@@ -164,7 +164,7 @@ export class CPContainerNode extends ElementNode {
     });
     return dom;
   }
-  updateDOM(prevNode: CPContainerNode, dom: HTMLDivElement): boolean {
+  updateDOM(prevNode: BlockContainerNode, dom: HTMLDivElement): boolean {
     if (prevNode.__open !== this.__open) {
       dom.classList.remove("open");
       dom.classList.remove("closed");
@@ -213,12 +213,12 @@ export class CPContainerNode extends ElementNode {
   }
 
   static importJSON(
-    serializedNode: SerializedCPContainerNode,
-  ): CPContainerNode {
+    serializedNode: SerializedBlockContainerNode,
+  ): BlockContainerNode {
     let node;
     // To avoid issues with parseSerializedNode. In some cases (when PASTING for example), children exist
     if (serializedNode.children?.length) {
-      node = $createCPContainerNode({ prepopulateChildren: false });
+      node = $createBlockContainerNode({ prepopulateChildren: false });
     } else {
       let textArray: (SerializedTextNode | SerializedLineBreakNode)[] = [];
 
@@ -239,8 +239,8 @@ export class CPContainerNode extends ElementNode {
       const children =
         (serializedNode.childNotes?.map((node) => {
           return $parseSerializedNode(node);
-        }) as CPContainerNode[]) || [];
-      node = $createCPContainerNode({
+        }) as BlockContainerNode[]) || [];
+      node = $createBlockContainerNode({
         titleNode: textNode,
         childContainerNodes: children,
       });
@@ -254,18 +254,18 @@ export class CPContainerNode extends ElementNode {
     return node;
   }
 
-  exportJSON(): SerializedCPContainerNode {
-    const titleNode = this.getCPTitleNode();
+  exportJSON(): SerializedBlockContainerNode {
+    const titleNode = this.getChildBlockTextNode();
     const titleNodeContent =
       titleNode?.getChildren().map((node) => node.exportJSON()) ?? [];
 
-    const childContainerNode = this.getCPChildContainerNode();
+    const childContainerNode = this.getChildBlockChildContainerNode();
     const childContainerNodeContent =
       childContainerNode
-        ?.getChildren<CPContainerNode>()
+        ?.getChildren<BlockContainerNode>()
         .map((node) => node.exportJSON()) ?? [];
 
-    const parentCPContainerNodeId = this.getParentCPContainer()?.getId();
+    const parentBlockContainerNodeId = this.getParentCPContainer()?.getId();
 
     const indexWithinParent = this.getIndexWithinParent();
 
@@ -275,7 +275,7 @@ export class CPContainerNode extends ElementNode {
       ...super.exportJSON(),
       title: JSON.stringify(titleNodeContent),
       childNotes: childContainerNodeContent, // Used only for debugging purposes
-      parentId: parentCPContainerNodeId ?? null,
+      parentId: parentBlockContainerNodeId ?? null,
       indexWithinParent,
       open: this.getOpen(),
       type: CONTAINER_BLOCK_TYPE,
@@ -289,32 +289,33 @@ export class CPContainerNode extends ElementNode {
   }
 
   // Mutation
-  getCPTitleNode() {
+  getChildBlockTextNode() {
+    // Weird bug with getBlockTextNode
     return this.getLatest()
       .getChildren()
-      .find((node): node is CPTitleNode => $isCPTitleNode(node));
+      .find((node): node is BlockTextNode => $isBlockTextNode(node));
   }
 
-  getCPChildContainerNode() {
+  getChildBlockChildContainerNode() {
     return this.getLatest()
       .getChildren()
-      .find((node): node is CPChildContainerNode =>
-        $isCPChildContainerNode(node),
+      .find((node): node is BlockChildContainerNode =>
+        $isBlockChildContainerNode(node),
       );
   }
 
   getParent<
-    T extends ElementNode = CPChildContainerNode | RootNode,
+    T extends ElementNode = BlockChildContainerNode | RootNode,
   >(): T | null {
     return super.getParent();
   }
 
-  getParentCPContainer(): CPContainerNode | undefined {
+  getParentCPContainer(): BlockContainerNode | undefined {
     const parent = this.getLatest().getParent<
-      CPChildContainerNode | RootNode
+      BlockChildContainerNode | RootNode
     >();
-    if ($isCPChildContainerNode(parent)) {
-      const parentContainer = parent.getParent<CPContainerNode>();
+    if ($isBlockChildContainerNode(parent)) {
+      const parentContainer = parent.getParent<BlockContainerNode>();
       if (parentContainer) {
         return parentContainer;
       }
@@ -342,42 +343,42 @@ export class CPContainerNode extends ElementNode {
   }
 }
 
-type CreateCPContainerNodeProps = {
+type CreateBlockContainerNodeProps = {
   titleNode?: (TextNode | LineBreakNode | LexicalNode)[];
-  childContainerNodes?: CPContainerNode[];
+  childContainerNodes?: BlockContainerNode[];
   open?: boolean;
   prepopulateChildren?: boolean;
 };
 
-export function $createCPContainerNode({
+export function $createBlockContainerNode({
   titleNode,
   childContainerNodes,
   open = true,
   prepopulateChildren = true,
-}: Partial<CreateCPContainerNodeProps> = {}): CPContainerNode {
+}: Partial<CreateBlockContainerNodeProps> = {}): BlockContainerNode {
   // In some cases (when PASTING for example), children exist
   if (prepopulateChildren) {
-    const title = $createCPTitleNode(titleNode);
-    const childContainer = $createCPChildContainerNode(childContainerNodes);
-    const container = new CPContainerNode(open);
+    const title = $createBlockTextNode(titleNode);
+    const childContainer = $createBlockChildContainerNode(childContainerNodes);
+    const container = new BlockContainerNode(open);
     return container.append(title, childContainer);
   } else {
-    const container = new CPContainerNode(open);
+    const container = new BlockContainerNode(open);
     return container;
   }
 }
 
-export function $isCPContainerNode(
+export function $isBlockContainerNode(
   node: LexicalNode | null | undefined,
-): node is CPContainerNode {
-  return node instanceof CPContainerNode;
+): node is BlockContainerNode {
+  return node instanceof BlockContainerNode;
 }
 
 export function $findParentCPContainer(node: LexicalNode) {
   return $findMatchingParent(
     node,
-    (node: LexicalNode): node is CPContainerNode => {
-      return $isCPContainerNode(node);
+    (node: LexicalNode): node is BlockContainerNode => {
+      return $isBlockContainerNode(node);
     },
-  ) as CPContainerNode | null;
+  ) as BlockContainerNode | null;
 }
