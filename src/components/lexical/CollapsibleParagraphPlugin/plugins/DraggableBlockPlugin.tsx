@@ -273,7 +273,6 @@ export default function DraggableBlockPlugin({
   const [draggableBlockElem, setDraggableBlockElem] =
     useState<HTMLElement | null>(null);
 
-  console.log("draggableBlockElem", draggableBlockElem);
 
   useEffect(() => {
     function onMouseMove(event: MouseEvent) {

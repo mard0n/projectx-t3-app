@@ -1,11 +1,7 @@
 import React, { type FC, useEffect, type MutableRefObject } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { mergeRegister } from "@lexical/utils";
-import {
-  BlockTextNode,
-  BlockChildContainerNode,
-  BlockContainerNode,
-} from "..";
+import { BlockTextNode, BlockChildContainerNode, BlockContainerNode } from "..";
 import {
   $getSelection,
   $isRangeSelection,
@@ -28,7 +24,11 @@ const SelectBlocksPlugin: FC<SelectBlocksPluginProps> = ({
 
   useEffect(() => {
     if (
-      !editor.hasNodes([BlockContainerNode, BlockTextNode, BlockChildContainerNode])
+      !editor.hasNodes([
+        BlockContainerNode,
+        BlockTextNode,
+        BlockChildContainerNode,
+      ])
     ) {
       throw new Error(
         "CollapsibleParagraphPlugin: BlockContainerNode, BlockTextNode, or BlockChildContainerNode not registered on editor",

@@ -191,6 +191,13 @@ const CollapsibleParagraphPlugin: FC<CollapsibleParagraphPluginProps> = ({
       editor.registerCommand<boolean>(
         DELETE_CHARACTER_COMMAND,
         (isBackward) => {
+
+          if (selectedBlocks.current?.length) {
+            selectedBlocks.current.forEach((node) => node.remove());
+            handleSelectedBlocks(null);
+            return true;
+          }
+
           const selection = $getSelection();
 
           if (!$isRangeSelection(selection)) {
