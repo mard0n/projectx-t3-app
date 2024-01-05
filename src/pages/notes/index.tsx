@@ -82,7 +82,7 @@ export default function Notes() {
       {
         replace: ParagraphNode,
         with: () => {
-          return new BlockContainerNode(true); // TODO: add transformer: wherever empty container add title and childContainer
+          return new BlockContainerNode({ __open: true }); // TODO: add transformer: wherever empty container add title and childContainer
         },
       },
     ],
