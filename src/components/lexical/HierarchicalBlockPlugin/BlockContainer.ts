@@ -36,7 +36,7 @@ import { z } from "zod";
 export const serializedBlockContainerNodeSchema: z.ZodSchema<SerializedBlockContainerNode> =
   z.lazy(() =>
     z.object({
-      type: z.enum([CONTAINER_BLOCK_TYPE]),
+      type: z.string(),
       version: z.number(),
       id: z.string(),
       open: z.boolean(),
@@ -72,7 +72,7 @@ export type SerializedBlockContainerNode = Spread<
     childNotes: SerializedBlockContainerNode[]; // HACK: Using it when deserializing (To Not to use children) when passing down from DB
     parentId: string | null;
     indexWithinParent: number;
-    type: typeof CONTAINER_BLOCK_TYPE;
+    type: string;
   },
   SerializedElementNode
 >;
@@ -97,20 +97,39 @@ export class BlockContainerNode extends ElementNode {
   __id: string;
   __selected: boolean;
 
-  constructor(props: {__open: boolean, __selected?: boolean, __key?: NodeKey,  __id?: string}) {
-    const {__open, __key, __id, __selected} = props;
-    super(__key); 
-    this.__open = __open ?? true
-    this.__id = __id ?? crypto.randomUUID();
-    this.__selected = __selected ?? false
+  constructor({
+    open,
+    key,
+    id,
+    selected,
+  }: Partial<{
+    open?: boolean;
+    selected?: boolean;
+    key?: NodeKey;
+    id?: string;
+  }> = {}) {
+    super(key);
+    this.__open = open ?? true;
+    this.__id = id ?? crypto.randomUUID();
+    this.__selected = selected ?? false;
   }
 
   static getType(): string {
     return CONTAINER_BLOCK_TYPE;
   }
 
-  static clone({ __open, __key, __id, __selected }: BlockContainerNode): BlockContainerNode {
-    return new BlockContainerNode({__open, __key, __id, __selected});
+  static clone({
+    __open,
+    __key,
+    __id,
+    __selected,
+  }: BlockContainerNode): BlockContainerNode {
+    return new BlockContainerNode({
+      open: __open,
+      key: __key,
+      id: __id,
+      selected: __selected,
+    });
   }
 
   // View
@@ -123,7 +142,6 @@ export class BlockContainerNode extends ElementNode {
     } else {
       dom.classList.add("closed");
     }
-
 
     if (this.__selected) {
       dom.classList.add("selected");
@@ -186,7 +204,7 @@ export class BlockContainerNode extends ElementNode {
         dom.classList.add("closed");
       }
     }
-    
+
     if (prevNode.__selected !== this.__selected) {
       if (this.__selected) {
         dom.classList.add("selected");
@@ -357,7 +375,7 @@ export class BlockContainerNode extends ElementNode {
   setOpen(open: boolean) {
     this.getWritable().__open = open;
   }
-  
+
   toggleOpen(): void {
     this.setOpen(!this.getOpen());
   }
@@ -388,10 +406,10 @@ export function $createBlockContainerNode({
   if (prepopulateChildren) {
     const title = $createBlockTextNode(titleNode);
     const childContainer = $createBlockChildContainerNode(childContainerNodes);
-    const container = new BlockContainerNode({__open: open});
+    const container = new BlockContainerNode();
     return container.append(title, childContainer);
   } else {
-    const container = new BlockContainerNode({__open: open});
+    const container = new BlockContainerNode();
     return container;
   }
 }

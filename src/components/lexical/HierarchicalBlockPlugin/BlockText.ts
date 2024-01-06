@@ -19,6 +19,7 @@ import type {
   LexicalNode,
   TextNode,
   LineBreakNode,
+  EditorConfig,
 } from "lexical";
 import { ElementNode, $isTextNode } from "lexical";
 
@@ -41,8 +42,8 @@ export class BlockTextNode extends ElementNode {
   }
 
   // View
-  createDOM(): HTMLElement {
-    const dom = document.createElement("p");
+  createDOM(config: EditorConfig): HTMLElement {
+    const dom = document.createElement("div");
     dom.classList.add(TEXT_BLOCK_TYPE);
     return dom;
   }

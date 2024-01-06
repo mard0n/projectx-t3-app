@@ -4,3 +4,4 @@ export { Point, isPoint } from "./point";
 export { Rect } from "./rect";
 export { throttle } from "./throttle";
 export { selectOnlyTopNotes } from "./selectOnlyTopNotes";
+export { $customSetBlocksType } from "./customSetBlocksType";

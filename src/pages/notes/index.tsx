@@ -19,6 +19,8 @@ import {
 import { useRef } from "react";
 import { ParagraphNode } from "lexical";
 import { CONTAINER_BLOCK_TYPE } from "~/components/lexical/HierarchicalBlockPlugin/BlockContainer";
+import { HeaderPlugin } from "~/components/lexical/HeaderPlugin";
+import { HeaderNode } from "~/components/lexical/HeaderPlugin/Header";
 
 const theme = {
   paragraph: "custom-paragraph",
@@ -79,10 +81,11 @@ export default function Notes() {
       BlockContainerNode,
       BlockTextNode,
       BlockChildContainerNode,
+      HeaderNode,
       {
         replace: ParagraphNode,
         with: () => {
-          return new BlockContainerNode({ __open: true }); // TODO: add transformer: wherever empty container add title and childContainer
+          return new BlockContainerNode(); // TODO: add transformer: wherever empty container add title and childContainer
         },
       },
     ],
@@ -133,7 +136,7 @@ export default function Notes() {
             anchorElem={anchorElemRef.current!}
           />
           <HistoryPlugin />
-          {/* <TreeViewPlugin /> */}
+          <HeaderPlugin />
         </LexicalComposer>
       </main>
     </div>
