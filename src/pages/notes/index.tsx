@@ -19,6 +19,19 @@ import {
   type UpdatedBlock,
   type Updates,
 } from "~/plugins/SendingUpdatesPlugin";
+import { create } from "zustand";
+import { SelectBlocksPlugin } from "~/plugins/SelectBlocksPlugin";
+
+type SelectedBlocks = {
+  selectedBlocks: BlockContainerNode[] | null;
+  setSelectedBlocks: (blocks: BlockContainerNode[] | null) => void;
+};
+
+export const useSelectedBlocks = create<SelectedBlocks>()((set) => ({
+  selectedBlocks: null,
+  setSelectedBlocks: (blocks: BlockContainerNode[] | null) =>
+    set(() => ({ selectedBlocks: blocks })),
+}));
 
 const theme = {
   blockParagraph: "paragraph",
@@ -140,6 +153,7 @@ export default function Notes() {
           />
           <HierarchicalBlockPlugin />
           <HistoryPlugin />
+          <SelectBlocksPlugin />
           <SendingUpdatesPlugin handleUpdates={handleUpdates} />
           {anchorElemRef.current ? (
             <DraggableBlockPlugin anchorElem={anchorElemRef.current} />

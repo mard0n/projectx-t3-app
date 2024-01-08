@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 
 import type {
   BaseSelection,
@@ -60,9 +60,14 @@ import {
   $findParentBlockContainer,
 } from "~/nodes/Block";
 import { selectOnlyTopNotes } from "~/utils/lexical";
+import { useSelectedBlocks } from "~/pages/notes";
 
 const HierarchicalBlockPlugin = ({}) => {
   const [editor] = useLexicalComposerContext();
+  const selectedBlocks = useSelectedBlocks((state) => state.selectedBlocks);
+  const setSelectedBlocks = useSelectedBlocks(
+    (state) => state.setSelectedBlocks,
+  );
 
   useEffect(() => {
     if (
@@ -192,11 +197,11 @@ const HierarchicalBlockPlugin = ({}) => {
       editor.registerCommand<boolean>(
         DELETE_CHARACTER_COMMAND,
         (isBackward) => {
-          // if (selectedBlocks.current?.length) {
-          //   selectedBlocks.current.forEach((node) => node.remove());
-          //   handleSelectedBlocks(null);
-          //   return true;
-          // }
+          if (selectedBlocks?.length) {
+            selectedBlocks.forEach((node) => node.remove());
+            setSelectedBlocks(null);
+            return true;
+          }
 
           const selection = $getSelection();
 
@@ -238,9 +243,9 @@ const HierarchicalBlockPlugin = ({}) => {
       editor.registerCommand<InputEvent | string>(
         CONTROLLED_TEXT_INSERTION_COMMAND,
         (eventOrText) => {
-          // if (selectedBlocks.current?.length) {
-          //   return true;
-          // }
+          if (selectedBlocks?.length) {
+            return true;
+          }
 
           const selection = $getSelection();
 
@@ -277,10 +282,10 @@ const HierarchicalBlockPlugin = ({}) => {
             return false;
           }
 
-          // if (selectedBlocks.current?.length) {
-          //   const lastNode = selectedBlocks.current.slice(-1)[0]; // TODO: Not the best method. is not ordered any specific way
-          //   lastNode?.selectEnd();
-          // }
+          if (selectedBlocks?.length) {
+            const lastNode = selectedBlocks.slice(-1)[0]; // TODO: Not the best method. is not ordered any specific way
+            lastNode?.selectEnd();
+          }
 
           if (event !== null) {
             // If we have beforeinput, then we can avoid blocking
@@ -438,20 +443,21 @@ const HierarchicalBlockPlugin = ({}) => {
       editor.registerCommand(
         COPY_COMMAND,
         (event) => {
-          return copy(event, editor);
+          return copy(event, editor, selectedBlocks);
         },
         COMMAND_PRIORITY_NORMAL,
       ),
       editor.registerCommand(
         CUT_COMMAND,
         (event) => {
-          copy(event, editor);
+          copy(event, editor, selectedBlocks);
 
           editor.update(() => {
-            // if (selectedBlocks.current) {
-            //   selectedBlocks.current.forEach((node) => node.remove());
-            //   return;
-            // }
+            if (selectedBlocks?.length) {
+              selectedBlocks.forEach((node) => node.remove());
+              setSelectedBlocks(null);
+              return;
+            }
             const selection = $getSelection();
             if ($isRangeSelection(selection)) {
               selection.removeText();
@@ -571,7 +577,7 @@ const HierarchicalBlockPlugin = ({}) => {
         COMMAND_PRIORITY_EDITOR,
       ),
     );
-  }, [editor]);
+  }, [editor, selectedBlocks]);
 
   return <></>;
 };
@@ -643,6 +649,7 @@ function insertGeneratedNodes(
 function copy(
   event: KeyboardEvent | ClipboardEvent | null,
   editor: LexicalEditor,
+  selectedBlocks: BlockContainerNode[] | null,
 ) {
   if (!event) return false;
   event.preventDefault();
@@ -673,14 +680,14 @@ function copy(
     return false;
   }
 
-  // if (selectedBlocks?.length) {
-  //   const json = selectedBlocks.map((node) => node.exportJSON());
-  //   clipboardData.setData(
-  //     "application/x-lexical-editor",
-  //     JSON.stringify({ namespace: editor._config.namespace, nodes: json }),
-  //   );
-  //   return true;
-  // }
+  if (selectedBlocks?.length) {
+    const json = selectedBlocks.map((node) => node.exportJSON());
+    clipboardData.setData(
+      "application/x-lexical-editor",
+      JSON.stringify({ namespace: editor._config.namespace, nodes: json }),
+    );
+    return true;
+  }
 
   const selectedNodes = selection.extract();
   const jsonNodes = selectedNodes.map((node) => node.exportJSON());

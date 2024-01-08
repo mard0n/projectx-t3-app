@@ -14,7 +14,7 @@ import {
   isHTMLElement,
 } from "lexical";
 import * as React from "react";
-import type { MutableRefObject, DragEvent as ReactDragEvent } from "react";
+import type { DragEvent as ReactDragEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {

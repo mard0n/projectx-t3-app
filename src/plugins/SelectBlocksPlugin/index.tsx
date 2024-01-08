@@ -4,6 +4,7 @@ import { mergeRegister } from "@lexical/utils";
 import {
   $getSelection,
   $isRangeSelection,
+  $isTextNode,
   COMMAND_PRIORITY_NORMAL,
   SELECTION_CHANGE_COMMAND,
 } from "lexical";
@@ -14,9 +15,14 @@ import {
   BlockTextNode,
 } from "~/nodes/Block";
 import { selectOnlyTopNotes } from "~/utils/lexical";
+import { useSelectedBlocks } from "~/pages/notes";
 
 const SelectBlocksPlugin = ({}) => {
   const [editor] = useLexicalComposerContext();
+  const selectedBlocks = useSelectedBlocks((state) => state.selectedBlocks);
+  const setSelectedBlocks = useSelectedBlocks(
+    (state) => state.setSelectedBlocks,
+  );
 
   useEffect(() => {
     if (
@@ -37,21 +43,16 @@ const SelectBlocksPlugin = ({}) => {
         () => {
           const selection = $getSelection();
 
-          // selectedBlocks.current?.forEach((node) => node.setSelected(false));
+          selectedBlocks?.forEach((node) => node.setSelected(false));
+          setSelectedBlocks(null);
 
-          // updateSelectedBlocks(null);
-
-          if (!$isRangeSelection(selection)) {
-            return false;
-          }
-
-          if (selection.isCollapsed()) {
+          if (!$isRangeSelection(selection) || selection.isCollapsed()) {
             return false;
           }
 
           const selectedNodes = selection.getNodes();
 
-          if (selectedNodes.length <= 1) {
+          if (!selectedNodes.some((node) => !$isTextNode(node))) {
             // Don't add selected class if only one line is selected
             return false;
           }
@@ -64,11 +65,9 @@ const SelectBlocksPlugin = ({}) => {
               }),
             ),
           ];
-
           const onlyTopLevelNodes = selectOnlyTopNotes(cPContainers);
 
-          // updateSelectedBlocks(onlyTopLevelNodes);
-
+          setSelectedBlocks(onlyTopLevelNodes);
           onlyTopLevelNodes.forEach((node) => node.setSelected(true));
 
           return true;
@@ -76,7 +75,7 @@ const SelectBlocksPlugin = ({}) => {
         COMMAND_PRIORITY_NORMAL,
       ),
     );
-  }, [editor]);
+  }, [editor, selectedBlocks]);
 
   return null;
 };
