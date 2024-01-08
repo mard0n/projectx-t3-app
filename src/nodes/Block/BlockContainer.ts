@@ -6,7 +6,7 @@
  *
  */
 
-import { $findMatchingParent } from "@lexical/utils";
+import { $findMatchingParent, addClassNamesToElement } from "@lexical/utils";
 import {
   $createBlockChildContainerNode,
   $createBlockTextNode,
@@ -20,9 +20,6 @@ import type {
   LexicalEditor,
   NodeKey,
   Spread,
-  DOMConversionMap,
-  DOMConversionOutput,
-  DOMExportOutput,
   LexicalNode,
   LineBreakNode,
   TextNode,
@@ -32,66 +29,40 @@ import type {
 } from "lexical";
 import { $parseSerializedNode, ElementNode } from "lexical";
 import { z } from "zod";
+import {
+  SerializedElementNodeSchema,
+  hasToggleElemClicked,
+} from "~/utils/lexical";
+import type { Prettify } from "~/utils/types";
 
-export const serializedBlockContainerNodeSchema: z.ZodSchema<SerializedBlockContainerNode> =
-  z.lazy(() =>
-    z.object({
-      type: z.string(),
-      version: z.number(),
+export const SerializedBlockContainerNodeSchema: z.ZodType<SerializedBlockContainerNode> =
+  z
+    .object({
       id: z.string(),
       open: z.boolean(),
       title: z.string(),
-      childNotes: z.array(serializedBlockContainerNodeSchema),
+      childNotes: z.lazy(() => z.array(SerializedBlockContainerNodeSchema)),
       parentId: z.string().nullable(),
       indexWithinParent: z.number(),
-      children: z.array(
-        z.object({
-          type: z.string(),
-          version: z.number(),
-        }),
-      ),
-      direction: z.union([z.literal("ltr"), z.literal("rtl")]),
-      format: z.union([
-        z.literal("left"),
-        z.literal("start"),
-        z.literal("center"),
-        z.literal("right"),
-        z.literal("end"),
-        z.literal("justify"),
-        z.literal(""),
-      ]),
-      indent: z.number(),
-    }),
-  );
+    })
+    .merge(SerializedElementNodeSchema);
 
-export type SerializedBlockContainerNode = Spread<
-  {
-    id: string;
-    open: boolean;
-    title: string;
-    childNotes: SerializedBlockContainerNode[]; // HACK: Using it when deserializing (To Not to use children) when passing down from DB
-    parentId: string | null;
-    indexWithinParent: number;
-    type: string;
-  },
-  SerializedElementNode
+export type SerializedBlockContainerNode = Prettify<
+  Spread<
+    {
+      id: string;
+      open: boolean;
+      title: string;
+      childNotes: SerializedBlockContainerNode[]; // HACK: Using it when deserializing (To Not to use children) when passing down from DB
+      parentId: string | null;
+      indexWithinParent: number;
+    },
+    SerializedElementNode
+  >
 >;
 
 export const CONTAINER_BLOCK_TYPE = "block-container" as const;
 
-function convertCPContainerElement(): DOMConversionOutput {
-  const node = $createBlockContainerNode();
-  // if (element.style) {
-  //   node.setFormat(element.style.textAlign as ElementFormatType);
-  //   const indent = parseInt(element.style.textIndent, 10) / 20;
-  //   if (indent > 0) {
-  //     node.setIndent(indent);
-  //   }
-  // }
-  return { node };
-}
-
-/** @noInheritDoc */
 export class BlockContainerNode extends ElementNode {
   __open: boolean;
   __id: string;
@@ -135,7 +106,11 @@ export class BlockContainerNode extends ElementNode {
   // View
   createDOM(config: EditorConfig, editor: LexicalEditor): HTMLDivElement {
     const dom = document.createElement("div");
-    dom.classList.add(CONTAINER_BLOCK_TYPE);
+    const theme = config.theme;
+    const className = (theme.block as { container: string }).container;
+    if (className !== undefined) {
+      addClassNamesToElement(dom, className);
+    }
 
     if (this.__open) {
       dom.classList.add("open");
@@ -149,55 +124,20 @@ export class BlockContainerNode extends ElementNode {
       dom.classList.remove("selected");
     }
 
-    const hasPseudoElemClicked = (e: MouseEvent): boolean => {
-      const target = e.currentTarget ?? e.target;
-      if (!target) return false;
-      const after = getComputedStyle(target as Element, "::before");
-
-      // Then we parse out the dimensions
-      const atop = Number(after.getPropertyValue("top").slice(0, -2));
-      const aleft = Number(after.getPropertyValue("left").slice(0, -2));
-      const aborderTopWidth = Number(
-        after.getPropertyValue("border-top-width").slice(0, -2),
-      );
-      const aborderBottomWidth = Number(
-        after.getPropertyValue("border-bottom-width").slice(0, -2),
-      );
-      const aborderLeftWidth = Number(
-        after.getPropertyValue("border-left-width").slice(0, -2),
-      );
-      const aborderRightWidth = Number(
-        after.getPropertyValue("border-right-width").slice(0, -2),
-      );
-
-      const bbox = (target as Element).getBoundingClientRect();
-      const ex = e.clientX - bbox.left;
-      const ey = e.clientY - bbox.top;
-      if (
-        ex >= aleft &&
-        ex <= aleft + aborderLeftWidth + aborderRightWidth &&
-        ey >= atop &&
-        ey <= atop + aborderTopWidth + aborderBottomWidth
-      ) {
-        return true;
-      }
-      return false;
-    };
-
     dom.addEventListener("click", (event) => {
-      if (hasPseudoElemClicked(event)) {
+      console.log("createDOM click event");
+      if (hasToggleElemClicked(event)) {
         editor.update(() => {
           this.toggleOpen();
         });
       }
-    }); // TODO: Make this event more efficient. RN all dom events have own eventhandler
+    });
     return dom;
   }
 
   updateDOM(prevNode: BlockContainerNode, dom: HTMLDivElement): boolean {
     if (prevNode.__open !== this.__open) {
-      dom.classList.remove("open");
-      dom.classList.remove("closed");
+      dom.classList.remove(...["open", "closed"]);
       if (this.__open) {
         dom.classList.add("open");
       } else {
@@ -213,41 +153,6 @@ export class BlockContainerNode extends ElementNode {
       }
     }
     return false;
-  }
-
-  static importDOM(): DOMConversionMap | null {
-    return {
-      div: () => ({
-        conversion: convertCPContainerElement,
-        priority: 0,
-      }),
-    };
-  }
-
-  exportDOM(editor: LexicalEditor): DOMExportOutput {
-    const { element } = super.exportDOM(editor);
-    // if (element && isHTMLElement(element)) {
-    //   element.setAttribute("open", this.__open.toString());
-    //   if (this.isEmpty()) element.append(document.createElement('br'));
-
-    //   const formatType = this.getFormatType();
-    //   element.style.textAlign = formatType;
-
-    //   const direction = this.getDirection();
-    //   if (direction) {
-    //     element.dir = direction;
-    //   }
-    //   const indent = this.getIndent();
-    //   if (indent > 0) {
-    //     // padding-inline-start is not widely supported in email HTML, but
-    //     // Lexical Reconciler uses padding-inline-start. Using text-indent instead.
-    //     element.style.textIndent = `${indent * 20}px`;
-    //   }
-    // }
-
-    return {
-      element,
-    };
   }
 
   static importJSON(
@@ -293,19 +198,17 @@ export class BlockContainerNode extends ElementNode {
   }
 
   exportJSON(): SerializedBlockContainerNode {
-    const titleNode = this.getChildBlockTextNode();
+    const titleNode = this.getBlockTextNode();
     const titleNodeContent =
       titleNode?.getChildren().map((node) => node.exportJSON()) ?? [];
 
-    const childContainerNode = this.getChildBlockChildContainerNode();
+    const childContainerNode = this.getBlockChildContainerNode();
     const childContainerNodeContent =
       childContainerNode
         ?.getChildren<BlockContainerNode>()
         .map((node) => node.exportJSON()) ?? [];
 
     const parentBlockContainerNodeId = this.getParentCPContainer()?.getId();
-
-    const indexWithinParent = this.getIndexWithinParent();
 
     const children = this.getChildren().map((node) => node.exportJSON());
 
@@ -314,27 +217,24 @@ export class BlockContainerNode extends ElementNode {
       title: JSON.stringify(titleNodeContent),
       childNotes: childContainerNodeContent, // Used only for debugging purposes
       parentId: parentBlockContainerNodeId ?? null,
-      indexWithinParent,
+      indexWithinParent: this.getIndexWithinParent(),
       open: this.getOpen(),
       type: CONTAINER_BLOCK_TYPE,
       id: this.getId(),
       version: 1,
-      direction: super.exportJSON().direction ?? "ltr",
-      format: super.exportJSON().format ?? "left",
-      indent: super.exportJSON().indent ?? 0,
       children,
     };
   }
 
   // Mutation
-  getChildBlockTextNode() {
+  getBlockTextNode() {
     // Weird bug with getBlockTextNode
     return this.getLatest()
       .getChildren()
       .find((node): node is BlockTextNode => $isBlockTextNode(node));
   }
 
-  getChildBlockChildContainerNode() {
+  getBlockChildContainerNode() {
     return this.getLatest()
       .getChildren()
       .find((node): node is BlockChildContainerNode =>
@@ -399,7 +299,6 @@ type CreateBlockContainerNodeProps = {
 export function $createBlockContainerNode({
   titleNode,
   childContainerNodes,
-  open = true,
   prepopulateChildren = true,
 }: Partial<CreateBlockContainerNodeProps> = {}): BlockContainerNode {
   // In some cases (when PASTING for example), children exist
@@ -420,7 +319,7 @@ export function $isBlockContainerNode(
   return node instanceof BlockContainerNode;
 }
 
-export function $findParentCPContainer(node: LexicalNode) {
+export function $findParentBlockContainer(node: LexicalNode) {
   return $findMatchingParent(
     node,
     (node: LexicalNode): node is BlockContainerNode => {

@@ -11,17 +11,17 @@ import {
   COMMAND_PRIORITY_LOW,
   DRAGOVER_COMMAND,
   DROP_COMMAND,
+  isHTMLElement,
 } from "lexical";
 import * as React from "react";
-import { eventFiles, isHTMLElement, Point, Rect } from "../utils";
 import type { MutableRefObject, DragEvent as ReactDragEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-
 import {
-  $isBlockContainerNode,
   type BlockContainerNode,
-} from "../BlockContainer";
+  $isBlockContainerNode,
+} from "../HierarchicalBlocksPlugin";
+import { Rect, eventFiles, Point } from "~/utils/lexical";
 
 function getBlockElement(
   draggingBlock: string[] | false,
@@ -46,7 +46,7 @@ function getBlockElement(
       if (!child) continue;
       result.push(child);
       const cPContainerChildren = child
-        .getChildBlockChildContainerNode()
+        .getBlockChildContainerNode()
         ?.getChildren<BlockContainerNode>();
 
       if (cPContainerChildren?.length) {
@@ -255,17 +255,15 @@ function setTargetLine(
   targetLineElem.style.opacity = ".4";
 }
 
-export default function DraggableBlockPlugin({
+export function DraggableBlockPlugin({
   anchorElem = document.body,
-  selectedBlocks,
 }: {
   anchorElem: HTMLElement;
-  selectedBlocks: MutableRefObject<BlockContainerNode[] | null>;
 }): JSX.Element {
   const [editor] = useLexicalComposerContext();
   // console.log("anchorElem", anchorElem);
 
-  const scrollerElem = anchorElem.parentElement;
+  const scrollerElem = anchorElem?.parentElement;
 
   const dragBoxRef = useRef<HTMLDivElement>(null);
   const targetLineRef = useRef<HTMLDivElement>(null);
@@ -273,11 +271,10 @@ export default function DraggableBlockPlugin({
   const [draggableBlockElem, setDraggableBlockElem] =
     useState<HTMLElement | null>(null);
 
-
   useEffect(() => {
     function onMouseMove(event: MouseEvent) {
       const target = event.target;
-      if (!isHTMLElement(target)) {
+      if (!isHTMLElement(target!)) {
         setDraggableBlockElem(null);
         return;
       }
@@ -320,7 +317,7 @@ export default function DraggableBlockPlugin({
         return false;
       }
       const { pageY, target } = event;
-      if (!isHTMLElement(target)) {
+      if (!isHTMLElement(target!)) {
         return false;
       }
       const targetBlockElem = getBlockElement(
@@ -361,7 +358,7 @@ export default function DraggableBlockPlugin({
       if (!draggedNodes) {
         return false;
       }
-      if (!isHTMLElement(target)) {
+      if (!isHTMLElement(target!)) {
         return false;
       }
       const targetBlockElem = getBlockElement(
@@ -411,26 +408,26 @@ export default function DraggableBlockPlugin({
   function onDragStart(event: ReactDragEvent<HTMLDivElement>): void {
     const dataTransfer = event.dataTransfer;
 
-    if (selectedBlocks.current?.length) {
-      const wrapperDiv = document.getElementById("drag-image-wrapper")!;
-      const selectedBlockElems = selectedBlocks.current.flatMap((node) => {
-        const result = editor.getElementByKey(node.getKey());
-        return !!result ? [result] : [];
-      });
-      selectedBlockElems.forEach((element) => {
-        const clonedDiv = element.cloneNode(true) as HTMLElement;
-        clonedDiv?.classList?.remove("selected");
-        wrapperDiv.appendChild(clonedDiv);
-      });
-      setDragImage(dataTransfer, wrapperDiv);
+    // if (selectedBlocks.current?.length) {
+    //   const wrapperDiv = document.getElementById("drag-image-wrapper")!;
+    //   const selectedBlockElems = selectedBlocks.current.flatMap((node) => {
+    //     const result = editor.getElementByKey(node.getKey());
+    //     return !!result ? [result] : [];
+    //   });
+    //   selectedBlockElems.forEach((element) => {
+    //     const clonedDiv = element.cloneNode(true) as HTMLElement;
+    //     clonedDiv?.classList?.remove("selected");
+    //     wrapperDiv.appendChild(clonedDiv);
+    //   });
+    //   setDragImage(dataTransfer, wrapperDiv);
 
-      const selectedBlockKeys = selectedBlocks.current.map((node) =>
-        node.getKey(),
-      );
-      draggingBlockRef.current = selectedBlockKeys;
+    //   const selectedBlockKeys = selectedBlocks.current.map((node) =>
+    //     node.getKey(),
+    //   );
+    //   draggingBlockRef.current = selectedBlockKeys;
 
-      return;
-    }
+    //   return;
+    // }
 
     if (draggableBlockElem) {
       setDragImage(dataTransfer, draggableBlockElem);

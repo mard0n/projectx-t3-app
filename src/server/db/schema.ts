@@ -22,9 +22,9 @@ export const notes = mysqlTable("notes", {
   id: varchar("id", { length: 36 })
     .primaryKey()
     .default(sql`(UUID())`),
-  type: mysqlEnum("type", ['block-container'])
+  type: varchar("type", { length: 100 }) // TODO: Make it more specific. mysqlEnum("type", ['block-container'])
     .notNull()
-    .default('block-container'),
+    .default("block-container"),
   title: varchar("title", { length: 10000 }), // TODO: Fix the length
   indexWithinParent: int("indexWithinParent"),
   parentId: varchar("parentId", { length: 36 }),

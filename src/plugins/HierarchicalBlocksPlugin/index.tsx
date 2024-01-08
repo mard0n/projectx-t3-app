@@ -1,22 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import { useEffect, useRef, useState } from "react";
 
-import {
-  $createBlockChildContainerNode,
-  $isBlockChildContainerNode,
-  BlockChildContainerNode,
-} from "./BlockChildContainer";
-import {
-  $createBlockContainerNode,
-  $findParentCPContainer,
-  $isBlockContainerNode,
-  BlockContainerNode,
-} from "./BlockContainer";
-import {
-  $createBlockTextNode,
-  $isBlockTextNode,
-  BlockTextNode,
-} from "./BlockText";
 import type {
   BaseSelection,
   ElementNode,
@@ -27,12 +11,10 @@ import type {
   SerializedLexicalNode,
   TextFormatType,
 } from "lexical";
-import type { FC } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $generateNodesFromSerializedNodes,
   $getHtmlContent,
-  $getLexicalContent,
   $insertDataTransferForPlainText,
 } from "@lexical/clipboard";
 import { $generateNodesFromDOM } from "@lexical/html";
@@ -65,29 +47,22 @@ import {
   DELETE_LINE_COMMAND,
 } from "lexical";
 import { mergeRegister } from "@lexical/utils";
-import DraggableBlockPlugin from "./plugins/DraggableBlockPlugin";
 import {
-  SendingUpdatesPlugin,
-  type Updates,
-} from "./plugins/SendingUpdatesPlugin";
-import { SelectBlocksPlugin } from "./plugins/SelectBlocksPlugin";
-import { selectOnlyTopNotes } from "./utils";
+  BlockContainerNode,
+  BlockTextNode,
+  BlockChildContainerNode,
+  $createBlockContainerNode,
+  $isBlockChildContainerNode,
+  $createBlockChildContainerNode,
+  $isBlockContainerNode,
+  $createBlockTextNode,
+  $isBlockTextNode,
+  $findParentBlockContainer,
+} from "~/nodes/Block";
+import { selectOnlyTopNotes } from "~/utils/lexical";
 
-interface HierarchicalBlockPluginProps {
-  anchorElem: HTMLElement;
-  handleUpdates: (updates: Updates) => void;
-}
-
-const HierarchicalBlockPlugin: FC<HierarchicalBlockPluginProps> = ({
-  anchorElem,
-  handleUpdates,
-}) => {
+const HierarchicalBlockPlugin = ({}) => {
   const [editor] = useLexicalComposerContext();
-  const selectedBlocks = useRef<BlockContainerNode[] | null>(null);
-
-  const handleSelectedBlocks = (blocks: BlockContainerNode[] | null) => {
-    selectedBlocks.current = blocks;
-  };
 
   useEffect(() => {
     if (
@@ -144,9 +119,8 @@ const HierarchicalBlockPlugin: FC<HierarchicalBlockPluginProps> = ({
       // When title is deleted, upwrap the childContent into a sibling or parent or root
       editor.registerNodeTransform(BlockContainerNode, (node) => {
         const containerNode = node;
-        const childContainerNode =
-          containerNode.getChildBlockChildContainerNode();
-        const titleNode = containerNode.getChildBlockTextNode();
+        const childContainerNode = containerNode.getBlockChildContainerNode();
+        const titleNode = containerNode.getBlockTextNode();
 
         if (!childContainerNode) return;
 
@@ -158,7 +132,7 @@ const HierarchicalBlockPlugin: FC<HierarchicalBlockPluginProps> = ({
 
           if (prevSiblingNode && $isBlockContainerNode(prevSiblingNode)) {
             const prevSiblingChildContainerNode =
-              prevSiblingNode.getChildBlockChildContainerNode();
+              prevSiblingNode.getBlockChildContainerNode();
 
             // HACK: somehow when a sibling title of a node is getting deleted, the empty childContainer of the node is also getting deleted
             if (prevSiblingChildContainerNode) {
@@ -201,10 +175,10 @@ const HierarchicalBlockPlugin: FC<HierarchicalBlockPluginProps> = ({
           }
           const textNode = selection.focus.getNode() as TextNode | ElementNode;
 
-          const blockContainer = $findParentCPContainer(textNode);
+          const blockContainer = $findParentBlockContainer(textNode);
 
           selection.deleteLine(isBackward); // if text is the whole line it deletes the parent as well. which we don't want
-          const blockTextNode = blockContainer?.getChildBlockTextNode();
+          const blockTextNode = blockContainer?.getBlockTextNode();
 
           if (!blockTextNode) {
             const newBlockTextNode = $createBlockTextNode();
@@ -218,11 +192,11 @@ const HierarchicalBlockPlugin: FC<HierarchicalBlockPluginProps> = ({
       editor.registerCommand<boolean>(
         DELETE_CHARACTER_COMMAND,
         (isBackward) => {
-          if (selectedBlocks.current?.length) {
-            selectedBlocks.current.forEach((node) => node.remove());
-            handleSelectedBlocks(null);
-            return true;
-          }
+          // if (selectedBlocks.current?.length) {
+          //   selectedBlocks.current.forEach((node) => node.remove());
+          //   handleSelectedBlocks(null);
+          //   return true;
+          // }
 
           const selection = $getSelection();
 
@@ -236,8 +210,8 @@ const HierarchicalBlockPlugin: FC<HierarchicalBlockPluginProps> = ({
               | ElementNode
               | TextNode;
 
-            const containerNode = $findParentCPContainer(currentNode);
-            const titleNode = containerNode?.getChildBlockTextNode();
+            const containerNode = $findParentBlockContainer(currentNode);
+            const titleNode = containerNode?.getBlockTextNode();
 
             const offset = selection.anchor.offset;
             const node = selection.anchor.getNode() as ElementNode | TextNode;
@@ -264,9 +238,9 @@ const HierarchicalBlockPlugin: FC<HierarchicalBlockPluginProps> = ({
       editor.registerCommand<InputEvent | string>(
         CONTROLLED_TEXT_INSERTION_COMMAND,
         (eventOrText) => {
-          if (selectedBlocks.current?.length) {
-            return true;
-          }
+          // if (selectedBlocks.current?.length) {
+          //   return true;
+          // }
 
           const selection = $getSelection();
 
@@ -303,10 +277,10 @@ const HierarchicalBlockPlugin: FC<HierarchicalBlockPluginProps> = ({
             return false;
           }
 
-          if (selectedBlocks.current?.length) {
-            const lastNode = selectedBlocks.current.slice(-1)[0]; // TODO: Not the best method. is not ordered any specific way
-            lastNode?.selectEnd();
-          }
+          // if (selectedBlocks.current?.length) {
+          //   const lastNode = selectedBlocks.current.slice(-1)[0]; // TODO: Not the best method. is not ordered any specific way
+          //   lastNode?.selectEnd();
+          // }
 
           if (event !== null) {
             // If we have beforeinput, then we can avoid blocking
@@ -340,15 +314,14 @@ const HierarchicalBlockPlugin: FC<HierarchicalBlockPluginProps> = ({
               titleNode: insertedNodeContent,
             });
 
-            if (!containerNode.getOpen()) {
+            if (!containerNode?.getOpen()) {
               containerNode.insertAfter(newParagraph);
               newParagraph.selectStart();
               insertedNode.remove();
               return true;
             }
 
-            const childContainer =
-              containerNode.getChildBlockChildContainerNode();
+            const childContainer = containerNode.getBlockChildContainerNode();
             if (childContainer?.getChildren().length) {
               const firstChild = childContainer.getChildren()[0];
               firstChild?.insertBefore(newParagraph);
@@ -378,7 +351,7 @@ const HierarchicalBlockPlugin: FC<HierarchicalBlockPluginProps> = ({
           const paragraphs = [
             ...new Set(
               nodes.flatMap((node) => {
-                const result = $findParentCPContainer(node);
+                const result = $findParentBlockContainer(node);
                 return !!result ? [result] : [];
               }),
             ),
@@ -403,8 +376,7 @@ const HierarchicalBlockPlugin: FC<HierarchicalBlockPluginProps> = ({
 
           if (!commonPrevSibling) return false;
 
-          const childContainer =
-            commonPrevSibling.getChildBlockChildContainerNode();
+          const childContainer = commonPrevSibling.getBlockChildContainerNode();
           if (!childContainer) {
             const childContainerNode = $createBlockChildContainerNode().append(
               ...onlyTopLevelNodes,
@@ -432,7 +404,7 @@ const HierarchicalBlockPlugin: FC<HierarchicalBlockPluginProps> = ({
           const paragraphs = [
             ...new Set(
               nodes.flatMap((node) => {
-                const result = $findParentCPContainer(node);
+                const result = $findParentBlockContainer(node);
                 return !!result ? [result] : [];
               }),
             ),
@@ -466,20 +438,20 @@ const HierarchicalBlockPlugin: FC<HierarchicalBlockPluginProps> = ({
       editor.registerCommand(
         COPY_COMMAND,
         (event) => {
-          return copy(event, editor, selectedBlocks.current);
+          return copy(event, editor);
         },
         COMMAND_PRIORITY_NORMAL,
       ),
       editor.registerCommand(
         CUT_COMMAND,
         (event) => {
-          copy(event, editor, selectedBlocks.current);
+          copy(event, editor);
 
           editor.update(() => {
-            if (selectedBlocks.current) {
-              selectedBlocks.current.forEach((node) => node.remove());
-              return;
-            }
+            // if (selectedBlocks.current) {
+            //   selectedBlocks.current.forEach((node) => node.remove());
+            //   return;
+            // }
             const selection = $getSelection();
             if ($isRangeSelection(selection)) {
               selection.removeText();
@@ -526,6 +498,7 @@ const HierarchicalBlockPlugin: FC<HierarchicalBlockPluginProps> = ({
                 const nodes = $generateNodesFromSerializedNodes(
                   payload.nodes,
                 ) as COPIABLE_NODES[];
+                console.log("paste nodes", nodes);
 
                 insertGeneratedNodes(editor, nodes, selection);
                 return true;
@@ -600,21 +573,7 @@ const HierarchicalBlockPlugin: FC<HierarchicalBlockPluginProps> = ({
     );
   }, [editor]);
 
-  return (
-    <>
-      {anchorElem && (
-        <DraggableBlockPlugin
-          anchorElem={anchorElem}
-          selectedBlocks={selectedBlocks}
-        />
-      )}
-      <SendingUpdatesPlugin handleUpdates={handleUpdates} />
-      <SelectBlocksPlugin
-        selectedBlocks={selectedBlocks}
-        updateSelectedBlocks={handleSelectedBlocks}
-      />
-    </>
-  );
+  return <></>;
 };
 
 type COPIABLE_NODES =
@@ -630,7 +589,7 @@ function insertGeneratedNodes(
   selection: RangeSelection | GridSelection,
 ): void {
   const currentNode = selection.anchor.getNode() as TextNode | ElementNode;
-  const anchorContainer = $findParentCPContainer(currentNode);
+  const anchorContainer = $findParentBlockContainer(currentNode);
 
   if (!anchorContainer) return;
 
@@ -638,7 +597,7 @@ function insertGeneratedNodes(
   // Wrap text and inline nodes in paragraph nodes so we have all blocks at the top-level
   for (const node of nodes) {
     if ($isLineBreakNode(node) || $isTextNode(node)) {
-      anchorContainer.getChildBlockTextNode()?.append(node);
+      anchorContainer.getBlockTextNode()?.append(node);
     } else if ($isBlockContainerNode(node)) {
       if (!anchorNextSibling) {
         const isTextEmpty = anchorContainer
@@ -656,10 +615,10 @@ function insertGeneratedNodes(
       }
       anchorNextSibling = node;
     } else if ($isBlockTextNode(node)) {
-      anchorContainer.getChildBlockTextNode()?.append(...node.getChildren());
+      anchorContainer.getBlockTextNode()?.append(...node.getChildren());
     } else if ($isBlockChildContainerNode(node)) {
       anchorContainer
-        .getChildBlockChildContainerNode()
+        .getBlockChildContainerNode()
         ?.append(...node.getChildren());
     }
   }
@@ -684,7 +643,6 @@ function insertGeneratedNodes(
 function copy(
   event: KeyboardEvent | ClipboardEvent | null,
   editor: LexicalEditor,
-  selectedBlocks: BlockContainerNode[] | null,
 ) {
   if (!event) return false;
   event.preventDefault();
@@ -715,16 +673,14 @@ function copy(
     return false;
   }
 
-  if (selectedBlocks?.length) {
-    const json = selectedBlocks.map((node) => node.exportJSON());
-
-    clipboardData.setData(
-      "application/x-lexical-editor",
-      JSON.stringify({ namespace: editor._config.namespace, nodes: json }),
-    );
-
-    return true;
-  }
+  // if (selectedBlocks?.length) {
+  //   const json = selectedBlocks.map((node) => node.exportJSON());
+  //   clipboardData.setData(
+  //     "application/x-lexical-editor",
+  //     JSON.stringify({ namespace: editor._config.namespace, nodes: json }),
+  //   );
+  //   return true;
+  // }
 
   const selectedNodes = selection.extract();
   const jsonNodes = selectedNodes.map((node) => node.exportJSON());

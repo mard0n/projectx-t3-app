@@ -6,25 +6,22 @@
  *
  */
 
+import { addClassNamesToElement } from "@lexical/utils";
 import type { BlockContainerNode } from ".";
 import type {
   SerializedElementNode,
-  LexicalEditor,
   NodeKey,
-  DOMConversionMap,
-  DOMConversionOutput,
-  DOMExportOutput,
   LexicalNode,
   TextNode,
   Spread,
+  EditorConfig,
 } from "lexical";
 import { ElementNode } from "lexical";
 
 type SerializedBlockChildContainerNode = Spread<object, SerializedElementNode>;
 
-const CHILD_CONTAINER_BLOCK_TYPE = 'block-child-container' as const
+const CHILD_CONTAINER_BLOCK_TYPE = "block-child-container" as const;
 
-/** @noInheritDoc */
 export class BlockChildContainerNode extends ElementNode {
   constructor(key?: NodeKey) {
     super(key);
@@ -39,15 +36,20 @@ export class BlockChildContainerNode extends ElementNode {
   }
 
   // View
-
-  createDOM(): HTMLElement {
+  createDOM(config: EditorConfig): HTMLElement {
     const dom = document.createElement("div");
-    dom.classList.add(CHILD_CONTAINER_BLOCK_TYPE);
+    const theme = config.theme;
+    const className = (theme.block as { childContainer: string })
+      .childContainer;
+    if (className !== undefined) {
+      addClassNamesToElement(dom, className);
+    }
+
     const children = this.getChildren();
     if (!children.length) {
       dom.style.display = "none";
     }
-    // dom.id = this.getKey();
+
     return dom;
   }
   updateDOM(prevNode: TextNode, dom: HTMLElement): boolean {
@@ -58,41 +60,6 @@ export class BlockChildContainerNode extends ElementNode {
       dom.style.removeProperty("display");
     }
     return false;
-  }
-
-  static importDOM(): DOMConversionMap | null {
-    return {
-      div: () => ({
-        conversion: convertBlockChildContainerElement,
-        priority: 0,
-      }),
-    };
-  }
-
-  exportDOM(editor: LexicalEditor): DOMExportOutput {
-    const { element } = super.exportDOM(editor);
-
-    // if (element && isHTMLElement(element)) {
-    //   if (this.isEmpty()) element.append(document.createElement('br'));
-
-    //   const formatType = this.getFormatType();
-    //   element.style.textAlign = formatType;
-
-    //   const direction = this.getDirection();
-    //   if (direction) {
-    //     element.dir = direction;
-    //   }
-    //   const indent = this.getIndent();
-    //   if (indent > 0) {
-    //     // padding-inline-start is not widely supported in email HTML, but
-    //     // Lexical Reconciler uses padding-inline-start. Using text-indent instead.
-    //     element.style.textIndent = `${indent * 20}px`;
-    //   }
-    // }
-
-    return {
-      element,
-    };
   }
 
   static importJSON(
@@ -126,18 +93,6 @@ export class BlockChildContainerNode extends ElementNode {
   getChildren<T extends LexicalNode = BlockContainerNode>(): T[] {
     return super.getChildren();
   }
-}
-
-function convertBlockChildContainerElement(): DOMConversionOutput {
-  const node = $createBlockChildContainerNode();
-  // if (element.style) {
-  //   node.setFormat(element.style.textAlign as ElementFormatType);
-  //   const indent = parseInt(element.style.textIndent, 10) / 20;
-  //   if (indent > 0) {
-  //     node.setIndent(indent);
-  //   }
-  // }
-  return { node };
 }
 
 export function $createBlockChildContainerNode(

@@ -1,25 +1,21 @@
-import React, { type FC, useEffect, type MutableRefObject } from "react";
+import React, { useEffect } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { mergeRegister } from "@lexical/utils";
-import { BlockTextNode, BlockChildContainerNode, BlockContainerNode } from "..";
 import {
   $getSelection,
   $isRangeSelection,
   COMMAND_PRIORITY_NORMAL,
   SELECTION_CHANGE_COMMAND,
 } from "lexical";
-import { selectOnlyTopNotes } from "../utils";
-import { $findParentCPContainer } from "../BlockContainer";
+import {
+  $findParentBlockContainer,
+  BlockChildContainerNode,
+  BlockContainerNode,
+  BlockTextNode,
+} from "~/nodes/Block";
+import { selectOnlyTopNotes } from "~/utils/lexical";
 
-interface SelectBlocksPluginProps {
-  selectedBlocks: MutableRefObject<BlockContainerNode[] | null>;
-  updateSelectedBlocks: (blocks: BlockContainerNode[] | null) => void;
-}
-
-const SelectBlocksPlugin: FC<SelectBlocksPluginProps> = ({
-  selectedBlocks,
-  updateSelectedBlocks,
-}) => {
+const SelectBlocksPlugin = ({}) => {
   const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
@@ -41,9 +37,9 @@ const SelectBlocksPlugin: FC<SelectBlocksPluginProps> = ({
         () => {
           const selection = $getSelection();
 
-          selectedBlocks.current?.forEach((node) => node.setSelected(false));
+          // selectedBlocks.current?.forEach((node) => node.setSelected(false));
 
-          updateSelectedBlocks(null);
+          // updateSelectedBlocks(null);
 
           if (!$isRangeSelection(selection)) {
             return false;
@@ -63,7 +59,7 @@ const SelectBlocksPlugin: FC<SelectBlocksPluginProps> = ({
           const cPContainers = [
             ...new Set(
               selectedNodes.flatMap((node) => {
-                const result = $findParentCPContainer(node);
+                const result = $findParentBlockContainer(node);
                 return !!result ? [result] : [];
               }),
             ),
@@ -71,7 +67,7 @@ const SelectBlocksPlugin: FC<SelectBlocksPluginProps> = ({
 
           const onlyTopLevelNodes = selectOnlyTopNotes(cPContainers);
 
-          updateSelectedBlocks(onlyTopLevelNodes);
+          // updateSelectedBlocks(onlyTopLevelNodes);
 
           onlyTopLevelNodes.forEach((node) => node.setSelected(true));
 

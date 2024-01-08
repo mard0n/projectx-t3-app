@@ -127,32 +127,32 @@
   background-color: transparent;
 }
 
-.editor-textBold {
+.textBold {
   font-weight: bold;
 }
-.editor-textItalic {
+.textItalic {
   font-style: italic;
 }
-.editor-textStrikethrough {
+.textStrikethrough {
   text-decoration: line-through;
 }
-.editor-textUnderline {
+.textUnderline {
   text-decoration: underline;
 }
 
-.header_1 .block-text {
+.block-h1 .block-text {
   font-size: 32px;
   font-weight: 600;
 }
-.header_2 .block-text {
+.block-h2 .block-text {
   font-size: 24px;
   font-weight: 600;
 }
-.header_3 .block-text {
+.block-h3 .block-text {
   font-size: 18px;
   font-weight: 600;
 }
-.header_4 .block-text {
+.block-h4 .block-text {
   font-size: 16px;
   font-weight: 600;
 }

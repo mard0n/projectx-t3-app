@@ -6,16 +6,13 @@
  *
  */
 
+import { addClassNamesToElement } from "@lexical/utils";
 import type { BlockContainerNode } from ".";
 import type {
-  LexicalEditor,
   NodeKey,
   Spread,
   SerializedParagraphNode,
   RangeSelection,
-  DOMConversionMap,
-  DOMConversionOutput,
-  DOMExportOutput,
   LexicalNode,
   TextNode,
   LineBreakNode,
@@ -27,7 +24,6 @@ type SerializedBlockTextNode = Spread<object, SerializedParagraphNode>;
 
 const TEXT_BLOCK_TYPE = "block-text" as const;
 
-/** @noInheritDoc */
 export class BlockTextNode extends ElementNode {
   constructor(key?: NodeKey) {
     super(key);
@@ -44,49 +40,16 @@ export class BlockTextNode extends ElementNode {
   // View
   createDOM(config: EditorConfig): HTMLElement {
     const dom = document.createElement("div");
-    dom.classList.add(TEXT_BLOCK_TYPE);
+    const theme = config.theme;
+    const className = (theme.block as { text: string }).text;
+    if (className !== undefined) {
+      addClassNamesToElement(dom, className);
+    }
     return dom;
   }
-  // prevNode: BlockTextNode,
-  // dom: HTMLElement,
-  // config: EditorConfig
+
   updateDOM(): boolean {
     return false;
-  }
-
-  static importDOM(): DOMConversionMap | null {
-    return {
-      div: () => ({
-        conversion: convertBlockTextElement,
-        priority: 0,
-      }),
-    };
-  }
-
-  exportDOM(editor: LexicalEditor): DOMExportOutput {
-    const { element } = super.exportDOM(editor);
-
-    // if (element && isHTMLElement(element)) {
-    //   if (this.isEmpty()) element.append(document.createElement('br'));
-
-    //   const formatType = this.getFormatType();
-    //   element.style.textAlign = formatType;
-
-    //   const direction = this.getDirection();
-    //   if (direction) {
-    //     element.dir = direction;
-    //   }
-    //   const indent = this.getIndent();
-    //   if (indent > 0) {
-    //     // padding-inline-start is not widely supported in email HTML, but
-    //     // Lexical Reconciler uses padding-inline-start. Using text-indent instead.
-    //     element.style.textIndent = `${indent * 20}px`;
-    //   }
-    // }
-
-    return {
-      element,
-    };
   }
 
   static importJSON(serializedNode: SerializedBlockTextNode): BlockTextNode {
@@ -150,18 +113,6 @@ export class BlockTextNode extends ElementNode {
     }
     return false;
   }
-}
-
-function convertBlockTextElement(): DOMConversionOutput {
-  const node = $createBlockTextNode();
-  // if (element.style) {
-  //   node.setFormat(element.style.textAlign as ElementFormatType);
-  //   const indent = parseInt(element.style.textIndent, 10) / 20;
-  //   if (indent > 0) {
-  //     node.setIndent(indent);
-  //   }
-  // }
-  return { node };
 }
 
 export function $createBlockTextNode(

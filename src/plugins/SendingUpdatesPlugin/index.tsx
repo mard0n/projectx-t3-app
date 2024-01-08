@@ -3,12 +3,16 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { mergeRegister } from "@lexical/utils";
 import type { NodeMutation } from "lexical";
 import { $getNodeByKey, TextNode, LineBreakNode } from "lexical";
-import { BlockTextNode, BlockChildContainerNode, BlockContainerNode } from "..";
 import {
-  $findParentCPContainer,
   type SerializedBlockContainerNode,
-} from "../BlockContainer";
-import { throttle } from "../utils";
+  $findParentBlockContainer,
+} from "~/nodes/Block";
+import { throttle } from "~/utils/lexical";
+import {
+  BlockContainerNode,
+  BlockTextNode,
+  BlockChildContainerNode,
+} from "../HierarchicalBlocksPlugin";
 
 export type UpdatedBlock = {
   updateType: NodeMutation;
@@ -38,7 +42,11 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
 
   useEffect(() => {
     if (
-      !editor.hasNodes([BlockContainerNode, BlockTextNode, BlockChildContainerNode])
+      !editor.hasNodes([
+        BlockContainerNode,
+        BlockTextNode,
+        BlockChildContainerNode,
+      ])
     ) {
       throw new Error(
         "HierarchicalBlockPlugin: BlockContainerNode, BlockTextNode, or BlockChildContainerNode not registered on editor",
@@ -60,7 +68,8 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
                       const prevNode = $getNodeByKey(nodeKey);
                       if (!prevNode) return;
 
-                      const parentContainer = $findParentCPContainer(prevNode);
+                      const parentContainer =
+                        $findParentBlockContainer(prevNode);
 
                       const parentKey = parentContainer?.getKey();
 
@@ -84,7 +93,7 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
                     continue;
                   }
 
-                  const parentContainer = $findParentCPContainer(node);
+                  const parentContainer = $findParentBlockContainer(node);
 
                   if (parentContainer) {
                     updatesRef.current.set(

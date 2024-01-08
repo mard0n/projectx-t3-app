@@ -4,31 +4,40 @@ import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import LexicalErrorBoundary from "@lexical/react/LexicalErrorBoundary";
-import type {
-  UpdatedBlock,
-  Updates,
-} from "~/components/lexical/HierarchicalBlockPlugin/plugins/SendingUpdatesPlugin";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
-import TreeViewPlugin from "~/components/lexical/TreeViewPlugin";
+import { useRef } from "react";
+import { ParagraphNode } from "lexical";
 import {
   BlockChildContainerNode,
   BlockContainerNode,
   BlockTextNode,
-  HierarchicalBlockPlugin,
-} from "~/components/lexical/HierarchicalBlockPlugin";
-import { useRef } from "react";
-import { ParagraphNode } from "lexical";
-import { CONTAINER_BLOCK_TYPE } from "~/components/lexical/HierarchicalBlockPlugin/BlockContainer";
-import { HeaderPlugin } from "~/components/lexical/HeaderPlugin";
-import { HeaderNode } from "~/components/lexical/HeaderPlugin/Header";
+} from "~/nodes/Block";
+import { HierarchicalBlockPlugin } from "~/plugins/HierarchicalBlocksPlugin";
+import { DraggableBlockPlugin } from "~/plugins/DraggableBlockPlugin";
+import {
+  SendingUpdatesPlugin,
+  type UpdatedBlock,
+  type Updates,
+} from "~/plugins/SendingUpdatesPlugin";
 
 const theme = {
-  paragraph: "custom-paragraph",
+  blockParagraph: "paragraph",
   text: {
-    bold: "editor-textBold",
-    italic: "editor-textItalic",
-    strikethrough: "editor-textStrikethrough",
-    underline: "editor-textUnderline",
+    bold: "textBold",
+    italic: "textItalic",
+    strikethrough: "textStrikethrough",
+    underline: "textUnderline",
+  },
+  block: {
+    container: "block-container",
+    text: "block-text",
+    childContainer: "block-child-container",
+  },
+  header: {
+    h1: "block-h1",
+    h2: "block-h2",
+    h3: "block-h3",
+    h4: "block-h4",
   },
 };
 
@@ -69,7 +78,6 @@ export default function Notes() {
       updatedBlocks.push(value);
     }
     console.log("updatedBlocks", updatedBlocks);
-
     saveChanges.mutate(updatedBlocks);
   };
 
@@ -81,7 +89,6 @@ export default function Notes() {
       BlockContainerNode,
       BlockTextNode,
       BlockChildContainerNode,
-      HeaderNode,
       {
         replace: ParagraphNode,
         with: () => {
@@ -98,9 +105,9 @@ export default function Notes() {
                 children: [],
                 direction: null,
                 format: "",
-                type: CONTAINER_BLOCK_TYPE,
+                type: "block-container",
                 version: 1,
-                title: [],
+                title: "[]",
                 childNotes: [],
                 open: true,
                 id: crypto.randomUUID(),
@@ -131,12 +138,14 @@ export default function Notes() {
             placeholder={<div>Enter some text...</div>}
             ErrorBoundary={LexicalErrorBoundary}
           />
-          <HierarchicalBlockPlugin
-            handleUpdates={handleUpdates}
-            anchorElem={anchorElemRef.current!}
-          />
+          <HierarchicalBlockPlugin />
           <HistoryPlugin />
-          <HeaderPlugin />
+          <SendingUpdatesPlugin handleUpdates={handleUpdates} />
+          {anchorElemRef.current ? (
+            <DraggableBlockPlugin anchorElem={anchorElemRef.current} />
+          ) : (
+            <></>
+          )}
         </LexicalComposer>
       </main>
     </div>
