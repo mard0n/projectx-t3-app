@@ -33,7 +33,9 @@ import {
   SerializedElementNodeSchema,
   hasToggleElemClicked,
 } from "~/utils/lexical";
-import type { Prettify } from "~/utils/types";
+import { type Prettify } from "~/utils/types";
+import { type BlockHeaderNode } from "../BlockHeader";
+import { type BlockParagraphNode } from "../BlockParagraph";
 
 export const BLOCK_CONTAINER_TYPE = "block-container" as const;
 
@@ -322,5 +324,5 @@ export function $findParentBlockContainer(node: LexicalNode) {
     (node: LexicalNode): node is BlockContainerNode => {
       return $isBlockContainerNode(node);
     },
-  ) as BlockContainerNode | null;
+  ) as BlockContainerNode | BlockHeaderNode | BlockParagraphNode | null;
 }

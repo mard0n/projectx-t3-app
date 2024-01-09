@@ -41,10 +41,10 @@ const SelectBlocksPlugin = ({}) => {
       editor.registerCommand(
         SELECTION_CHANGE_COMMAND,
         () => {
-          const selection = $getSelection();
-
           selectedBlocks?.forEach((node) => node.setSelected(false));
           setSelectedBlocks(null);
+
+          const selection = $getSelection();
 
           if (!$isRangeSelection(selection) || selection.isCollapsed()) {
             return false;
@@ -68,7 +68,6 @@ const SelectBlocksPlugin = ({}) => {
           const onlyTopLevelNodes = selectOnlyTopNotes(cPContainers);
 
           setSelectedBlocks(onlyTopLevelNodes);
-          onlyTopLevelNodes.forEach((node) => node.setSelected(true));
 
           return true;
         },
@@ -76,6 +75,12 @@ const SelectBlocksPlugin = ({}) => {
       ),
     );
   }, [editor, selectedBlocks]);
+
+  useEffect(() => {
+    editor.update(() => {
+      selectedBlocks?.forEach((node) => node.setSelected(true));
+    });
+  }, [selectedBlocks]);
 
   return null;
 };

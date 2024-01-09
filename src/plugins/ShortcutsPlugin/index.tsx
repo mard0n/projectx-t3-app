@@ -16,10 +16,13 @@ import {
 } from "~/nodes/Block";
 import {
   $createBlockHeaderNode,
+  $isBlockHeaderNode,
   BlockHeaderNode,
   type HeaderTagType,
 } from "~/nodes/BlockHeader";
 import { useSelectedBlocks } from "~/pages/notes";
+import { $createBlockParagraphNode } from "../HierarchicalBlocksPlugin";
+import { type BlockParagraphNode } from "~/nodes/BlockParagraph";
 
 const ShortcutsPlugin = ({}) => {
   const [editor] = useLexicalComposerContext();
@@ -67,7 +70,43 @@ const ShortcutsPlugin = ({}) => {
               ),
             ];
 
-            const replacedBlocks = [];
+            // To turn HeaderBlocks to ParagraphBlocks if they have the same tagType
+            const isAllTheSameTagType = containerNodes.reduce((curr, acc) => {
+              if (
+                !curr ||
+                !acc ||
+                !$isBlockHeaderNode(curr) ||
+                !$isBlockHeaderNode(acc)
+              )
+                return;
+
+              if (curr.getTag() === acc.getTag()) {
+                return curr;
+              }
+            }, containerNodes[0]);
+
+            if (
+              isAllTheSameTagType &&
+              $isBlockHeaderNode(isAllTheSameTagType) &&
+              tagType === isAllTheSameTagType.getTag()
+            ) {
+              const replacedBlocks: BlockParagraphNode[] = [];
+              containerNodes.forEach((node) => {
+                const newBlockParagraph = $createBlockParagraphNode({
+                  prepopulateChildren: false,
+                });
+
+                node.replace(newBlockParagraph, true);
+                replacedBlocks.push(newBlockParagraph);
+              });
+
+              if (selectedBlocks?.length && replacedBlocks.length) {
+                setSelectedBlocks(replacedBlocks);
+              }
+              return;
+            }
+
+            const replacedBlocks: BlockHeaderNode[] = [];
             for (const blockContainerNode of containerNodes) {
               const newHeaderNode = $createBlockHeaderNode({
                 tag: tagType,
