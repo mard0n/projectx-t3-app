@@ -12,6 +12,7 @@ import {
 import { z } from "zod";
 import { SerializedElementNodeSchema } from "~/utils/lexical";
 import type { Prettify } from "~/utils/types";
+import { addClassNamesToElement } from "@lexical/utils";
 
 export const SerializedBlockHeaderNodeSchema: z.ZodType<SerializedBlockHeaderNode> =
   z
@@ -49,20 +50,6 @@ export class BlockHeaderNode extends BlockContainerNode {
   /** @internal */
   __tag: HeaderTagType;
 
-  static getType(): string {
-    return HEADER_BLOCK_TYPE;
-  }
-
-  static clone(node: BlockHeaderNode): BlockHeaderNode {
-    return new BlockHeaderNode({
-      tag: node.__tag,
-      key: node.__key,
-      open: node.__open,
-      id: node.__id,
-      selected: node.__selected,
-    });
-  }
-
   constructor({
     tag,
     key,
@@ -80,25 +67,33 @@ export class BlockHeaderNode extends BlockContainerNode {
     this.__tag = tag;
   }
 
-  getTag(): HeaderTagType {
-    return this.__tag;
+  static clone(node: BlockHeaderNode): BlockHeaderNode {
+    return new BlockHeaderNode({
+      tag: node.__tag,
+      key: node.__key,
+      open: node.__open,
+      id: node.__id,
+      selected: node.__selected,
+    });
+  }
+
+  static getType(): string {
+    return HEADER_BLOCK_TYPE;
   }
 
   createDOM(config: EditorConfig, editor: LexicalEditor): HTMLDivElement {
-    console.log("createDOM");
     const dom = super.createDOM(config, editor);
-    const classNames = {
-      h1: "header_1",
-      h2: "header_2",
-      h3: "header_3",
-      h4: "header_4",
-    }; // TODO: Maybe move it to themes
-    dom.classList.add(classNames[this.getTag()]);
+    const tag = this.__tag;
+    const theme = config.theme;
+    const classNames = theme.header as Record<string, string>;
+    if (classNames !== undefined) {
+      const className = classNames[tag];
+      addClassNamesToElement(dom, className);
+    }
     return dom;
   }
 
   updateDOM(prevNode: BlockHeaderNode, dom: HTMLDivElement): boolean {
-    console.log("updateDOM");
     return super.updateDOM(prevNode, dom);
   }
 
@@ -106,11 +101,17 @@ export class BlockHeaderNode extends BlockContainerNode {
     serializedNode: SerializedBlockHeaderNode,
   ): BlockHeaderNode {
     const container = super.importJSON(serializedNode);
-    const BlockheaderNode = $createBlockHeaderNode({ tag: serializedNode.tag });
+    const blockheaderNode = $createBlockHeaderNode({ tag: serializedNode.tag });
     const containerChildren = container.getChildren();
-    BlockheaderNode.append(...containerChildren);
+    blockheaderNode.append(...containerChildren);
     container.remove();
-    return BlockheaderNode;
+
+    blockheaderNode.setId(serializedNode.id);
+    blockheaderNode.setOpen(serializedNode.open);
+    blockheaderNode.setDirection(serializedNode.direction);
+    blockheaderNode.setIndent(serializedNode?.indent ?? 0);
+    blockheaderNode.setFormat(serializedNode?.format ?? "");
+    return blockheaderNode;
   }
 
   exportJSON(): SerializedBlockHeaderNode {
@@ -120,6 +121,10 @@ export class BlockHeaderNode extends BlockContainerNode {
       type: HEADER_BLOCK_TYPE,
       version: 1,
     };
+  }
+
+  getTag(): HeaderTagType {
+    return this.__tag;
   }
 }
 

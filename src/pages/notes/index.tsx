@@ -21,6 +21,8 @@ import {
 } from "~/plugins/SendingUpdatesPlugin";
 import { create } from "zustand";
 import { SelectBlocksPlugin } from "~/plugins/SelectBlocksPlugin";
+import { ShortcutsPlugin } from "~/plugins/ShortcutsPlugin";
+import { BlockHeaderNode } from "~/nodes/BlockHeader";
 
 type SelectedBlocks = {
   selectedBlocks: BlockContainerNode[] | null;
@@ -102,6 +104,7 @@ export default function Notes() {
       BlockContainerNode,
       BlockTextNode,
       BlockChildContainerNode,
+      BlockHeaderNode,
       {
         replace: ParagraphNode,
         with: () => {
@@ -160,6 +163,7 @@ export default function Notes() {
           ) : (
             <></>
           )}
+          <ShortcutsPlugin />
         </LexicalComposer>
       </main>
     </div>

@@ -85,22 +85,17 @@ export class BlockContainerNode extends ElementNode {
     this.__selected = selected ?? false;
   }
 
-  static getType(): string {
-    return CONTAINER_BLOCK_TYPE;
+  static clone(node: BlockContainerNode): BlockContainerNode {
+    return new BlockContainerNode({
+      open: node.__open,
+      key: node.__key,
+      id: node.__id,
+      selected: node.__selected,
+    });
   }
 
-  static clone({
-    __open,
-    __key,
-    __id,
-    __selected,
-  }: BlockContainerNode): BlockContainerNode {
-    return new BlockContainerNode({
-      open: __open,
-      key: __key,
-      id: __id,
-      selected: __selected,
-    });
+  static getType(): string {
+    return CONTAINER_BLOCK_TYPE;
   }
 
   // View
@@ -228,7 +223,6 @@ export class BlockContainerNode extends ElementNode {
 
   // Mutation
   getBlockTextNode() {
-    // Weird bug with getBlockTextNode
     return this.getLatest()
       .getChildren()
       .find((node): node is BlockTextNode => $isBlockTextNode(node));
