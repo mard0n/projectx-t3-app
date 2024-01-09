@@ -51,7 +51,6 @@ import {
   BlockContainerNode,
   BlockTextNode,
   BlockChildContainerNode,
-  $createBlockContainerNode,
   $isBlockChildContainerNode,
   $createBlockChildContainerNode,
   $isBlockContainerNode,
@@ -61,6 +60,7 @@ import {
 } from "~/nodes/Block";
 import { selectOnlyTopNotes } from "~/utils/lexical";
 import { useSelectedBlocks } from "~/pages/notes";
+import { $createBlockParagraphNode } from "~/nodes/BlockParagraph";
 
 const HierarchicalBlockPlugin = ({}) => {
   const [editor] = useLexicalComposerContext();
@@ -87,7 +87,7 @@ const HierarchicalBlockPlugin = ({}) => {
       editor.registerMutationListener(BlockContainerNode, () => {
         editor.update(() => {
           if ($getRoot().isEmpty()) {
-            const collapsible = $createBlockContainerNode();
+            const collapsible = $createBlockParagraphNode();
             $getRoot().append(collapsible);
             const firstDecendent = collapsible.getFirstDescendant();
             $isElementNode(firstDecendent) && firstDecendent.select();
@@ -102,7 +102,7 @@ const HierarchicalBlockPlugin = ({}) => {
               const paragraph = $getNodeByKey<ParagraphNode>(nodeKey);
               if (!paragraph) return;
               const textContent = paragraph.getChildren();
-              const collapsible = $createBlockContainerNode({
+              const collapsible = $createBlockParagraphNode({
                 titleNode: textContent,
               });
               paragraph.insertBefore(collapsible);
@@ -315,7 +315,7 @@ const HierarchicalBlockPlugin = ({}) => {
             if (!containerNode) return false;
 
             const insertedNodeContent = insertedNode.getChildren();
-            const newParagraph = $createBlockContainerNode({
+            const newParagraph = $createBlockParagraphNode({
               titleNode: insertedNodeContent,
             });
 
@@ -546,7 +546,7 @@ const HierarchicalBlockPlugin = ({}) => {
               }
               for (const part of parts) {
                 if (part === "\n" || part === "\r\n") {
-                  const newContainer = $createBlockContainerNode();
+                  const newContainer = $createBlockParagraphNode();
                   selection.insertNodes([newContainer]);
                   // selection.insertParagraph()
                 } else if (part === "\t") {
@@ -713,7 +713,7 @@ function copy(
 }
 
 export { HierarchicalBlockPlugin };
-export { $createBlockContainerNode, $isBlockContainerNode, BlockContainerNode };
+export { $createBlockParagraphNode, $isBlockContainerNode, BlockContainerNode };
 export { $createBlockTextNode, $isBlockTextNode, BlockTextNode };
 export {
   $createBlockChildContainerNode,

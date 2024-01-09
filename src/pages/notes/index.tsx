@@ -23,6 +23,11 @@ import { create } from "zustand";
 import { SelectBlocksPlugin } from "~/plugins/SelectBlocksPlugin";
 import { ShortcutsPlugin } from "~/plugins/ShortcutsPlugin";
 import { BlockHeaderNode } from "~/nodes/BlockHeader";
+import TreeViewPlugin from "~/plugins/TreeViewPlugin";
+import {
+  BLOCK_PARAGRAPH_TYPE,
+  BlockParagraphNode,
+} from "~/nodes/BlockParagraph";
 
 type SelectedBlocks = {
   selectedBlocks: BlockContainerNode[] | null;
@@ -36,7 +41,7 @@ export const useSelectedBlocks = create<SelectedBlocks>()((set) => ({
 }));
 
 const theme = {
-  blockParagraph: "paragraph",
+  blockParagraph: "block-paragraph",
   text: {
     bold: "textBold",
     italic: "textItalic",
@@ -105,12 +110,7 @@ export default function Notes() {
       BlockTextNode,
       BlockChildContainerNode,
       BlockHeaderNode,
-      {
-        replace: ParagraphNode,
-        with: () => {
-          return new BlockContainerNode(); // TODO: add transformer: wherever empty container add title and childContainer
-        },
-      },
+      BlockParagraphNode,
     ],
     editorState: JSON.stringify({
       root: {
@@ -121,7 +121,7 @@ export default function Notes() {
                 children: [],
                 direction: null,
                 format: "",
-                type: "block-container",
+                type: BLOCK_PARAGRAPH_TYPE,
                 version: 1,
                 title: "[]",
                 childNotes: [],
@@ -164,6 +164,7 @@ export default function Notes() {
             <></>
           )}
           <ShortcutsPlugin />
+          <TreeViewPlugin />
         </LexicalComposer>
       </main>
     </div>

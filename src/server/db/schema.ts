@@ -10,21 +10,16 @@ import {
   mysqlTable,
   varchar,
 } from "drizzle-orm/mysql-core";
-
-/**
- * This is an example of how to use the multi-project schema feature of Drizzle ORM. Use the same
- * database instance for multiple projects.
- *
- * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
- */
+import { BLOCK_HEADER_TYPE } from "~/nodes/BlockHeader";
+import { BLOCK_PARAGRAPH_TYPE } from "~/nodes/BlockParagraph";
 
 export const notes = mysqlTable("notes", {
   id: varchar("id", { length: 36 })
     .primaryKey()
     .default(sql`(UUID())`),
-  type: varchar("type", { length: 100 }) // TODO: Make it more specific. mysqlEnum("type", ['block-container'])
+  type: mysqlEnum("type", [BLOCK_PARAGRAPH_TYPE, BLOCK_HEADER_TYPE]) // TODO: Make it more specific. mysqlEnum("type", ['block-container'])
     .notNull()
-    .default("block-container"),
+    .default(BLOCK_PARAGRAPH_TYPE),
   title: varchar("title", { length: 10000 }), // TODO: Fix the length
   indexWithinParent: int("indexWithinParent"),
   parentId: varchar("parentId", { length: 36 }),
@@ -41,10 +36,7 @@ export const notes = mysqlTable("notes", {
     "",
   ]).default(""),
   indent: int("indent").default(0),
-  // createdAt: timestamp("created_at")
-  //   .default(sql`CURRENT_TIMESTAMP`)
-  //   .notNull(),
-  // updatedAt: timestamp("updatedAt").onUpdateNow(),
+  tag: mysqlEnum("tag", ["h1", "h2", "h3", "h4"]),
 });
 
 export type Note = typeof notes.$inferSelect;

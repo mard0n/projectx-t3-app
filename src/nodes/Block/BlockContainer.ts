@@ -35,21 +35,27 @@ import {
 } from "~/utils/lexical";
 import type { Prettify } from "~/utils/types";
 
+export const BLOCK_CONTAINER_TYPE = "block-container" as const;
+
+export const ExtendableSerializedBlockContainerNodeSchema =
+  SerializedElementNodeSchema.extend({
+    type: z.string(),
+    id: z.string(),
+    open: z.boolean(),
+    title: z.string(),
+    childNotes: z.lazy(() => z.array(SerializedBlockContainerNodeSchema)),
+    parentId: z.string().nullable(),
+    indexWithinParent: z.number(),
+  });
+
+// To check if Typescript and Zod types match
 export const SerializedBlockContainerNodeSchema: z.ZodType<SerializedBlockContainerNode> =
-  z
-    .object({
-      id: z.string(),
-      open: z.boolean(),
-      title: z.string(),
-      childNotes: z.lazy(() => z.array(SerializedBlockContainerNodeSchema)),
-      parentId: z.string().nullable(),
-      indexWithinParent: z.number(),
-    })
-    .merge(SerializedElementNodeSchema);
+  ExtendableSerializedBlockContainerNodeSchema;
 
 export type SerializedBlockContainerNode = Prettify<
   Spread<
     {
+      type: string;
       id: string;
       open: boolean;
       title: string;
@@ -60,8 +66,6 @@ export type SerializedBlockContainerNode = Prettify<
     SerializedElementNode
   >
 >;
-
-export const CONTAINER_BLOCK_TYPE = "block-container" as const;
 
 export class BlockContainerNode extends ElementNode {
   __open: boolean;
@@ -95,7 +99,7 @@ export class BlockContainerNode extends ElementNode {
   }
 
   static getType(): string {
-    return CONTAINER_BLOCK_TYPE;
+    return BLOCK_CONTAINER_TYPE;
   }
 
   // View
@@ -214,7 +218,7 @@ export class BlockContainerNode extends ElementNode {
       parentId: parentBlockContainerNodeId ?? null,
       indexWithinParent: this.getIndexWithinParent(),
       open: this.getOpen(),
-      type: CONTAINER_BLOCK_TYPE,
+      type: BLOCK_CONTAINER_TYPE,
       id: this.getId(),
       version: 1,
       children,
@@ -284,10 +288,9 @@ export class BlockContainerNode extends ElementNode {
 }
 
 type CreateBlockContainerNodeProps = {
-  titleNode?: (TextNode | LineBreakNode | LexicalNode)[];
-  childContainerNodes?: BlockContainerNode[];
-  open?: boolean;
-  prepopulateChildren?: boolean;
+  titleNode: (TextNode | LineBreakNode | LexicalNode)[];
+  childContainerNodes: BlockContainerNode[];
+  prepopulateChildren: boolean;
 };
 
 export function $createBlockContainerNode({

@@ -69,8 +69,11 @@ const ShortcutsPlugin = ({}) => {
 
             const replacedBlocks = [];
             for (const blockContainerNode of containerNodes) {
-              const newHeaderNode = $createBlockHeaderNode({ tag: tagType });
-              newHeaderNode.setId(blockContainerNode.getId());
+              const newHeaderNode = $createBlockHeaderNode({
+                tag: tagType,
+                prepopulateChildren: false,
+              });
+
               newHeaderNode.setOpen(blockContainerNode.getOpen());
               newHeaderNode.setSelected(blockContainerNode.getSelected());
               newHeaderNode.setDirection(blockContainerNode.getDirection());

@@ -19,53 +19,39 @@ import {
   ExtendableSerializedBlockContainerNodeSchema,
 } from "../Block/BlockContainer";
 
-export const BLOCK_HEADER_TYPE = "block-header" as const;
-export type HeaderTagType = "h1" | "h2" | "h3" | "h4";
+export const BLOCK_PARAGRAPH_TYPE = "block-paragraph" as const;
 
-export const SerializedBlockHeaderNodeSchema: z.ZodType<SerializedBlockHeaderNode> =
+export const SerializedBlockParagraphNodeSchema: z.ZodType<SerializedBlockParagraphNode> =
   ExtendableSerializedBlockContainerNodeSchema.extend({
-    type: z.literal(BLOCK_HEADER_TYPE),
-    tag: z.union([
-      z.literal("h1"),
-      z.literal("h2"),
-      z.literal("h3"),
-      z.literal("h4"),
-    ]),
+    type: z.literal(BLOCK_PARAGRAPH_TYPE),
   });
 
-export type SerializedBlockHeaderNode = Prettify<
+export type SerializedBlockParagraphNode = Prettify<
   Spread<
     {
-      type: typeof BLOCK_HEADER_TYPE;
-      tag: "h1" | "h2" | "h3" | "h4";
+      type: typeof BLOCK_PARAGRAPH_TYPE;
     },
     SerializedBlockContainerNode
   >
 >;
 
-export class BlockHeaderNode extends BlockContainerNode {
-  __tag: HeaderTagType;
-
+export class BlockParagraphNode extends BlockContainerNode {
   constructor({
-    tag,
     key,
     open,
     id,
     selected,
-  }: {
-    tag: HeaderTagType;
-    key?: NodeKey;
-    open?: boolean;
-    id?: string;
-    selected?: boolean;
-  }) {
+  }: Partial<{
+    key: NodeKey;
+    open: boolean;
+    id: string;
+    selected: boolean;
+  }> = {}) {
     super({ open, selected, id, key });
-    this.__tag = tag;
   }
 
-  static clone(node: BlockHeaderNode): BlockHeaderNode {
-    return new BlockHeaderNode({
-      tag: node.__tag,
+  static clone(node: BlockParagraphNode): BlockParagraphNode {
+    return new BlockParagraphNode({
       key: node.__key,
       open: node.__open,
       id: node.__id,
@@ -74,31 +60,28 @@ export class BlockHeaderNode extends BlockContainerNode {
   }
 
   static getType(): string {
-    return BLOCK_HEADER_TYPE;
+    return BLOCK_PARAGRAPH_TYPE;
   }
 
   createDOM(config: EditorConfig, editor: LexicalEditor): HTMLDivElement {
     const dom = super.createDOM(config, editor);
-    const tag = this.__tag;
     const theme = config.theme;
-    const classNames = theme.header as Record<string, string>;
-    if (classNames !== undefined) {
-      const className = classNames[tag];
+    const className = theme.blockParagraph as string;
+    if (className !== undefined) {
       addClassNamesToElement(dom, className);
     }
     return dom;
   }
 
-  updateDOM(prevNode: BlockContainerNode, dom: HTMLDivElement): boolean {
+  updateDOM(prevNode: BlockParagraphNode, dom: HTMLDivElement): boolean {
     return super.updateDOM(prevNode, dom);
   }
 
   static importJSON(
-    serializedNode: SerializedBlockHeaderNode,
-  ): BlockHeaderNode {
+    serializedNode: SerializedBlockParagraphNode,
+  ): BlockParagraphNode {
     const container = super.importJSON(serializedNode);
-    const blockheaderNode = $createBlockHeaderNode({
-      tag: serializedNode.tag,
+    const blockheaderNode = $createBlockParagraphNode({
       prepopulateChildren: false,
     });
     const containerChildren = container.getChildren();
@@ -113,53 +96,46 @@ export class BlockHeaderNode extends BlockContainerNode {
     return blockheaderNode;
   }
 
-  exportJSON(): SerializedBlockHeaderNode {
+  exportJSON(): SerializedBlockParagraphNode {
     return {
       ...super.exportJSON(),
-      type: BLOCK_HEADER_TYPE,
-      tag: this.getTag(),
+      type: BLOCK_PARAGRAPH_TYPE,
       version: 1,
     };
   }
-
-  getTag(): HeaderTagType {
-    return this.__tag;
-  }
 }
 
-type CreateBlockHeaderNodeProps = {
-  tag: HeaderTagType;
-  prepopulateChildren?: boolean;
-  titleNode?: (TextNode | LineBreakNode | LexicalNode)[];
-  childContainerNodes?: BlockContainerNode[];
+type CreateBlockContainerNodeProps = {
+  titleNode: (TextNode | LineBreakNode | LexicalNode)[];
+  childContainerNodes: BlockContainerNode[];
+  prepopulateChildren: boolean;
 };
 
-export function $createBlockHeaderNode({
-  tag,
+export function $createBlockParagraphNode({
   titleNode,
   childContainerNodes,
   prepopulateChildren = true,
-}: CreateBlockHeaderNodeProps): BlockHeaderNode {
+}: Partial<CreateBlockContainerNodeProps> = {}): BlockParagraphNode {
   if (prepopulateChildren) {
     const blockContainerNode = $createBlockContainerNode({
       prepopulateChildren,
       titleNode,
       childContainerNodes,
     });
-    const blockHeaderNode = new BlockHeaderNode({ tag });
-    const newBlockHeader = blockHeaderNode.append(
+    const blockParagraphNode = new BlockParagraphNode();
+    const newBlockParagraph = blockParagraphNode.append(
       ...blockContainerNode.getChildren(),
     );
     blockContainerNode.remove();
-    return newBlockHeader;
+    return newBlockParagraph;
   } else {
-    const blockHeader = new BlockHeaderNode({ tag });
-    return blockHeader;
+    const blockParagraph = new BlockParagraphNode();
+    return blockParagraph;
   }
 }
 
-export function $isBlockHeaderNode(
+export function $isBlockParagraphNode(
   node: LexicalNode | null | undefined,
-): node is BlockHeaderNode {
-  return node instanceof BlockHeaderNode;
+): node is BlockParagraphNode {
+  return node instanceof BlockParagraphNode;
 }

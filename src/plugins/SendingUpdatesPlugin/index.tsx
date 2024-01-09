@@ -3,21 +3,26 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { mergeRegister } from "@lexical/utils";
 import type { NodeMutation } from "lexical";
 import { $getNodeByKey, TextNode, LineBreakNode } from "lexical";
-import {
-  type SerializedBlockContainerNode,
-  $findParentBlockContainer,
-} from "~/nodes/Block";
+import { $findParentBlockContainer } from "~/nodes/Block";
 import { throttle } from "~/utils/lexical";
 import {
   BlockContainerNode,
   BlockTextNode,
   BlockChildContainerNode,
 } from "../HierarchicalBlocksPlugin";
+import {
+  BlockHeaderNode,
+  type SerializedBlockHeaderNode,
+} from "~/nodes/BlockHeader";
+import {
+  BlockParagraphNode,
+  type SerializedBlockParagraphNode,
+} from "~/nodes/BlockParagraph";
 
 export type UpdatedBlock = {
   updateType: NodeMutation;
   updatedBlockId: string;
-  updatedBlock: SerializedBlockContainerNode | null;
+  updatedBlock: SerializedBlockHeaderNode | SerializedBlockParagraphNode | null;
 };
 
 export type Updates = Map<string, UpdatedBlock>;
@@ -93,7 +98,9 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
                     continue;
                   }
 
-                  const parentContainer = $findParentBlockContainer(node);
+                  const parentContainer = $findParentBlockContainer(node) as
+                    | BlockParagraphNode
+                    | BlockHeaderNode; // TODO: This is tedious way of doing it.
 
                   if (parentContainer) {
                     updatesRef.current.set(
@@ -112,38 +119,44 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
             },
           ),
       ),
-      editor.registerMutationListener(
-        BlockContainerNode,
-        (mutations, { prevEditorState }) => {
-          editor.getEditorState().read(() => {
-            for (const [nodeKey, mutation] of mutations) {
-              const node = $getNodeByKey<BlockContainerNode>(nodeKey);
+      ...[BlockParagraphNode, BlockHeaderNode].map((node) => {
+        return editor.registerMutationListener(
+          node,
+          (mutations, { prevEditorState }) => {
+            editor.getEditorState().read(() => {
+              for (const [nodeKey, mutation] of mutations) {
+                const node = $getNodeByKey<
+                  BlockParagraphNode | BlockHeaderNode // TODO: This one as well. Not ideal
+                >(nodeKey);
 
-              if (!node || mutation === "destroyed") {
-                prevEditorState.read(() => {
-                  const prevNode = $getNodeByKey<BlockContainerNode>(nodeKey);
-                  if (!prevNode) return;
+                if (!node || mutation === "destroyed") {
+                  prevEditorState.read(() => {
+                    const prevNode = $getNodeByKey<
+                      BlockParagraphNode | BlockHeaderNode // TODO: This one as well. Not ideal
+                    >(nodeKey);
+                    if (!prevNode) return;
 
-                  updatesRef.current.set(`${nodeKey}:destroyed`, {
-                    updateType: "destroyed",
-                    updatedBlockId: prevNode.getId(),
-                    updatedBlock: null,
+                    updatesRef.current.set(`${nodeKey}:destroyed`, {
+                      updateType: "destroyed",
+                      updatedBlockId: prevNode.getId(),
+                      updatedBlock: null,
+                    });
                   });
-                });
-                continue;
-              }
+                  continue;
+                }
 
-              updatesRef.current.set(`${nodeKey}:${mutation}`, {
-                updateType: mutation,
-                updatedBlockId: node.getId(),
-                updatedBlock: node.exportJSON(),
-              });
-            }
-            // First setupdates then debounce Promise/async
-            throttleUpdate(updatesRef.current, updatesRef);
-          });
-        },
-      ),
+                updatesRef.current.set(`${nodeKey}:${mutation}`, {
+                  updateType: mutation,
+                  updatedBlockId: node.getId(),
+                  updatedBlock: node.exportJSON(),
+                });
+              }
+              // First setupdates then debounce Promise/async
+              throttleUpdate(updatesRef.current, updatesRef);
+            });
+          },
+        );
+      }),
     );
   }, [editor]);
 
