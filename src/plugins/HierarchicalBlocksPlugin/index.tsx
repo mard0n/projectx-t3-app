@@ -60,7 +60,11 @@ import {
 } from "~/nodes/Block";
 import { selectOnlyTopNotes } from "~/utils/lexical";
 import { useSelectedBlocks } from "~/pages/notes";
-import { $createBlockParagraphNode } from "~/nodes/BlockParagraph";
+import {
+  $createBlockParagraphNode,
+  BlockParagraphNode,
+} from "~/nodes/BlockParagraph";
+import { BlockHeaderNode } from "~/nodes/BlockHeader";
 
 const HierarchicalBlockPlugin = ({}) => {
   const [editor] = useLexicalComposerContext();
@@ -75,6 +79,7 @@ const HierarchicalBlockPlugin = ({}) => {
         BlockContainerNode,
         BlockTextNode,
         BlockChildContainerNode,
+        BlockParagraphNode,
       ])
     ) {
       throw new Error(
@@ -83,18 +88,7 @@ const HierarchicalBlockPlugin = ({}) => {
     }
 
     return mergeRegister(
-      // To make sure all the Editor is never empty
-      editor.registerMutationListener(BlockContainerNode, () => {
-        editor.update(() => {
-          if ($getRoot().isEmpty()) {
-            const collapsible = $createBlockParagraphNode();
-            $getRoot().append(collapsible);
-            const firstDecendent = collapsible.getFirstDescendant();
-            $isElementNode(firstDecendent) && firstDecendent.select();
-          }
-        });
-      }),
-      // To make sure all ParagraphNodes are replaced by BlockContainerNode
+      // To make sure all ParagraphNodes are replaced by BlockParagraphNode
       editor.registerMutationListener(ParagraphNode, (mutations) => {
         editor.update(() => {
           for (const [nodeKey, mutation] of mutations) {
@@ -110,67 +104,88 @@ const HierarchicalBlockPlugin = ({}) => {
           }
         });
       }),
-      // To make sure there is always childContainer
-      editor.registerNodeTransform(BlockContainerNode, (node) => {
-        const children = node.getChildren<LexicalNode>();
-        const blockChildContainer = children.find((node) =>
-          $isBlockChildContainerNode(node),
-        );
-        if (!blockChildContainer) {
-          const newChildContainerNode = $createBlockChildContainerNode();
-          node.append(newChildContainerNode);
-        }
-      }),
-      // When title is deleted, upwrap the childContent into a sibling or parent or root
-      editor.registerNodeTransform(BlockContainerNode, (node) => {
-        const containerNode = node;
-        const childContainerNode = containerNode.getBlockChildContainerNode();
-        const titleNode = containerNode.getBlockTextNode();
+      ...[BlockContainerNode, BlockParagraphNode, BlockHeaderNode].map(
+        (BlockNode) => {
+          // To make sure all the Editor is never empty
+          return mergeRegister(
+            editor.registerMutationListener(BlockNode, () => {
+              editor.update(() => {
+                if ($getRoot().isEmpty()) {
+                  const collapsible = $createBlockParagraphNode();
+                  $getRoot().append(collapsible);
+                  const firstDecendent = collapsible.getFirstDescendant();
+                  $isElementNode(firstDecendent) && firstDecendent.select();
+                }
+              });
+            }),
+            // To make sure there is always childContainer
+            editor.registerNodeTransform(BlockNode, (node) => {
+              const children = node.getChildren<LexicalNode>();
+              const blockChildContainer = children.find((node) =>
+                $isBlockChildContainerNode(node),
+              );
+              if (!blockChildContainer) {
+                const newChildContainerNode = $createBlockChildContainerNode();
+                node.append(newChildContainerNode);
+              }
+            }),
+            // When title is deleted, upwrap the childContent into a sibling or parent or root
+            editor.registerNodeTransform(BlockNode, (node) => {
+              const containerNode = node;
+              const childContainerNode =
+                containerNode.getBlockChildContainerNode();
+              const titleNode = containerNode.getBlockTextNode();
 
-        if (!childContainerNode) return;
+              if (!childContainerNode) return;
 
-        if (!titleNode) {
-          const childContainerChildren =
-            childContainerNode.getChildren<BlockContainerNode>();
-          const prevSiblingNode =
-            containerNode.getPreviousSibling<BlockContainerNode>();
+              if (!titleNode) {
+                const childContainerChildren =
+                  childContainerNode.getChildren<BlockContainerNode>();
+                const prevSiblingNode =
+                  containerNode.getPreviousSibling<BlockContainerNode>();
 
-          if (prevSiblingNode && $isBlockContainerNode(prevSiblingNode)) {
-            const prevSiblingChildContainerNode =
-              prevSiblingNode.getBlockChildContainerNode();
+                if (prevSiblingNode && $isBlockContainerNode(prevSiblingNode)) {
+                  const prevSiblingChildContainerNode =
+                    prevSiblingNode.getBlockChildContainerNode();
 
-            // HACK: somehow when a sibling title of a node is getting deleted, the empty childContainer of the node is also getting deleted
-            if (prevSiblingChildContainerNode) {
-              prevSiblingChildContainerNode.append(...childContainerChildren);
-              containerNode.remove();
-              return;
-            } else {
-              const newChildContainerNode =
-                $createBlockChildContainerNode().append(
-                  ...childContainerChildren,
-                );
-              prevSiblingNode.append(newChildContainerNode);
-              containerNode.remove();
-              return;
-            }
-          }
+                  // HACK: somehow when a sibling title of a node is getting deleted, the empty childContainer of the node is also getting deleted
+                  if (prevSiblingChildContainerNode) {
+                    prevSiblingChildContainerNode.append(
+                      ...childContainerChildren,
+                    );
+                    containerNode.remove();
+                    return;
+                  } else {
+                    const newChildContainerNode =
+                      $createBlockChildContainerNode().append(
+                        ...childContainerChildren,
+                      );
+                    prevSiblingNode.append(newChildContainerNode);
+                    containerNode.remove();
+                    return;
+                  }
+                }
 
-          const parentNode = containerNode.getParent<ElementNode>();
-          if (parentNode) {
-            childContainerChildren.forEach((node) =>
-              containerNode.insertBefore(node),
-            );
-            containerNode.remove();
-            return;
-          }
+                const parentNode = containerNode.getParent<ElementNode>();
+                if (parentNode) {
+                  childContainerChildren.forEach((node) =>
+                    containerNode.insertBefore(node),
+                  );
+                  containerNode.remove();
+                  return;
+                }
 
-          if (childContainerChildren.length) {
-            $getRoot().append(...childContainerChildren);
-            containerNode.remove();
-            return;
-          }
-        }
-      }),
+                if (childContainerChildren.length) {
+                  $getRoot().append(...childContainerChildren);
+                  containerNode.remove();
+                  return;
+                }
+              }
+            }),
+          );
+        },
+      ),
+
       editor.registerCommand<boolean>(
         DELETE_LINE_COMMAND,
         (isBackward) => {
