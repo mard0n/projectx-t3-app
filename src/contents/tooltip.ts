@@ -1,4 +1,4 @@
-import { highlight } from "~/utils/extension";
+import { highlight, serializeSelectionPath } from "~/utils/extension";
 import type { PlasmoCSConfig } from "plasmo"
 
 console.log(
@@ -23,6 +23,9 @@ document.addEventListener("mousedown", (event) => {
   const isTooltipClicked = getTooltipElem()?.contains(event.target as Node);
 
   if (isTooltipClicked && latestRange) {
+    const { startContainer, startOffset, endContainer, endOffset } = latestRange
+    const selectionPath = serializeSelectionPath(startContainer, startOffset, endContainer, endOffset)
+    
     highlight(latestRange);
   }
 
