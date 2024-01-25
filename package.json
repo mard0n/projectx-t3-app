@@ -32,7 +32,7 @@
     "drizzle-orm": "^0.28.5",
     "lexical": "^0.12.5",
     "next": "^14.0.3",
-    "plasmo": "0.84.0",
+    "plasmo": "0.84.1",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "superjson": "^2.2.1",

@@ -1,32 +1,38 @@
-import React, { type FC } from "react";
-import type {
-  PlasmoCSConfig,
-  PlasmoCSUIJSXContainer,
-  PlasmoCSUIProps,
-  PlasmoRender,
-} from "plasmo";
-import { createRoot } from "react-dom/client";
+import { highlight } from "~/utils/extension";
+import type { PlasmoCSConfig } from "plasmo"
 
 console.log(
   "You may find that having is not so pleasing a thing as wanting. This is not logical, but it is often true.",
 );
 
+ 
+export const config: PlasmoCSConfig = {
+  matches: ["<all_urls>"],
+  exclude_matches: ["https://github.com/*"],
+  all_frames: true
+}
+
 const TOOLTIP_WIDTH = 32;
 const TOOLTIP_HEIGHT = 32;
 const TOOLTIP_ID = "projectx-tooltip";
+let latestRange: Range | null = null;
 
 // selectionchange didn't work because when you click on tooltip
 // and hold your click selectionchange was firing and hidingTooltip before it's able to handle the click event
 document.addEventListener("mousedown", (event) => {
   const isTooltipClicked = getTooltipElem()?.contains(event.target as Node);
 
-  if (!isHighlighting() || !isTooltipClicked) {
-    hideTooltip();
+  if (isTooltipClicked && latestRange) {
+    highlight(latestRange);
   }
+
+  hideTooltip();
 });
 
 document.addEventListener("mouseup", (event: MouseEvent) => {
   console.log("mouseup event", event);
+  console.log("isHighlighting()", isHighlighting());
+
   if (isHighlighting()) {
     showTooltip();
   }
@@ -178,11 +184,18 @@ function showTooltip() {
   if (!tooltip) return;
 
   const selection = window.getSelection();
+  console.log('selection', selection);
+  
   if (!selection) return;
+  latestRange = selection.getRangeAt(0).cloneRange();
 
   const position = getSelectedTextPosition(selection);
+  console.log('position', position);
+  
   if (!position) return;
 
+  console.log('isAnchorBeforeFocus(selection)', isAnchorBeforeFocus(selection));
+  
   if (isAnchorBeforeFocus(selection)) {
     tooltip.style.transform = `translate(${position.right + 4}px, ${
       position.bottom + 4
@@ -192,82 +205,35 @@ function showTooltip() {
       position.left - TOOLTIP_WIDTH - 4
     }px, ${position.top - TOOLTIP_HEIGHT - 4}px)`;
   }
-  tooltip.style.display = "block";
+  tooltip.style.visibility = "visible";
 }
 
 function hideTooltip() {
   const tooltip = getTooltipElem();
-  if (tooltip) tooltip.style.display = "none";
+  if (tooltip) tooltip.style.visibility = "hidden";
+  latestRange = null;
 }
 
-export const config: PlasmoCSConfig = {
-  matches: ["https://*/*"],
-};
+function renderTooltipOnLoad() {
+  console.log("rendered");
+  const tooltipElem = document.createElement("div");
+  tooltipElem.setAttribute("id", TOOLTIP_ID);
+  tooltipElem.style.width = TOOLTIP_WIDTH + "px";
+  tooltipElem.style.height = TOOLTIP_HEIGHT + "px";
+  tooltipElem.style.border = "1px solid #333";
+  tooltipElem.style.borderRadius = "4px";
+  tooltipElem.style.backgroundColor = "white";
+  tooltipElem.style.position = "absolute";
+  tooltipElem.style.top = "0px";
+  tooltipElem.style.left = "0px";
+  tooltipElem.style.cursor = "pointer";
+  tooltipElem.style.visibility = "hidden";
 
-export const getRootContainer = () =>
-  new Promise((resolve) => {
-    const checkInterval = setInterval(() => {
-      const rootContainerParent = document.body;
-      if (rootContainerParent) {
-        clearInterval(checkInterval);
-        const rootContainer = document.createElement("div");
-        rootContainerParent.appendChild(rootContainer);
-        resolve(rootContainer);
-      }
-    }, 137);
-  });
+  document.body.appendChild(tooltipElem);
+}
+renderTooltipOnLoad();
 
-const Tooltip: FC<PlasmoCSUIProps> = () => {
-  const handleTooltipClick = () => {
-    console.log("handleTooltipClick event");
-    if (!isHighlighting()) {
-      hideTooltip();
-    }
-  };
-
-  return (
-    <div
-      id={TOOLTIP_ID}
-      style={{
-        width: TOOLTIP_WIDTH,
-        height: TOOLTIP_HEIGHT,
-        borderRadius: "4px",
-        border: "1px solid #333",
-        backgroundColor: "white",
-        cursor: "pointer",
-        position: "absolute",
-        top: 0,
-        left: 0,
-        zIndex: 100000,
-        transformOrigin: "top left",
-        display: "none",
-      }}
-      onClick={handleTooltipClick}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth="1"
-        stroke="currentColor"
-        className="h-6 w-6"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M3.75 9h16.5m-16.5 6.75h16.5"
-        />
-      </svg>
-    </div>
-  );
-};
-
-export const render: PlasmoRender<PlasmoCSUIJSXContainer> = async ({
-  createRootContainer,
-}) => {
-  const rootContainer = await createRootContainer!();
-  const root = createRoot(rootContainer);
-  root.render(<Tooltip />);
-};
-
-export default Tooltip;
+/*
+  React tooltip component didn't work because we need to capture selection before it's changed (i.e. on mousedown)
+  not when tooltip is clicked. Cuz by the time the tooltip is clicked the selection is already gone.
+*/
