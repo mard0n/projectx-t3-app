@@ -1,16 +1,16 @@
 import { highlight, serializeSelectionPath } from "~/utils/extension";
-import type { PlasmoCSConfig } from "plasmo"
+import type { PlasmoCSConfig } from "plasmo";
+import TurndownService from "turndown";
 
 console.log(
   "You may find that having is not so pleasing a thing as wanting. This is not logical, but it is often true.",
 );
 
- 
 export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
   exclude_matches: ["https://github.com/*"],
-  all_frames: true
-}
+  all_frames: true,
+};
 
 const TOOLTIP_WIDTH = 32;
 const TOOLTIP_HEIGHT = 32;
@@ -23,9 +23,22 @@ document.addEventListener("mousedown", (event) => {
   const isTooltipClicked = getTooltipElem()?.contains(event.target as Node);
 
   if (isTooltipClicked && latestRange) {
-    const { startContainer, startOffset, endContainer, endOffset } = latestRange
-    const selectionPath = serializeSelectionPath(startContainer, startOffset, endContainer, endOffset)
-    
+    const { startContainer, startOffset, endContainer, endOffset } =
+      latestRange;
+    const selectionPath = serializeSelectionPath(
+      startContainer,
+      startOffset,
+      endContainer,
+      endOffset,
+    );
+
+    const turndownService = new TurndownService();
+    const html = latestRange.cloneContents();
+    console.log("html", html);
+
+    const markdown = turndownService.turndown(html);
+    console.log("markdown", JSON.stringify(markdown));
+
     highlight(latestRange);
   }
 
@@ -187,18 +200,18 @@ function showTooltip() {
   if (!tooltip) return;
 
   const selection = window.getSelection();
-  console.log('selection', selection);
-  
+  console.log("selection", selection);
+
   if (!selection) return;
   latestRange = selection.getRangeAt(0).cloneRange();
 
   const position = getSelectedTextPosition(selection);
-  console.log('position', position);
-  
+  console.log("position", position);
+
   if (!position) return;
 
-  console.log('isAnchorBeforeFocus(selection)', isAnchorBeforeFocus(selection));
-  
+  console.log("isAnchorBeforeFocus(selection)", isAnchorBeforeFocus(selection));
+
   if (isAnchorBeforeFocus(selection)) {
     tooltip.style.transform = `translate(${position.right + 4}px, ${
       position.bottom + 4
