@@ -16,13 +16,40 @@ import {
 } from "~/nodes/BlockHeader";
 import {
   BlockParagraphNode,
+  SerializedBlockParagraphNodeSchema,
   type SerializedBlockParagraphNode,
 } from "~/nodes/BlockParagraph";
+import { z } from "zod";
+import { SerializedBlockHeaderNodeSchema } from "~/nodes/BlockHeader/BlockHeaderNode";
+import {
+  type SerializedBlockHighlightCommentNode,
+  SerializedBlockHighlightCommentNodeSchema,
+} from "~/nodes/BlockHighlightComment";
+
+export const updatedBlocksSchema: z.ZodSchema<UpdatedBlock> = z.object({
+  updateType: z.union([
+    z.literal("created"),
+    z.literal("updated"),
+    z.literal("destroyed"),
+  ]),
+  updatedBlockId: z.string().uuid(),
+  updatedBlock: z
+    .union([
+      SerializedBlockParagraphNodeSchema,
+      SerializedBlockHeaderNodeSchema,
+      SerializedBlockHighlightCommentNodeSchema,
+    ])
+    .nullable(),
+});
 
 export type UpdatedBlock = {
   updateType: NodeMutation;
   updatedBlockId: string;
-  updatedBlock: SerializedBlockHeaderNode | SerializedBlockParagraphNode | null;
+  updatedBlock:
+    | SerializedBlockHeaderNode
+    | SerializedBlockParagraphNode
+    | SerializedBlockHighlightCommentNode
+    | null;
 };
 
 export type Updates = Map<string, UpdatedBlock>;

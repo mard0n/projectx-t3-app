@@ -13,6 +13,8 @@ import {
   BLOCK_HIGHLIGHT_COMMENT_TYPE,
   type SerializedBlockHighlightCommentNode,
 } from "~/nodes/BlockHighlightComment";
+import { saveHighlight } from "~/background/messages/saveHighlight";
+import type { RouterInputs } from "~/utils/api";
 
 console.log(
   "You may find that having is not so pleasing a thing as wanting. This is not logical, but it is often true.",
@@ -71,6 +73,16 @@ async function handleTooltipClick() {
   };
 
   saveCommentHighlightsToStorage(data);
+
+  const update: RouterInputs["note"]["saveChanges"] = [
+    {
+      updateType: "created",
+      updatedBlockId: data.id,
+      updatedBlock: data,
+    },
+  ];
+
+  saveHighlight(update);
 
   highlight(range);
 }
