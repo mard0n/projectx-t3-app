@@ -7,10 +7,8 @@ import {
 } from "~/utils/extension";
 import type { PlasmoCSConfig } from "plasmo";
 import TurndownService from "turndown";
-import { Storage } from "@plasmohq/storage";
 import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
-
-const storage = new Storage({ area: "local" });
+import { saveCommentHighlightsToStorage } from "~/utils/extension-store";
 
 console.log(
   "You may find that having is not so pleasing a thing as wanting. This is not logical, but it is often true.",
@@ -68,10 +66,7 @@ async function handleTooltipClick() {
     highlightRangePath: selectionPath,
   };
 
-  const highlightComments = (await storage.get("saveHightlightComment")) ?? [];
-
-  // TODO: storage is not type safe
-  await storage.set("saveHightlightComment", [...highlightComments, {}]);
+  saveCommentHighlightsToStorage(data)
 
   highlight(range);
 }

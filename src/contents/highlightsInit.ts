@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-floating-promises */
-import { Storage } from "@plasmohq/storage";
 import { type PlasmoCSConfig } from "plasmo";
+import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
+import { deserializeSelectionPath, highlight } from "~/utils/extension";
+import { getCommentHighlights } from "~/utils/extension-store";
 console.log("highlightInit");
-
-const storage = new Storage({ area: "local" });
 
 export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
@@ -12,25 +12,22 @@ export const config: PlasmoCSConfig = {
 };
 
 (async () => {
-  // const highlightComments: SerializedBlockHighlightParagraphNode[] =
-  //   (await storage.get("saveHightlightComment")) ?? [];
+  const highlightComments = await getCommentHighlights();
 
-  // const currentUrl = await sendToBackground<ReqGetCurrentUrl, ResGetCurrentUrl>(
-  //   { name: "getCurrentUrl" },
-  // );
+  const currentUrl = await getCurrentUrl();
 
-  // setTimeout(() => {
-  //   // TODO: figure out better solution.
-  //   // We need to show highlights only after the page is fully loaded. run_at: "document_idle" doesn't do the job
-  //   // This only doesn't work on certain cites. e.g. https://docs.plasmo.com
-  //   highlightComments
-  //     .filter((highlight) => {
-  //       return highlight.highlightUrl === currentUrl;
-  //     })
-  //     .forEach((hc) => {
-  //       const range = deserializeSelectionPath(hc.highlightRangePath);
-  //       if (!range) return;
-  //       highlight(range);
-  //     });
-  // }, 500);
+  setTimeout(() => {
+    // TODO: figure out better solution.
+    // We need to show highlights only after the page is fully loaded. run_at: "document_idle" doesn't do the job
+    // This only doesn't work on certain cites. e.g. https://docs.plasmo.com
+    highlightComments
+      .filter((highlight) => {
+        return highlight.highlightUrl === currentUrl;
+      })
+      .forEach((hc) => {
+        const range = deserializeSelectionPath(hc.highlightRangePath);
+        if (!range) return;
+        highlight(range);
+      });
+  }, 500);
 })();
