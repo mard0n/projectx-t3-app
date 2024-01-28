@@ -1,6 +1,14 @@
+/* eslint-disable @typescript-eslint/no-floating-promises */
 import { highlight, serializeSelectionPath } from "~/utils/extension";
 import type { PlasmoCSConfig } from "plasmo";
 import TurndownService from "turndown";
+import { Storage } from "@plasmohq/storage";
+import {
+  BLOCK_HIGHLIGHT_PARAGRAPH_TYPE,
+  type SerializedBlockHighlightParagraphNode,
+} from "~/nodes/BlockHighlightParagraph";
+
+const storage = new Storage({ area: "local" });
 
 console.log(
   "You may find that having is not so pleasing a thing as wanting. This is not logical, but it is often true.",
@@ -10,12 +18,55 @@ export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
   exclude_matches: ["https://github.com/*"],
   all_frames: true,
+  run_at: "document_idle",
 };
 
 const TOOLTIP_WIDTH = 32;
 const TOOLTIP_HEIGHT = 32;
 const TOOLTIP_ID = "projectx-tooltip";
-let latestRange: Range | null = null;
+let latestRange: Range | null = null; // TODO: Find a better way to store the range
+
+async function handleTooltipClick(range: Range) {
+  const { startContainer, startOffset, endContainer, endOffset } = range;
+  const selectionPath = serializeSelectionPath(
+    startContainer,
+    startOffset,
+    endContainer,
+    endOffset,
+  );
+
+  const turndownService = new TurndownService();
+  const html = range.cloneContents();
+  const markdown = turndownService.turndown(html);
+  const currentUrl = window.location.origin + window.location.pathname;
+
+  // TODO: need to figure out ways to sync this data and BlockHighlightParagraph or easier way to create data
+  const data: SerializedBlockHighlightParagraphNode = {
+    type: BLOCK_HIGHLIGHT_PARAGRAPH_TYPE,
+    id: crypto.randomUUID(),
+    title: "",
+    parentId: null,
+    indexWithinParent: 0,
+    // indexWithinParent: this.getIndexWithinParent(),
+    open: true,
+    version: 1,
+    children: [],
+    direction: "ltr",
+    format: "left",
+    indent: 0,
+    childNotes: [],
+    highlightText: markdown,
+    highlightUrl: currentUrl,
+    highlightRangePath: selectionPath,
+  };
+
+  const highlightComments: SerializedBlockHighlightParagraphNode[] =
+    (await storage.get("saveHightlightComment")) ?? [];
+
+  await storage.set("saveHightlightComment", [...highlightComments, data]);
+
+  highlight(range);
+}
 
 // selectionchange didn't work because when you click on tooltip
 // and hold your click selectionchange was firing and hidingTooltip before it's able to handle the click event
@@ -23,32 +74,13 @@ document.addEventListener("mousedown", (event) => {
   const isTooltipClicked = getTooltipElem()?.contains(event.target as Node);
 
   if (isTooltipClicked && latestRange) {
-    const { startContainer, startOffset, endContainer, endOffset } =
-      latestRange;
-    const selectionPath = serializeSelectionPath(
-      startContainer,
-      startOffset,
-      endContainer,
-      endOffset,
-    );
-
-    const turndownService = new TurndownService();
-    const html = latestRange.cloneContents();
-    console.log("html", html);
-
-    const markdown = turndownService.turndown(html);
-    console.log("markdown", JSON.stringify(markdown));
-
-    highlight(latestRange);
+    handleTooltipClick(latestRange.cloneRange());
   }
 
   hideTooltip();
 });
 
 document.addEventListener("mouseup", (event: MouseEvent) => {
-  console.log("mouseup event", event);
-  console.log("isHighlighting()", isHighlighting());
-
   if (isHighlighting()) {
     showTooltip();
   }
@@ -88,7 +120,6 @@ function getSelectedTextPosition(selection: Selection) {
     selection.removeRange(endRange);
 
     // Set the selection back to the original positions
-
     selection.setBaseAndExtent(
       selection.anchorNode!,
       selection.anchorOffset,

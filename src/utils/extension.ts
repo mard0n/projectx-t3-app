@@ -34,7 +34,7 @@ function surroundTextWithWrapper(
 ) {
   const wrapper = document.createElement("projectx-highlight");
   // HACK: couldn't figure out how to add global styles
-  wrapper.style.backgroundColor = '#b2dbff'
+  wrapper.style.backgroundColor = "#b2dbff";
   const customRange = range.cloneRange();
   customRange.setStart(startContainer, startOffset);
   customRange.setEnd(endContainer, endOffset);
@@ -42,8 +42,9 @@ function surroundTextWithWrapper(
   window.getSelection()?.removeRange(customRange);
 }
 
+// TODO: Highlight fucks up the range. Place it on the bottom before any range dependent fns
 export function highlight(range: Range) {
-  const rangeClone = range.cloneRange()
+  const rangeClone = range.cloneRange();
   const container = rangeClone.commonAncestorContainer;
   const startContainer = rangeClone.startContainer as Node | Text;
   const startOffset = rangeClone.startOffset;
@@ -88,7 +89,13 @@ export function highlight(range: Range) {
     }
 
     if (textNode === endContainer) {
-      surroundTextWithWrapper(rangeClone, endContainer, 0, endContainer, endOffset);
+      surroundTextWithWrapper(
+        rangeClone,
+        endContainer,
+        0,
+        endContainer,
+        endOffset,
+      );
       break;
     }
 
@@ -115,10 +122,10 @@ function getSelectionPath(el: Node) {
       }
     }
 
-    if(el.nodeType === Node.TEXT_NODE) {
-      textNode = `#TEXT(${sibIndex})`
+    if (el.nodeType === Node.TEXT_NODE) {
+      textNode = `#TEXT(${sibIndex})`;
       el = el.parentNode;
-      continue
+      continue;
     }
 
     const nodeName = CSS.escape(el.nodeName.toLowerCase());
@@ -126,7 +133,11 @@ function getSelectionPath(el: Node) {
     // Ignore `html` as a parent node
     if (nodeName === "html") break;
 
-    if (el.nodeType !== Node.TEXT_NODE && (el as Element).hasAttribute("id") && (el as Element).id !== "") {
+    if (
+      el.nodeType !== Node.TEXT_NODE &&
+      (el as Element).hasAttribute("id") &&
+      (el as Element).id !== ""
+    ) {
       stack.unshift(`#${CSS.escape((el as Element).id)}`);
       // Remove this `break` if you want the entire path
       break;
@@ -140,35 +151,66 @@ function getSelectionPath(el: Node) {
     el = el.parentNode;
   }
 
-  return stack.join(">") + "-|-" + textNode
+  return stack.join(">") + "-|-" + textNode;
 }
 
-
-export function serializeSelectionPath(startContainer: Node, startOffset: number, endContainer: Node, endOffset: number): string {
-  const selectionStartPath = getSelectionPath(startContainer)
+export function serializeSelectionPath(
+  startContainer: Node,
+  startOffset: number,
+  endContainer: Node,
+  endOffset: number,
+): string {
+  const selectionStartPath = getSelectionPath(startContainer);
   const selectionStartOffset = startOffset;
-  const selectionEndPath = getSelectionPath(endContainer)
+  const selectionEndPath = getSelectionPath(endContainer);
   const selectionEndOffset = endOffset;
-  return `${selectionStartPath}-|-${selectionStartOffset}-|-${selectionEndPath}-|-${selectionEndOffset}`
-} 
+  return `${selectionStartPath}-|-${selectionStartOffset}-|-${selectionEndPath}-|-${selectionEndOffset}`;
+}
 
+export function deserializeSelectionPath(path: string): Range | null {
+  const [
+    startPath,
+    startTextIndexStr,
+    startOffsetStr,
+    endPath,
+    endTextIndexStr,
+    endOffsetStr,
+  ] = path.split("-|-");
 
-export function deserializeSelectionPath(path: string): {startContainer: Text | Node, startOffset: number, endContainer: Text, endOffset: number} | null {
-  const [startPath, startTextIndexStr, startOffset, endPath, endTextIndexStr, endOffset] = path.split('-|-')
+  const startTextIndex = startTextIndexStr?.match(/\d+/g)?.[0];
+  const startParentNode = document.querySelector(startPath!);
+  if (!startParentNode) return null;
+  const startChildTextNodes = [...startParentNode.childNodes].filter(
+    (node) => node.nodeType === Node.TEXT_NODE,
+  ) as Text[];
+  let startContainer: Text | Element;
+  if (startTextIndex) {
+    startContainer =
+      startChildTextNodes[parseInt(startTextIndex)] ?? startParentNode;
+  } else {
+    startContainer = startParentNode;
+  }
+  if (!startContainer) return null;
+  const startOffset = parseInt(startOffsetStr!) || 0;
 
-  const startTextIndex = startTextIndexStr!.match(/\d+/g)![0]
-  const startParentNode = document.querySelector(startPath!)
-  if(!startParentNode) return null
-  const startChildTextNodes = [...startParentNode.childNodes].filter(node => node.nodeType === Node.TEXT_NODE) as Text[]
-  const startContainer = startChildTextNodes[parseInt(startTextIndex)]
-  if(!startContainer) return null;
-  
-  const endTextIndex = endTextIndexStr!.match(/\d+/g)![0]
-  const endParentNode = document.querySelector(endPath!)
-  if(!endParentNode) return null
-  const endChildTextNodes = [...endParentNode.childNodes].filter(node => node.nodeType === Node.TEXT_NODE) as Text[]
-  const endContainer = endChildTextNodes[parseInt(endTextIndex)]
-  if(!endContainer) return null;
+  const endTextIndex = endTextIndexStr?.match(/\d+/g)?.[0];
+  const endParentNode = document.querySelector(endPath!);
+  if (!endParentNode) return null;
+  const endChildTextNodes = [...endParentNode.childNodes].filter(
+    (node) => node.nodeType === Node.TEXT_NODE,
+  ) as Text[];
+  let endContainer: Text | Element;
+  if (endTextIndex) {
+    endContainer = endChildTextNodes[parseInt(endTextIndex)] ?? endParentNode;
+  } else {
+    endContainer = endParentNode;
+  }
+  if (!endContainer) return null;
+  const endOffset = parseInt(endOffsetStr!) ?? 0;
 
-  return { startContainer, startOffset: parseInt(startOffset!), endContainer, endOffset: parseInt(endOffset!) }
-} 
+  const range = new Range();
+  range.setStart(startContainer, startOffset);
+  range.setEnd(endContainer, endOffset);
+
+  return range;
+}
