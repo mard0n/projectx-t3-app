@@ -1,6 +1,11 @@
 /* eslint-disable @typescript-eslint/no-floating-promises */
+import { sendToBackground } from "@plasmohq/messaging";
 import { Storage } from "@plasmohq/storage";
 import { type PlasmoCSConfig } from "plasmo";
+import type {
+  ReqGetCurrentUrl,
+  ResGetCurrentUrl,
+} from "~/background/messages/getCurrentUrl";
 import { type SerializedBlockHighlightParagraphNode } from "~/nodes/BlockHighlightParagraph";
 import { deserializeSelectionPath, highlight } from "~/utils/extension";
 console.log("highlightInit");
@@ -16,14 +21,23 @@ export const config: PlasmoCSConfig = {
 (async () => {
   const highlightComments: SerializedBlockHighlightParagraphNode[] =
     (await storage.get("saveHightlightComment")) ?? [];
+
+  const currentUrl = await sendToBackground<ReqGetCurrentUrl, ResGetCurrentUrl>(
+    { name: "getCurrentUrl" },
+  );
+
   setTimeout(() => {
     // TODO: figure out better solution.
     // We need to show highlights only after the page is fully loaded. run_at: "document_idle" doesn't do the job
     // This only doesn't work on certain cites. e.g. https://docs.plasmo.com
-    highlightComments.forEach((hc) => {
-      const range = deserializeSelectionPath(hc.highlightRangePath);
-      if (!range) return;
-      highlight(range);
-    });
+    highlightComments
+      .filter((highlight) => {
+        return highlight.highlightUrl === currentUrl;
+      })
+      .forEach((hc) => {
+        const range = deserializeSelectionPath(hc.highlightRangePath);
+        if (!range) return;
+        highlight(range);
+      });
   }, 500);
 })();

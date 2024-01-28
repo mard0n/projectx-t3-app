@@ -1,5 +1,3 @@
-console.log("highlight.js loaded");
-
 function getNextNode(node: Node, container: Node) {
   if (node.firstChild) {
     return node.firstChild;
@@ -176,9 +174,9 @@ export function deserializeSelectionPath(path: string): Range | null {
     endTextIndexStr,
     endOffsetStr,
   ] = path.split("-|-");
-
   const startTextIndex = startTextIndexStr?.match(/\d+/g)?.[0];
-  const startParentNode = document.querySelector(startPath!);
+  if (!startPath) return null;
+  const startParentNode = document.querySelector(startPath);
   if (!startParentNode) return null;
   const startChildTextNodes = [...startParentNode.childNodes].filter(
     (node) => node.nodeType === Node.TEXT_NODE,

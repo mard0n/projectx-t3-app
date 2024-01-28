@@ -7,6 +7,11 @@ import {
   BLOCK_HIGHLIGHT_PARAGRAPH_TYPE,
   type SerializedBlockHighlightParagraphNode,
 } from "~/nodes/BlockHighlightParagraph";
+import { sendToBackground } from "@plasmohq/messaging";
+import type {
+  ReqGetCurrentUrl,
+  ResGetCurrentUrl,
+} from "~/background/messages/getCurrentUrl";
 
 const storage = new Storage({ area: "local" });
 
@@ -38,7 +43,9 @@ async function handleTooltipClick(range: Range) {
   const turndownService = new TurndownService();
   const html = range.cloneContents();
   const markdown = turndownService.turndown(html);
-  const currentUrl = window.location.origin + window.location.pathname;
+  const currentUrl = await sendToBackground<ReqGetCurrentUrl, ResGetCurrentUrl>(
+    { name: "getCurrentUrl" },
+  );
 
   // TODO: need to figure out ways to sync this data and BlockHighlightParagraph or easier way to create data
   const data: SerializedBlockHighlightParagraphNode = {
@@ -56,7 +63,7 @@ async function handleTooltipClick(range: Range) {
     indent: 0,
     childNotes: [],
     highlightText: markdown,
-    highlightUrl: currentUrl,
+    highlightUrl: currentUrl!,
     highlightRangePath: selectionPath,
   };
 
