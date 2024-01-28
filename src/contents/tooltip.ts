@@ -3,15 +3,7 @@ import { highlight, serializeSelectionPath } from "~/utils/extension";
 import type { PlasmoCSConfig } from "plasmo";
 import TurndownService from "turndown";
 import { Storage } from "@plasmohq/storage";
-import {
-  BLOCK_HIGHLIGHT_PARAGRAPH_TYPE,
-  type SerializedBlockHighlightParagraphNode,
-} from "~/nodes/BlockHighlightParagraph";
-import { sendToBackground } from "@plasmohq/messaging";
-import type {
-  ReqGetCurrentUrl,
-  ResGetCurrentUrl,
-} from "~/background/messages/getCurrentUrl";
+import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
 
 const storage = new Storage({ area: "local" });
 
@@ -29,9 +21,14 @@ export const config: PlasmoCSConfig = {
 const TOOLTIP_WIDTH = 32;
 const TOOLTIP_HEIGHT = 32;
 const TOOLTIP_ID = "projectx-tooltip";
-let latestRange: Range | null = null; // TODO: Find a better way to store the range
+// This was the easiest way to store the range
+// I could serialize and store the range in chrome.storage but it might be too slow and requires lot of effort
+let lastRange: Range | null = null; 
 
-async function handleTooltipClick(range: Range) {
+async function handleTooltipClick() {
+  const range = lastRange?.cloneRange();
+  if (!range) return;
+
   const { startContainer, startOffset, endContainer, endOffset } = range;
   const selectionPath = serializeSelectionPath(
     startContainer,
@@ -43,13 +40,12 @@ async function handleTooltipClick(range: Range) {
   const turndownService = new TurndownService();
   const html = range.cloneContents();
   const markdown = turndownService.turndown(html);
-  const currentUrl = await sendToBackground<ReqGetCurrentUrl, ResGetCurrentUrl>(
-    { name: "getCurrentUrl" },
-  );
+
+  const currentUrl = await getCurrentUrl();
 
   // TODO: need to figure out ways to sync this data and BlockHighlightParagraph or easier way to create data
-  const data: SerializedBlockHighlightParagraphNode = {
-    type: BLOCK_HIGHLIGHT_PARAGRAPH_TYPE,
+  const data = {
+    // type: BLOCK_HIGHLIGHT_PARAGRAPH_TYPE,
     id: crypto.randomUUID(),
     title: "",
     parentId: null,
@@ -63,14 +59,14 @@ async function handleTooltipClick(range: Range) {
     indent: 0,
     childNotes: [],
     highlightText: markdown,
-    highlightUrl: currentUrl!,
+    highlightUrl: currentUrl,
     highlightRangePath: selectionPath,
   };
 
-  const highlightComments: SerializedBlockHighlightParagraphNode[] =
-    (await storage.get("saveHightlightComment")) ?? [];
+  const highlightComments = (await storage.get("saveHightlightComment")) ?? [];
 
-  await storage.set("saveHightlightComment", [...highlightComments, data]);
+  // TODO: storage is not type safe
+  await storage.set("saveHightlightComment", [...highlightComments, {}]);
 
   highlight(range);
 }
@@ -79,15 +75,21 @@ async function handleTooltipClick(range: Range) {
 // and hold your click selectionchange was firing and hidingTooltip before it's able to handle the click event
 document.addEventListener("mousedown", (event) => {
   const isTooltipClicked = getTooltipElem()?.contains(event.target as Node);
-
-  if (isTooltipClicked && latestRange) {
-    handleTooltipClick(latestRange.cloneRange());
+  if (isTooltipClicked) {
+    handleTooltipClick();
   }
 
   hideTooltip();
 });
 
-document.addEventListener("mouseup", (event: MouseEvent) => {
+document.addEventListener("selectionchange", () => {
+  const range = window.getSelection()?.getRangeAt(0).cloneRange();
+  if (range) {
+    lastRange = range;
+  }
+});
+
+document.addEventListener("mouseup", () => {
   if (isHighlighting()) {
     showTooltip();
   }
@@ -238,10 +240,7 @@ function showTooltip() {
   if (!tooltip) return;
 
   const selection = window.getSelection();
-  console.log("selection", selection);
-
   if (!selection) return;
-  latestRange = selection.getRangeAt(0).cloneRange();
 
   const position = getSelectedTextPosition(selection);
   console.log("position", position);
@@ -265,7 +264,6 @@ function showTooltip() {
 function hideTooltip() {
   const tooltip = getTooltipElem();
   if (tooltip) tooltip.style.visibility = "hidden";
-  latestRange = null;
 }
 
 function renderTooltipOnLoad() {
