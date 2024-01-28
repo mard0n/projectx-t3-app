@@ -1,4 +1,4 @@
-import type { PlasmoMessaging } from "@plasmohq/messaging";
+import { sendToBackground, type PlasmoMessaging } from "@plasmohq/messaging";
 
 export type ReqGetCurrentUrl = object;
 export type ResGetCurrentUrl = string | undefined;
@@ -12,5 +12,12 @@ const handler: PlasmoMessaging.MessageHandler<
 
   res.send(tab?.url);
 };
+
+export async function getCurrentUrl() {
+  const res = await sendToBackground<ReqGetCurrentUrl, ResGetCurrentUrl>({
+    name: "getCurrentUrl",
+  });
+  return res;
+}
 
 export default handler;
