@@ -9,6 +9,10 @@ import type { PlasmoCSConfig } from "plasmo";
 import TurndownService from "turndown";
 import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
 import { saveCommentHighlightsToStorage } from "~/utils/extension-store";
+import {
+  BLOCK_HIGHLIGHT_COMMENT_TYPE,
+  type SerializedBlockHighlightCommentNode,
+} from "~/nodes/BlockHighlightComment";
 
 console.log(
   "You may find that having is not so pleasing a thing as wanting. This is not logical, but it is often true.",
@@ -47,8 +51,8 @@ async function handleTooltipClick() {
   const currentUrl = await getCurrentUrl();
 
   // TODO: need to figure out ways to sync this data and BlockHighlightParagraph or easier way to create data
-  const data = {
-    // type: BLOCK_HIGHLIGHT_PARAGRAPH_TYPE,
+  const data: SerializedBlockHighlightCommentNode = {
+    type: BLOCK_HIGHLIGHT_COMMENT_TYPE,
     id: crypto.randomUUID(),
     title: "",
     parentId: null,
@@ -62,11 +66,11 @@ async function handleTooltipClick() {
     indent: 0,
     childNotes: [],
     highlightText: markdown,
-    highlightUrl: currentUrl,
+    highlightUrl: currentUrl!,
     highlightRangePath: selectionPath,
   };
 
-  saveCommentHighlightsToStorage(data)
+  saveCommentHighlightsToStorage(data);
 
   highlight(range);
 }
