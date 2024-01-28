@@ -37,9 +37,6 @@ export const notes = mysqlTable("notes", {
   ]).default(""),
   indent: int("indent").default(0),
   tag: mysqlEnum("tag", ["h1", "h2", "h3", "h4"]),
-  highlightText: varchar("highlightText", { length: 10000 }),
-  highlightUrl: varchar("highlightUrl", { length: 2048 }),
-  highlightRangePath: varchar("highlightText", { length: 2048 })
 });
 
 export type Note = typeof notes.$inferSelect;
