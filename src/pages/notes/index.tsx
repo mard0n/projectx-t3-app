@@ -6,7 +6,6 @@ import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import LexicalErrorBoundary from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { useRef } from "react";
-import { ParagraphNode } from "lexical";
 import {
   BlockChildContainerNode,
   BlockContainerNode,
@@ -28,6 +27,9 @@ import {
   BLOCK_PARAGRAPH_TYPE,
   BlockParagraphNode,
 } from "~/nodes/BlockParagraph";
+import { BLOCK_HIGHLIGHT_COMMENT_TYPE } from "~/nodes/BlockHighlightComment";
+import { BlockHighlightCommentNode } from "~/nodes/BlockHighlightComment/BlockHighlightCommentNode";
+import { HeaderNode } from "~/nodes/Header";
 
 type SelectedBlocks = {
   selectedBlocks: BlockContainerNode[] | null;
@@ -111,24 +113,38 @@ export default function Notes() {
       BlockChildContainerNode,
       BlockHeaderNode,
       BlockParagraphNode,
+      BlockHighlightCommentNode,
+      HeaderNode
     ],
     editorState: JSON.stringify({
       root: {
-        children: notes.data?.length
-          ? notes.data
-          : [
+        children: [
+          {
+            children: [],
+            type: BLOCK_HIGHLIGHT_COMMENT_TYPE,
+            version: 1,
+            title: "[]",
+            childNotes: [
               {
                 children: [],
-                direction: null,
-                format: "",
-                type: BLOCK_PARAGRAPH_TYPE,
+                type: BLOCK_HIGHLIGHT_COMMENT_TYPE,
                 version: 1,
                 title: "[]",
                 childNotes: [],
                 open: true,
                 id: crypto.randomUUID(),
+                highlightText: "## world \n (Google)[https://google.com]",
+                highlightUrl: "https://google.com",
+                highlightRangePath: "",
               },
             ],
+            open: true,
+            id: crypto.randomUUID(),
+            highlightText: "# Hello",
+            highlightUrl: "https://google.com",
+            highlightRangePath: "",
+          },
+        ],
         direction: null,
         type: "root",
         version: 1,

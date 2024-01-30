@@ -16,7 +16,7 @@ const handler: PlasmoMessaging.MessageHandler<Request, Response> = async (
 
 export async function saveHighlight(highlight: Request) {
   const res = await sendToBackground<Request, Response>({
-    name: "getCurrentUrl",
+    name: "saveHighlight",
     body: highlight,
   });
   return res;

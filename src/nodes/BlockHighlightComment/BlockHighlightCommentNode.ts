@@ -7,7 +7,10 @@ import type {
   Spread,
   TextNode,
 } from "lexical";
-import { type SerializedBlockContainerNode } from "../Block";
+import {
+  $createBlockTextNode,
+  type SerializedBlockContainerNode,
+} from "../Block";
 import { z } from "zod";
 import type { Prettify } from "~/utils/types";
 import {
@@ -16,6 +19,8 @@ import {
   ExtendableSerializedBlockContainerNodeSchema,
 } from "../Block/BlockContainer";
 import { addClassNamesToElement } from "@lexical/utils";
+import { $convertFromMarkdownString } from "@lexical/markdown";
+import { CUSTOM_TRANSFORMERS } from "~/utils/markdown-transformers";
 
 export const BLOCK_HIGHLIGHT_COMMENT_TYPE = "block-highlight-comment" as const;
 
@@ -107,15 +112,19 @@ export class BlockHighlightCommentNode extends BlockContainerNode {
       highlightUrl: serializedNode.highlightUrl,
       highlightRangePath: serializedNode.highlightRangePath,
     });
-    const containerChildren = container.getChildren();
-    blockHighlightCommentNode.append(...containerChildren);
+    const textNode = $createBlockTextNode();
+    $convertFromMarkdownString(
+      serializedNode.highlightText,
+      CUSTOM_TRANSFORMERS,
+      textNode,
+    );
+
+    const childContainerNode = container.getBlockChildContainerNode();
+    blockHighlightCommentNode.append(textNode, childContainerNode!);
     container.remove();
 
     blockHighlightCommentNode.setId(serializedNode.id);
     blockHighlightCommentNode.setOpen(serializedNode.open);
-    blockHighlightCommentNode.setDirection(serializedNode.direction);
-    blockHighlightCommentNode.setIndent(serializedNode?.indent ?? 0);
-    blockHighlightCommentNode.setFormat(serializedNode?.format ?? "");
     return blockHighlightCommentNode;
   }
 
