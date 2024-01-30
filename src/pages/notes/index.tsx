@@ -30,6 +30,13 @@ import {
 import { BLOCK_HIGHLIGHT_COMMENT_TYPE } from "~/nodes/BlockHighlightComment";
 import { BlockHighlightCommentNode } from "~/nodes/BlockHighlightComment/BlockHighlightCommentNode";
 import { HeaderNode } from "~/nodes/Header";
+import { BlockHighlightCommentTextNode } from "~/nodes/BlockHighlightComment/BlockHighlightCommentTextNode";
+import {
+  BLOCK_HIGHLIGHT_PARAGRAPH_TYPE,
+  BlockHighlightParagraphNode,
+} from "~/nodes/BlockHighlightParagraph/BlockHighlightParagraphNode";
+import { BlockHighlightParagraphCommentNode } from "~/nodes/BlockHighlightParagraph/BlockHighlightParagraphCommentNode";
+import { BlockHighlightParagraphQuoteNode } from "~/nodes/BlockHighlightParagraph";
 
 type SelectedBlocks = {
   selectedBlocks: BlockContainerNode[] | null;
@@ -113,17 +120,27 @@ export default function Notes() {
       BlockChildContainerNode,
       BlockHeaderNode,
       BlockParagraphNode,
-      BlockHighlightCommentNode,
       HeaderNode,
+      BlockHighlightCommentNode,
+      BlockHighlightCommentTextNode,
+      BlockHighlightParagraphNode,
+      BlockHighlightParagraphCommentNode,
+      BlockHighlightParagraphQuoteNode,
     ],
     editorState: JSON.stringify({
       root: {
         children: [
           {
             children: [],
-            type: BLOCK_HIGHLIGHT_COMMENT_TYPE,
+            type: BLOCK_HIGHLIGHT_PARAGRAPH_TYPE,
             version: 1,
             title: "[]",
+            open: true,
+            id: crypto.randomUUID(),
+            highlightText:
+              "# Adding multiple content scripts \n Create a contents directory for multiple content scripts, and add your content scripts there. Make sure their names describe what they do!",
+            highlightUrl: "https://google.com",
+            highlightRangePath: "",
             childNotes: [
               {
                 children: [],
@@ -133,16 +150,23 @@ export default function Notes() {
                 childNotes: [],
                 open: true,
                 id: crypto.randomUUID(),
-                highlightText: "## world \n (Google)[https://google.com]",
+                highlightText: "directory for multiple",
+                highlightUrl: "https://google.com",
+                highlightRangePath: "",
+              },
+              {
+                children: [],
+                type: BLOCK_HIGHLIGHT_COMMENT_TYPE,
+                version: 1,
+                title: "[]",
+                childNotes: [],
+                open: true,
+                id: crypto.randomUUID(),
+                highlightText: "Adding multiple",
                 highlightUrl: "https://google.com",
                 highlightRangePath: "",
               },
             ],
-            open: true,
-            id: crypto.randomUUID(),
-            highlightText: "# Hello",
-            highlightUrl: "https://google.com",
-            highlightRangePath: "",
           },
           {
             children: [],

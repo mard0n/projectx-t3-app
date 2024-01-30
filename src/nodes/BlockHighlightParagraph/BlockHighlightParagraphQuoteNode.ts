@@ -1,45 +1,43 @@
-/**
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- */
-
 import { addClassNamesToElement } from "@lexical/utils";
-import type { BlockContainerNode } from ".";
 import type {
   NodeKey,
   Spread,
-  SerializedParagraphNode,
   RangeSelection,
   LexicalNode,
   TextNode,
   LineBreakNode,
   EditorConfig,
 } from "lexical";
-import { ElementNode, $isTextNode } from "lexical";
+import { type ElementNode, $isTextNode } from "lexical";
+import type { BlockHighlightParagraphNode } from "./BlockHighlightParagraphNode";
+import { BlockTextNode, type SerializedBlockTextNode } from "../Block";
 
-export type SerializedBlockTextNode = Spread<object, SerializedParagraphNode>;
+export type SerializedBlockHighlightParagraphQuoteNode = Spread<
+  object,
+  SerializedBlockTextNode
+>;
 
-const TEXT_BLOCK_TYPE = "block-text" as const;
+export const BLOCK_HIGHLIGHT_PARAGRAPH_QUOTE = "block-highlight-paragraph-quote" as const;
 
-export class BlockTextNode extends ElementNode {
+export class BlockHighlightParagraphQuoteNode extends BlockTextNode {
   constructor(key?: NodeKey) {
     super(key);
   }
 
   static getType(): string {
-    return TEXT_BLOCK_TYPE;
+    return BLOCK_HIGHLIGHT_PARAGRAPH_QUOTE;
   }
 
-  static clone(node: BlockTextNode): BlockTextNode {
-    return new BlockTextNode(node.__key);
+  static clone(
+    node: BlockHighlightParagraphQuoteNode,
+  ): BlockHighlightParagraphQuoteNode {
+    return new BlockHighlightParagraphQuoteNode(node.__key);
   }
 
   // View
   createDOM(config: EditorConfig): HTMLElement {
     const dom = document.createElement("div");
+    dom.contentEditable = "false";
     const theme = config.theme;
     const className = (theme.block as { text: string }).text;
     if (className !== undefined) {
@@ -52,29 +50,21 @@ export class BlockTextNode extends ElementNode {
     return false;
   }
 
-  static importJSON(serializedNode: SerializedBlockTextNode): BlockTextNode {
-    const node = $createBlockTextNode();
-    node.setFormat(serializedNode.format);
-    node.setIndent(serializedNode.indent);
-    node.setDirection(serializedNode.direction);
+  static importJSON(): BlockHighlightParagraphQuoteNode {
+    const node = $createBlockHighlightParagraphQuoteNode();
     return node;
   }
 
-  exportJSON(): SerializedBlockTextNode {
-    const children = this.getLatest()
-      .getChildren()
-      .map((node) => node.exportJSON());
-
+  exportJSON(): SerializedBlockHighlightParagraphQuoteNode {
     return {
       ...super.exportJSON(),
-      type: TEXT_BLOCK_TYPE,
+      type: BLOCK_HIGHLIGHT_PARAGRAPH_QUOTE,
       version: 1,
-      children,
     };
   }
 
   // Mutation
-  getParent<T extends ElementNode = BlockContainerNode>(): T | null {
+  getParent<T extends ElementNode = BlockHighlightParagraphNode>(): T | null {
     return super.getParent();
   }
 
@@ -82,8 +72,11 @@ export class BlockTextNode extends ElementNode {
     return super.getChildren();
   }
 
-  insertNewAfter(_: RangeSelection, restoreSelection: boolean): BlockTextNode {
-    const newElement = $createBlockTextNode();
+  insertNewAfter(
+    _: RangeSelection,
+    restoreSelection: boolean,
+  ): BlockHighlightParagraphQuoteNode {
+    const newElement = $createBlockHighlightParagraphQuoteNode();
     const direction = this.getDirection();
     newElement.setDirection(direction);
     this.insertAfter(newElement, restoreSelection);
@@ -115,16 +108,16 @@ export class BlockTextNode extends ElementNode {
   }
 }
 
-export function $createBlockTextNode(
+export function $createBlockHighlightParagraphQuoteNode(
   content?: (TextNode | LineBreakNode | LexicalNode)[],
-): BlockTextNode {
+): BlockHighlightParagraphQuoteNode {
   return content?.length
-    ? new BlockTextNode().append(...content)
-    : new BlockTextNode();
+    ? new BlockHighlightParagraphQuoteNode().append(...content)
+    : new BlockHighlightParagraphQuoteNode();
 }
 
-export function $isBlockTextNode(
+export function $isBlockHighlightParagraphQuoteNode(
   node: LexicalNode | null | undefined,
-): node is BlockTextNode {
-  return node instanceof BlockTextNode;
+): node is BlockHighlightParagraphQuoteNode {
+  return node instanceof BlockHighlightParagraphQuoteNode;
 }

@@ -7,34 +7,40 @@
  */
 
 import { addClassNamesToElement } from "@lexical/utils";
-import type { BlockContainerNode } from ".";
 import type {
   NodeKey,
   Spread,
-  SerializedParagraphNode,
   RangeSelection,
   LexicalNode,
   TextNode,
   LineBreakNode,
   EditorConfig,
 } from "lexical";
-import { ElementNode, $isTextNode } from "lexical";
+import { type ElementNode, $isTextNode } from "lexical";
+import type { BlockHighlightParagraphNode } from "./BlockHighlightParagraphNode";
+import { BlockTextNode, type SerializedBlockTextNode } from "../Block";
 
-export type SerializedBlockTextNode = Spread<object, SerializedParagraphNode>;
+export type SerializedBlockHighlightParagraphCommentNode = Spread<
+  object,
+  SerializedBlockTextNode
+>;
 
-const TEXT_BLOCK_TYPE = "block-text" as const;
+export const BLOCK_HIGHLIGHT_PARAGRAPH_COMMENT =
+  "block-highlight-paragraph-comment" as const;
 
-export class BlockTextNode extends ElementNode {
+export class BlockHighlightParagraphCommentNode extends BlockTextNode {
   constructor(key?: NodeKey) {
     super(key);
   }
 
   static getType(): string {
-    return TEXT_BLOCK_TYPE;
+    return BLOCK_HIGHLIGHT_PARAGRAPH_COMMENT;
   }
 
-  static clone(node: BlockTextNode): BlockTextNode {
-    return new BlockTextNode(node.__key);
+  static clone(
+    node: BlockHighlightParagraphCommentNode,
+  ): BlockHighlightParagraphCommentNode {
+    return new BlockHighlightParagraphCommentNode(node.__key);
   }
 
   // View
@@ -52,29 +58,21 @@ export class BlockTextNode extends ElementNode {
     return false;
   }
 
-  static importJSON(serializedNode: SerializedBlockTextNode): BlockTextNode {
-    const node = $createBlockTextNode();
-    node.setFormat(serializedNode.format);
-    node.setIndent(serializedNode.indent);
-    node.setDirection(serializedNode.direction);
+  static importJSON(): BlockHighlightParagraphCommentNode {
+    const node = $createBlockHighlightParagraphCommentNode();
     return node;
   }
 
-  exportJSON(): SerializedBlockTextNode {
-    const children = this.getLatest()
-      .getChildren()
-      .map((node) => node.exportJSON());
-
+  exportJSON(): SerializedBlockHighlightParagraphCommentNode {
     return {
       ...super.exportJSON(),
-      type: TEXT_BLOCK_TYPE,
+      type: BLOCK_HIGHLIGHT_PARAGRAPH_COMMENT,
       version: 1,
-      children,
     };
   }
 
   // Mutation
-  getParent<T extends ElementNode = BlockContainerNode>(): T | null {
+  getParent<T extends ElementNode = BlockHighlightParagraphNode>(): T | null {
     return super.getParent();
   }
 
@@ -82,8 +80,11 @@ export class BlockTextNode extends ElementNode {
     return super.getChildren();
   }
 
-  insertNewAfter(_: RangeSelection, restoreSelection: boolean): BlockTextNode {
-    const newElement = $createBlockTextNode();
+  insertNewAfter(
+    _: RangeSelection,
+    restoreSelection: boolean,
+  ): BlockHighlightParagraphCommentNode {
+    const newElement = $createBlockHighlightParagraphCommentNode();
     const direction = this.getDirection();
     newElement.setDirection(direction);
     this.insertAfter(newElement, restoreSelection);
@@ -115,16 +116,16 @@ export class BlockTextNode extends ElementNode {
   }
 }
 
-export function $createBlockTextNode(
+export function $createBlockHighlightParagraphCommentNode(
   content?: (TextNode | LineBreakNode | LexicalNode)[],
-): BlockTextNode {
+): BlockHighlightParagraphCommentNode {
   return content?.length
-    ? new BlockTextNode().append(...content)
-    : new BlockTextNode();
+    ? new BlockHighlightParagraphCommentNode().append(...content)
+    : new BlockHighlightParagraphCommentNode();
 }
 
-export function $isBlockTextNode(
+export function $isBlockHighlightParagraphCommentNode(
   node: LexicalNode | null | undefined,
-): node is BlockTextNode {
-  return node instanceof BlockTextNode;
+): node is BlockHighlightParagraphCommentNode {
+  return node instanceof BlockHighlightParagraphCommentNode;
 }

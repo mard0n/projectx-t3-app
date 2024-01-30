@@ -10,6 +10,7 @@ export {
   $createBlockTextNode,
   $isBlockTextNode,
   BlockTextNode,
+  type SerializedBlockTextNode
 } from "./BlockText";
 export {
   $createBlockChildContainerNode,

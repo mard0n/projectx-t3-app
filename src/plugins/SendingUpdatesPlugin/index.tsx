@@ -25,6 +25,10 @@ import {
   type SerializedBlockHighlightCommentNode,
   SerializedBlockHighlightCommentNodeSchema,
 } from "~/nodes/BlockHighlightComment";
+import {
+  type SerializedBlockHighlightParagraphNode,
+  SerializedBlockHighlightParagraphNodeSchema,
+} from "~/nodes/BlockHighlightParagraph";
 
 export const updatedBlocksSchema: z.ZodSchema<UpdatedBlock> = z.object({
   updateType: z.union([
@@ -38,6 +42,7 @@ export const updatedBlocksSchema: z.ZodSchema<UpdatedBlock> = z.object({
       SerializedBlockParagraphNodeSchema,
       SerializedBlockHeaderNodeSchema,
       SerializedBlockHighlightCommentNodeSchema,
+      SerializedBlockHighlightParagraphNodeSchema,
     ])
     .nullable(),
 });
@@ -49,6 +54,7 @@ export type UpdatedBlock = {
     | SerializedBlockHeaderNode
     | SerializedBlockParagraphNode
     | SerializedBlockHighlightCommentNode
+    | SerializedBlockHighlightParagraphNode
     | null;
 };
 

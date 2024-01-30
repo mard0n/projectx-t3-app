@@ -52,6 +52,7 @@ export class HeaderNode extends ElementNode {
   createDOM(config: EditorConfig): HTMLElement {
     const tag = this.__tag;
     const element = document.createElement(tag);
+    element.classList.add('block-h1')
     // const theme = config.theme;
     // const classNames = theme.header;
     // if (classNames !== undefined) {

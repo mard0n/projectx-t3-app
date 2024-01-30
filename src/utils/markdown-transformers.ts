@@ -1,4 +1,21 @@
-import type { ElementTransformer, Transformer } from "@lexical/markdown";
+import type {
+  ElementTransformer,
+  Transformer,
+  TextFormatTransformer,
+  TextMatchTransformer,
+} from "@lexical/markdown";
+import {
+  HIGHLIGHT,
+  BOLD_ITALIC_STAR,
+  BOLD_ITALIC_UNDERSCORE,
+  BOLD_STAR,
+  BOLD_UNDERSCORE,
+  INLINE_CODE,
+  ITALIC_STAR,
+  ITALIC_UNDERSCORE,
+  LINK,
+  STRIKETHROUGH,
+} from "@lexical/markdown";
 import type { ElementNode } from "lexical";
 import {
   $createHeaderNode,
@@ -44,6 +61,19 @@ const ELEMENT_TRANSFORMERS: Array<ElementTransformer> = [
   // UNORDERED_LIST,
   // ORDERED_LIST,
 ];
+const TEXT_FORMAT_TRANSFORMERS: Array<TextFormatTransformer> = [
+  INLINE_CODE,
+  BOLD_ITALIC_STAR,
+  BOLD_ITALIC_UNDERSCORE,
+  BOLD_STAR,
+  BOLD_UNDERSCORE,
+  HIGHLIGHT,
+  ITALIC_STAR,
+  ITALIC_UNDERSCORE,
+  STRIKETHROUGH,
+];
+
+const TEXT_MATCH_TRANSFORMERS: Array<TextMatchTransformer> = [LINK];
 
 export const CUSTOM_TRANSFORMERS: Array<Transformer> = [
   // TABLE,
@@ -54,6 +84,6 @@ export const CUSTOM_TRANSFORMERS: Array<Transformer> = [
   // TWEET,
   // CHECK_LIST,
   ...ELEMENT_TRANSFORMERS,
-  // ...TEXT_FORMAT_TRANSFORMERS,
+  ...TEXT_FORMAT_TRANSFORMERS,
   // ...TEXT_MATCH_TRANSFORMERS,
 ];

@@ -12,6 +12,7 @@ import {
 } from "drizzle-orm/mysql-core";
 import { BLOCK_HEADER_TYPE } from "~/nodes/BlockHeader";
 import { BLOCK_HIGHLIGHT_COMMENT_TYPE } from "~/nodes/BlockHighlightComment";
+import { BLOCK_HIGHLIGHT_PARAGRAPH_TYPE } from "~/nodes/BlockHighlightParagraph";
 import { BLOCK_PARAGRAPH_TYPE } from "~/nodes/BlockParagraph";
 
 export const notes = mysqlTable("notes", {
@@ -21,6 +22,7 @@ export const notes = mysqlTable("notes", {
   type: mysqlEnum("type", [
     BLOCK_PARAGRAPH_TYPE,
     BLOCK_HEADER_TYPE,
+    BLOCK_HIGHLIGHT_PARAGRAPH_TYPE,
     BLOCK_HIGHLIGHT_COMMENT_TYPE,
   ]) // TODO: Make it more specific. mysqlEnum("type", ['block-container'])
     .notNull()
