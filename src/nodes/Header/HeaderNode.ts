@@ -170,7 +170,11 @@ export class HeaderNode extends ElementNode {
     newElement.setDirection(direction);
     this.insertAfter(newElement, restoreSelection);
     if (anchorOffet === 0 && !this.isEmpty() && selection) {
-      this.replace($createParagraphNode(), restoreSelection);
+      // TODO: Figure out if it's a right decision. 
+      // Because when you press enter at the beginning of the line it leaves empty paragraph at the place where 
+      // the Header was and we don't need that
+      this.remove() 
+      // this.replace($createParagraphNode(), restoreSelection);
     }
     return newElement;
   }

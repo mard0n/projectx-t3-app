@@ -325,8 +325,9 @@ const HierarchicalBlockPlugin = ({}) => {
 
           const insertedNode = selection.insertParagraph();
 
-          if (insertedNode && $isBlockTextNode(insertedNode)) {
-            const containerNode = insertedNode.getParent();
+          if (insertedNode) {
+            const containerNode = $findParentBlockContainer(insertedNode);
+            // const containerNode = insertedNode.getParent();
             if (!containerNode) return false;
 
             const insertedNodeContent = insertedNode.getChildren();

@@ -114,7 +114,7 @@ export default function Notes() {
       BlockHeaderNode,
       BlockParagraphNode,
       BlockHighlightCommentNode,
-      HeaderNode
+      HeaderNode,
     ],
     editorState: JSON.stringify({
       root: {
@@ -143,6 +143,15 @@ export default function Notes() {
             highlightText: "# Hello",
             highlightUrl: "https://google.com",
             highlightRangePath: "",
+          },
+          {
+            children: [],
+            type: BLOCK_PARAGRAPH_TYPE,
+            version: 1,
+            title: "[]",
+            childNotes: [],
+            open: true,
+            id: crypto.randomUUID(),
           },
         ],
         direction: null,
