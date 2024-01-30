@@ -1,10 +1,10 @@
 import { Storage } from "@plasmohq/storage";
-import type { SerializedBlockHighlightCommentNode } from "~/nodes/BlockHighlightComment/BlockHighlightCommentNode";
+import type { SerializedBlockHighlightSliceNode } from "~/nodes/BlockHighlightSlice/BlockHighlightSliceNode";
 
 const storage = new Storage({ area: "local" });
 
 export async function saveCommentHighlightsToStorage(
-  highlight: SerializedBlockHighlightCommentNode,
+  highlight: SerializedBlockHighlightSliceNode,
 ) {
   const highlightComments = await getCommentHighlights();
 
@@ -12,7 +12,7 @@ export async function saveCommentHighlightsToStorage(
 }
 
 export async function getCommentHighlights() {
-  const highlightComments: SerializedBlockHighlightCommentNode[] =
+  const highlightComments: SerializedBlockHighlightSliceNode[] =
     (await storage.get("saveHightlightComment")) ?? [];
 
   return highlightComments;

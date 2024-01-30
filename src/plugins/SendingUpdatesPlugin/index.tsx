@@ -22,9 +22,9 @@ import {
 import { z } from "zod";
 import { SerializedBlockHeaderNodeSchema } from "~/nodes/BlockHeader/BlockHeaderNode";
 import {
-  type SerializedBlockHighlightCommentNode,
-  SerializedBlockHighlightCommentNodeSchema,
-} from "~/nodes/BlockHighlightComment";
+  type SerializedBlockHighlightSliceNode,
+  SerializedBlockHighlightSliceNodeSchema,
+} from "~/nodes/BlockHighlightSlice";
 import {
   type SerializedBlockHighlightParagraphNode,
   SerializedBlockHighlightParagraphNodeSchema,
@@ -41,7 +41,7 @@ export const updatedBlocksSchema: z.ZodSchema<UpdatedBlock> = z.object({
     .union([
       SerializedBlockParagraphNodeSchema,
       SerializedBlockHeaderNodeSchema,
-      SerializedBlockHighlightCommentNodeSchema,
+      SerializedBlockHighlightSliceNodeSchema,
       SerializedBlockHighlightParagraphNodeSchema,
     ])
     .nullable(),
@@ -53,7 +53,7 @@ export type UpdatedBlock = {
   updatedBlock:
     | SerializedBlockHeaderNode
     | SerializedBlockParagraphNode
-    | SerializedBlockHighlightCommentNode
+    | SerializedBlockHighlightSliceNode
     | SerializedBlockHighlightParagraphNode
     | null;
 };

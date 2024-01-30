@@ -10,9 +10,9 @@ import TurndownService from "turndown";
 import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
 import { saveCommentHighlightsToStorage } from "~/utils/extension-store";
 import {
-  BLOCK_HIGHLIGHT_COMMENT_TYPE,
-  type SerializedBlockHighlightCommentNode,
-} from "~/nodes/BlockHighlightComment";
+  BLOCK_HIGHLIGHT_SLICE_TYPE,
+  type SerializedBlockHighlightSliceNode,
+} from "~/nodes/BlockHighlightSlice";
 import { saveHighlight } from "~/background/messages/saveHighlight";
 import type { RouterInputs } from "~/utils/api";
 
@@ -53,8 +53,8 @@ async function handleTooltipClick() {
   const currentUrl = await getCurrentUrl();
 
   // TODO: need to figure out ways to sync this data and BlockHighlightParagraph or easier way to create data
-  const data: SerializedBlockHighlightCommentNode = {
-    type: BLOCK_HIGHLIGHT_COMMENT_TYPE,
+  const data: SerializedBlockHighlightSliceNode = {
+    type: BLOCK_HIGHLIGHT_SLICE_TYPE,
     id: crypto.randomUUID(),
     title: "",
     parentId: null,

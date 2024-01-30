@@ -20,9 +20,9 @@ import { $convertFromMarkdownString } from "@lexical/markdown";
 import { CUSTOM_TRANSFORMERS } from "~/utils/markdown-transformers";
 import { $createBlockHighlightParagraphQuoteNode } from "./BlockHighlightParagraphQuoteNode";
 import {
-  $isBlockHighlightCommentNode,
-  type BlockHighlightCommentNode,
-} from "../BlockHighlightComment";
+  $isBlockHighlightSliceNode,
+  type BlockHighlightSliceNode,
+} from "../BlockHighlightSlice";
 import {
   $createBlockHighlightParagraphCommentNode,
   $isBlockHighlightParagraphCommentNode,
@@ -130,8 +130,8 @@ export class BlockHighlightParagraphNode extends BlockContainerNode {
     const childContainers = childContainerNode?.getChildren();
 
     const commentContainers = childContainers?.filter((childContainer) =>
-      $isBlockHighlightCommentNode(childContainer),
-    ) as BlockHighlightCommentNode[];
+      $isBlockHighlightSliceNode(childContainer),
+    ) as BlockHighlightSliceNode[];
 
     let highlightedText = serializedNode.highlightText;
     for (const comment of commentContainers) {

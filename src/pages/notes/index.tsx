@@ -27,10 +27,9 @@ import {
   BLOCK_PARAGRAPH_TYPE,
   BlockParagraphNode,
 } from "~/nodes/BlockParagraph";
-import { BLOCK_HIGHLIGHT_COMMENT_TYPE } from "~/nodes/BlockHighlightComment";
-import { BlockHighlightCommentNode } from "~/nodes/BlockHighlightComment/BlockHighlightCommentNode";
+import { BLOCK_HIGHLIGHT_SLICE_TYPE } from "~/nodes/BlockHighlightSlice";
+import { BlockHighlightSliceNode } from "~/nodes/BlockHighlightSlice/BlockHighlightSliceNode";
 import { HeaderNode } from "~/nodes/Header";
-import { BlockHighlightCommentTextNode } from "~/nodes/BlockHighlightComment/BlockHighlightCommentTextNode";
 import {
   BLOCK_HIGHLIGHT_PARAGRAPH_TYPE,
   BlockHighlightParagraphNode,
@@ -121,8 +120,7 @@ export default function Notes() {
       BlockHeaderNode,
       BlockParagraphNode,
       HeaderNode,
-      BlockHighlightCommentNode,
-      BlockHighlightCommentTextNode,
+      BlockHighlightSliceNode,
       BlockHighlightParagraphNode,
       BlockHighlightParagraphCommentNode,
       BlockHighlightParagraphQuoteNode,
@@ -144,25 +142,26 @@ export default function Notes() {
             childNotes: [
               {
                 children: [],
-                type: BLOCK_HIGHLIGHT_COMMENT_TYPE,
+                type: BLOCK_HIGHLIGHT_SLICE_TYPE,
+                version: 1,
+                title:
+                  '[{"detail":0,"format":0,"mode":"normal","style":"","text":"this is what I think about adding multiple","type":"text","version":1}]',
+                childNotes: [],
+                open: true,
+                id: crypto.randomUUID(),
+                highlightText: "Adding multiple",
+                highlightUrl: "https://google.com",
+                highlightRangePath: "",
+              },
+              {
+                children: [],
+                type: BLOCK_HIGHLIGHT_SLICE_TYPE,
                 version: 1,
                 title: "[]",
                 childNotes: [],
                 open: true,
                 id: crypto.randomUUID(),
                 highlightText: "directory for multiple",
-                highlightUrl: "https://google.com",
-                highlightRangePath: "",
-              },
-              {
-                children: [],
-                type: BLOCK_HIGHLIGHT_COMMENT_TYPE,
-                version: 1,
-                title: "[]",
-                childNotes: [],
-                open: true,
-                id: crypto.randomUUID(),
-                highlightText: "Adding multiple",
                 highlightUrl: "https://google.com",
                 highlightRangePath: "",
               },

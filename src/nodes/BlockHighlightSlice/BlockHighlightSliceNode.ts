@@ -7,35 +7,30 @@ import type {
   Spread,
   TextNode,
 } from "lexical";
-import {
-  $createBlockTextNode,
-  type SerializedBlockContainerNode,
-} from "../Block";
-import { z } from "zod";
+import type { SerializedBlockContainerNode } from "../Block";
 import type { Prettify } from "~/utils/types";
+import { z } from "zod";
 import {
   $createBlockContainerNode,
   BlockContainerNode,
   ExtendableSerializedBlockContainerNodeSchema,
 } from "../Block/BlockContainer";
 import { addClassNamesToElement } from "@lexical/utils";
-import { $convertFromMarkdownString } from "@lexical/markdown";
-import { CUSTOM_TRANSFORMERS } from "~/utils/markdown-transformers";
 
-export const BLOCK_HIGHLIGHT_COMMENT_TYPE = "block-highlight-comment" as const;
+export const BLOCK_HIGHLIGHT_SLICE_TYPE = "block-highlight-slice" as const;
 
-export const SerializedBlockHighlightCommentNodeSchema: z.ZodType<SerializedBlockHighlightCommentNode> =
+export const SerializedBlockHighlightSliceNodeSchema: z.ZodType<SerializedBlockHighlightSliceNode> =
   ExtendableSerializedBlockContainerNodeSchema.extend({
-    type: z.literal(BLOCK_HIGHLIGHT_COMMENT_TYPE),
+    type: z.literal(BLOCK_HIGHLIGHT_SLICE_TYPE),
     highlightText: z.string(),
     highlightUrl: z.string().url(),
     highlightRangePath: z.string(),
   });
 
-export type SerializedBlockHighlightCommentNode = Prettify<
+export type SerializedBlockHighlightSliceNode = Prettify<
   Spread<
     {
-      type: typeof BLOCK_HIGHLIGHT_COMMENT_TYPE;
+      type: typeof BLOCK_HIGHLIGHT_SLICE_TYPE;
       highlightText: string;
       highlightUrl: string;
       highlightRangePath: string;
@@ -44,7 +39,7 @@ export type SerializedBlockHighlightCommentNode = Prettify<
   >
 >;
 
-export class BlockHighlightCommentNode extends BlockContainerNode {
+export class BlockHighlightSliceNode extends BlockContainerNode {
   __highlightText: string;
   __highlightUrl: string;
   __highlightRangePath: string;
@@ -72,8 +67,8 @@ export class BlockHighlightCommentNode extends BlockContainerNode {
     this.__highlightRangePath = highlightRangePath ?? "";
   }
 
-  static clone(node: BlockHighlightCommentNode): BlockHighlightCommentNode {
-    return new BlockHighlightCommentNode({
+  static clone(node: BlockHighlightSliceNode): BlockHighlightSliceNode {
+    return new BlockHighlightSliceNode({
       key: node.__key,
       open: node.__open,
       id: node.__id,
@@ -85,7 +80,7 @@ export class BlockHighlightCommentNode extends BlockContainerNode {
   }
 
   static getType(): string {
-    return BLOCK_HIGHLIGHT_COMMENT_TYPE;
+    return BLOCK_HIGHLIGHT_SLICE_TYPE;
   }
 
   createDOM(config: EditorConfig, editor: LexicalEditor): HTMLDivElement {
@@ -98,29 +93,22 @@ export class BlockHighlightCommentNode extends BlockContainerNode {
     return dom;
   }
 
-  updateDOM(prevNode: BlockHighlightCommentNode, dom: HTMLDivElement): boolean {
+  updateDOM(prevNode: BlockHighlightSliceNode, dom: HTMLDivElement): boolean {
     return super.updateDOM(prevNode, dom);
   }
 
   static importJSON(
-    serializedNode: SerializedBlockHighlightCommentNode,
-  ): BlockHighlightCommentNode {
+    serializedNode: SerializedBlockHighlightSliceNode,
+  ): BlockHighlightSliceNode {
     const container = super.importJSON(serializedNode);
-    const blockHighlightCommentNode = $createBlockHighlightCommentNode({
+    const blockHighlightCommentNode = $createBlockHighlightSliceNode({
       prepopulateChildren: false,
       highlightText: serializedNode.highlightText,
       highlightUrl: serializedNode.highlightUrl,
       highlightRangePath: serializedNode.highlightRangePath,
     });
-    const textNode = $createBlockTextNode();
-    $convertFromMarkdownString(
-      serializedNode.highlightText,
-      CUSTOM_TRANSFORMERS,
-      textNode,
-    );
 
-    const childContainerNode = container.getBlockChildContainerNode();
-    blockHighlightCommentNode.append(textNode, childContainerNode!);
+    blockHighlightCommentNode.append(...container.getChildren());
     container.remove();
 
     blockHighlightCommentNode.setId(serializedNode.id);
@@ -128,7 +116,7 @@ export class BlockHighlightCommentNode extends BlockContainerNode {
     return blockHighlightCommentNode;
   }
 
-  exportJSON(): SerializedBlockHighlightCommentNode {
+  exportJSON(): SerializedBlockHighlightSliceNode {
     const blockHighlightCommentNode = this.getLatest();
 
     return {
@@ -136,7 +124,7 @@ export class BlockHighlightCommentNode extends BlockContainerNode {
       highlightText: blockHighlightCommentNode.getHighlightText(),
       highlightUrl: blockHighlightCommentNode.getHighlightUrl(),
       highlightRangePath: blockHighlightCommentNode.getHighlightRangePath(),
-      type: BLOCK_HIGHLIGHT_COMMENT_TYPE,
+      type: BLOCK_HIGHLIGHT_SLICE_TYPE,
       version: 1,
     };
   }
@@ -172,21 +160,21 @@ type CreateBlockContainerNodeProps = {
   highlightRangePath: string;
 };
 
-export function $createBlockHighlightCommentNode({
+export function $createBlockHighlightSliceNode({
   highlightText,
   highlightUrl,
   highlightRangePath,
   titleNode,
   childContainerNodes,
   prepopulateChildren = true,
-}: CreateBlockContainerNodeProps): BlockHighlightCommentNode {
+}: CreateBlockContainerNodeProps): BlockHighlightSliceNode {
   if (prepopulateChildren) {
     const blockContainerNode = $createBlockContainerNode({
       prepopulateChildren,
       titleNode,
       childContainerNodes,
     });
-    const blockHighlightCommentNode = new BlockHighlightCommentNode({
+    const blockHighlightCommentNode = new BlockHighlightSliceNode({
       highlightText,
       highlightUrl,
       highlightRangePath,
@@ -197,7 +185,7 @@ export function $createBlockHighlightCommentNode({
     blockContainerNode.remove();
     return newBlockComment;
   } else {
-    const blockComment = new BlockHighlightCommentNode({
+    const blockComment = new BlockHighlightSliceNode({
       highlightText,
       highlightUrl,
       highlightRangePath,
@@ -206,8 +194,8 @@ export function $createBlockHighlightCommentNode({
   }
 }
 
-export function $isBlockHighlightCommentNode(
+export function $isBlockHighlightSliceNode(
   node: LexicalNode | null | undefined,
-): node is BlockHighlightCommentNode {
-  return node instanceof BlockHighlightCommentNode;
+): node is BlockHighlightSliceNode {
+  return node instanceof BlockHighlightSliceNode;
 }
