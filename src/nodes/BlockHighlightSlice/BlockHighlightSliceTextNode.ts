@@ -10,49 +10,46 @@ import { addClassNamesToElement } from "@lexical/utils";
 import type {
   NodeKey,
   Spread,
+  SerializedParagraphNode,
   RangeSelection,
   LexicalNode,
   TextNode,
   LineBreakNode,
   EditorConfig,
 } from "lexical";
-import { type ElementNode, $isTextNode } from "lexical";
-import type { BlockHighlightParagraphNode } from "./BlockHighlightParagraphNode";
-import { BlockTextNode, type SerializedBlockTextNode } from "../Block";
+import { ElementNode, $isTextNode } from "lexical";
+import { type BlockHighlightSliceNode } from ".";
 
-export type SerializedBlockHighlightParagraphCommentNode = Spread<
+export type SerializedBlockHighlightSliceTextNode = Spread<
   object,
-  SerializedBlockTextNode
+  SerializedParagraphNode
 >;
 
-export const BLOCK_HIGHLIGHT_PARAGRAPH_COMMENT =
-  "block-highlight-paragraph-comment" as const;
+export const BLOCK_HIGHLIGHT_SLICE_TEXT_TYPE =
+  "block-highlight-slice-text" as const;
 
-export class BlockHighlightParagraphCommentNode extends BlockTextNode {
+export class BlockHighlightSliceTextNode extends ElementNode {
   constructor(key?: NodeKey) {
     super(key);
   }
 
   static getType(): string {
-    return BLOCK_HIGHLIGHT_PARAGRAPH_COMMENT;
+    return BLOCK_HIGHLIGHT_SLICE_TEXT_TYPE;
   }
 
-  static clone(
-    node: BlockHighlightParagraphCommentNode,
-  ): BlockHighlightParagraphCommentNode {
-    return new BlockHighlightParagraphCommentNode(node.__key);
+  static clone(node: BlockHighlightSliceTextNode): BlockHighlightSliceTextNode {
+    return new BlockHighlightSliceTextNode(node.__key);
   }
 
   // View
   createDOM(config: EditorConfig): HTMLElement {
-    const dom = document.createElement("div");
-    const theme = config.theme;
-    const className = (theme.block as { text: string }).text;
-    if (className !== undefined) {
-      addClassNamesToElement(dom, className);
-    }
-    dom.style.marginLeft = "34px";
-    dom.style.marginTop = "4px";
+    const dom = document.createElement("li");
+    
+    // const theme = config.theme;
+    // const className = (theme.block as { text: string }).text;
+    // if (className !== undefined) {
+    //   addClassNamesToElement(dom, className);
+    // }
     return dom;
   }
 
@@ -60,21 +57,31 @@ export class BlockHighlightParagraphCommentNode extends BlockTextNode {
     return false;
   }
 
-  static importJSON(): BlockHighlightParagraphCommentNode {
-    const node = $createBlockHighlightParagraphCommentNode();
+  static importJSON(
+    serializedNode: SerializedBlockHighlightSliceTextNode,
+  ): BlockHighlightSliceTextNode {
+    const node = $createBlockHighlightSliceTextNode();
+    node.setFormat(serializedNode.format);
+    node.setIndent(serializedNode.indent);
+    node.setDirection(serializedNode.direction);
     return node;
   }
 
-  exportJSON(): SerializedBlockHighlightParagraphCommentNode {
+  exportJSON(): SerializedBlockHighlightSliceTextNode {
+    const children = this.getLatest()
+      .getChildren()
+      .map((node) => node.exportJSON());
+
     return {
       ...super.exportJSON(),
-      type: BLOCK_HIGHLIGHT_PARAGRAPH_COMMENT,
+      type: BLOCK_HIGHLIGHT_SLICE_TEXT_TYPE,
       version: 1,
+      children,
     };
   }
 
   // Mutation
-  getParent<T extends ElementNode = BlockHighlightParagraphNode>(): T | null {
+  getParent<T extends ElementNode = BlockHighlightSliceNode>(): T | null {
     return super.getParent();
   }
 
@@ -85,8 +92,8 @@ export class BlockHighlightParagraphCommentNode extends BlockTextNode {
   insertNewAfter(
     _: RangeSelection,
     restoreSelection: boolean,
-  ): BlockHighlightParagraphCommentNode {
-    const newElement = $createBlockHighlightParagraphCommentNode();
+  ): BlockHighlightSliceTextNode {
+    const newElement = $createBlockHighlightSliceTextNode();
     const direction = this.getDirection();
     newElement.setDirection(direction);
     this.insertAfter(newElement, restoreSelection);
@@ -118,16 +125,16 @@ export class BlockHighlightParagraphCommentNode extends BlockTextNode {
   }
 }
 
-export function $createBlockHighlightParagraphCommentNode(
+export function $createBlockHighlightSliceTextNode(
   content?: (TextNode | LineBreakNode | LexicalNode)[],
-): BlockHighlightParagraphCommentNode {
+): BlockHighlightSliceTextNode {
   return content?.length
-    ? new BlockHighlightParagraphCommentNode().append(...content)
-    : new BlockHighlightParagraphCommentNode();
+    ? new BlockHighlightSliceTextNode().append(...content)
+    : new BlockHighlightSliceTextNode();
 }
 
-export function $isBlockHighlightParagraphCommentNode(
+export function $isBlockHighlightSliceTextNode(
   node: LexicalNode | null | undefined,
-): node is BlockHighlightParagraphCommentNode {
-  return node instanceof BlockHighlightParagraphCommentNode;
+): node is BlockHighlightSliceTextNode {
+  return node instanceof BlockHighlightSliceTextNode;
 }

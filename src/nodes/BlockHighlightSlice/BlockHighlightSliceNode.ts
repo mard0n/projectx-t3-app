@@ -16,6 +16,8 @@ import {
   ExtendableSerializedBlockContainerNodeSchema,
 } from "../Block/BlockContainer";
 import { addClassNamesToElement } from "@lexical/utils";
+import { hasToggleElemClicked } from "~/utils/lexical";
+import { $createBlockHighlightSliceTextNode } from "./BlockHighlightSliceTextNode";
 
 export const BLOCK_HIGHLIGHT_SLICE_TYPE = "block-highlight-slice" as const;
 
@@ -25,6 +27,7 @@ export const SerializedBlockHighlightSliceNodeSchema: z.ZodType<SerializedBlockH
     highlightText: z.string(),
     highlightUrl: z.string().url(),
     highlightRangePath: z.string(),
+    highlightIndexWithPage: z.number(),
   });
 
 export type SerializedBlockHighlightSliceNode = Prettify<
@@ -34,6 +37,7 @@ export type SerializedBlockHighlightSliceNode = Prettify<
       highlightText: string;
       highlightUrl: string;
       highlightRangePath: string;
+      highlightIndexWithPage: number;
     },
     SerializedBlockContainerNode
   >
@@ -43,6 +47,7 @@ export class BlockHighlightSliceNode extends BlockContainerNode {
   __highlightText: string;
   __highlightUrl: string;
   __highlightRangePath: string;
+  __highlightIndexWithPage: number;
 
   constructor({
     key,
@@ -52,6 +57,7 @@ export class BlockHighlightSliceNode extends BlockContainerNode {
     highlightText,
     highlightUrl,
     highlightRangePath,
+    highlightIndexWithPage,
   }: {
     key?: NodeKey;
     open?: boolean;
@@ -60,11 +66,13 @@ export class BlockHighlightSliceNode extends BlockContainerNode {
     highlightText: string;
     highlightUrl: string;
     highlightRangePath: string;
+    highlightIndexWithPage: number;
   }) {
     super({ open, selected, id, key });
     this.__highlightText = highlightText ?? "";
     this.__highlightUrl = highlightUrl ?? "";
     this.__highlightRangePath = highlightRangePath ?? "";
+    this.__highlightIndexWithPage = highlightIndexWithPage ?? 0;
   }
 
   static clone(node: BlockHighlightSliceNode): BlockHighlightSliceNode {
@@ -76,6 +84,7 @@ export class BlockHighlightSliceNode extends BlockContainerNode {
       highlightText: node.__highlightText,
       highlightUrl: node.__highlightUrl,
       highlightRangePath: node.__highlightRangePath,
+      highlightIndexWithPage: node.__highlightIndexWithPage,
     });
   }
 
@@ -84,13 +93,26 @@ export class BlockHighlightSliceNode extends BlockContainerNode {
   }
 
   createDOM(config: EditorConfig, editor: LexicalEditor): HTMLDivElement {
-    const dom = super.createDOM(config, editor);
+    const divDom = super.createDOM(config, editor);
     const theme = config.theme;
     const className = theme.blockHighlightComment as string;
     if (className !== undefined) {
-      addClassNamesToElement(dom, className);
+      addClassNamesToElement(divDom, className);
     }
-    return dom;
+
+    const olDom = document.createElement("ol");
+    olDom.className = divDom.className;
+
+    olDom.addEventListener("click", (event) => {
+      console.log("createDOM click event");
+      if (hasToggleElemClicked(event)) {
+        editor.update(() => {
+          this.toggleOpen();
+        });
+      }
+    });
+
+    return olDom as HTMLDivElement; // HACK
   }
 
   updateDOM(prevNode: BlockHighlightSliceNode, dom: HTMLDivElement): boolean {
@@ -106,7 +128,10 @@ export class BlockHighlightSliceNode extends BlockContainerNode {
       highlightText: serializedNode.highlightText,
       highlightUrl: serializedNode.highlightUrl,
       highlightRangePath: serializedNode.highlightRangePath,
+      highlightIndexWithPage: serializedNode.highlightIndexWithPage,
     });
+
+    container.getBlockTextNode()?.replace($createBlockHighlightSliceTextNode());
 
     blockHighlightCommentNode.append(...container.getChildren());
     container.remove();
@@ -124,6 +149,8 @@ export class BlockHighlightSliceNode extends BlockContainerNode {
       highlightText: blockHighlightCommentNode.getHighlightText(),
       highlightUrl: blockHighlightCommentNode.getHighlightUrl(),
       highlightRangePath: blockHighlightCommentNode.getHighlightRangePath(),
+      highlightIndexWithPage:
+        blockHighlightCommentNode.getHighlightIndexWithPage(),
       type: BLOCK_HIGHLIGHT_SLICE_TYPE,
       version: 1,
     };
@@ -149,6 +176,13 @@ export class BlockHighlightSliceNode extends BlockContainerNode {
   setHighlightRangePath(highlightRangePath: string) {
     this.getWritable().__highlightRangePath = highlightRangePath;
   }
+
+  getHighlightIndexWithPage() {
+    return this.getLatest().__highlightIndexWithPage;
+  }
+  setHighlightIndexWithPage(highlightIndexWithPage: number) {
+    this.getWritable().__highlightIndexWithPage = highlightIndexWithPage;
+  }
 }
 
 type CreateBlockContainerNodeProps = {
@@ -158,12 +192,14 @@ type CreateBlockContainerNodeProps = {
   highlightText: string;
   highlightUrl: string;
   highlightRangePath: string;
+  highlightIndexWithPage: number;
 };
 
 export function $createBlockHighlightSliceNode({
   highlightText,
   highlightUrl,
   highlightRangePath,
+  highlightIndexWithPage,
   titleNode,
   childContainerNodes,
   prepopulateChildren = true,
@@ -178,6 +214,7 @@ export function $createBlockHighlightSliceNode({
       highlightText,
       highlightUrl,
       highlightRangePath,
+      highlightIndexWithPage,
     });
     const newBlockComment = blockHighlightCommentNode.append(
       ...blockContainerNode.getChildren(),
@@ -189,6 +226,7 @@ export function $createBlockHighlightSliceNode({
       highlightText,
       highlightUrl,
       highlightRangePath,
+      highlightIndexWithPage,
     });
     return blockComment;
   }

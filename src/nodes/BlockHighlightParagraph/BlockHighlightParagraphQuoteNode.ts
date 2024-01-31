@@ -17,7 +17,8 @@ export type SerializedBlockHighlightParagraphQuoteNode = Spread<
   SerializedBlockTextNode
 >;
 
-export const BLOCK_HIGHLIGHT_PARAGRAPH_QUOTE = "block-highlight-paragraph-quote" as const;
+export const BLOCK_HIGHLIGHT_PARAGRAPH_QUOTE =
+  "block-highlight-paragraph-quote" as const;
 
 export class BlockHighlightParagraphQuoteNode extends BlockTextNode {
   constructor(key?: NodeKey) {
@@ -39,7 +40,7 @@ export class BlockHighlightParagraphQuoteNode extends BlockTextNode {
     const dom = document.createElement("div");
     dom.contentEditable = "false";
     const theme = config.theme;
-    const className = (theme.block as { text: string }).text;
+    const className = "";
     if (className !== undefined) {
       addClassNamesToElement(dom, className);
     }

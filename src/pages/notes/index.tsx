@@ -27,7 +27,7 @@ import {
   BLOCK_PARAGRAPH_TYPE,
   BlockParagraphNode,
 } from "~/nodes/BlockParagraph";
-import { BLOCK_HIGHLIGHT_SLICE_TYPE } from "~/nodes/BlockHighlightSlice";
+import { BLOCK_HIGHLIGHT_SLICE_TYPE, BlockHighlightSliceTextNode } from "~/nodes/BlockHighlightSlice";
 import { BlockHighlightSliceNode } from "~/nodes/BlockHighlightSlice/BlockHighlightSliceNode";
 import { HeaderNode } from "~/nodes/Header";
 import {
@@ -121,9 +121,11 @@ export default function Notes() {
       BlockParagraphNode,
       HeaderNode,
       BlockHighlightSliceNode,
+      BlockHighlightSliceTextNode,
       BlockHighlightParagraphNode,
       BlockHighlightParagraphCommentNode,
       BlockHighlightParagraphQuoteNode,
+      
     ],
     editorState: JSON.stringify({
       root: {
@@ -152,6 +154,7 @@ export default function Notes() {
                 highlightText: "Adding multiple",
                 highlightUrl: "https://google.com",
                 highlightRangePath: "",
+                highlightIndexWithPage: 1,
               },
               {
                 children: [],
@@ -164,6 +167,7 @@ export default function Notes() {
                 highlightText: "directory for multiple",
                 highlightUrl: "https://google.com",
                 highlightRangePath: "",
+                highlightIndexWithPage: 1,
               },
             ],
           },
