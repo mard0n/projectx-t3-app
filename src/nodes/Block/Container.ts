@@ -264,7 +264,7 @@ export function $findParentBlockContainer(node: LexicalNode) {
     (node: LexicalNode): node is BlockContainerNode => {
       return $isBlockContainerNode(node);
     },
-  ) as BlockContainerNode | null;
+  );
 }
 
 export function $getSelectedBlocks(

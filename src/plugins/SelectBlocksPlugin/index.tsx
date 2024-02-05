@@ -1,34 +1,37 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { mergeRegister } from "@lexical/utils";
 import {
-  $getSelection,
-  $isRangeSelection,
-  $isTextNode,
-  COMMAND_PRIORITY_NORMAL,
-  SELECTION_CHANGE_COMMAND,
-} from "lexical";
-import {
-  $findParentBlockContainer,
+  $getSelectedBlocks,
+  $isBlockContainerNode,
   BlockChildContainerNode,
   BlockContainerNode,
-  BlockTextNode,
+  BlockContentNode,
 } from "~/nodes/Block";
-import { selectOnlyTopNotes } from "~/utils/lexical";
-import { useSelectedBlocks } from "~/pages/notes";
+import {
+  SELECTION_CHANGE_COMMAND,
+  $getSelection,
+  $isRangeSelection,
+  COMMAND_PRIORITY_NORMAL,
+  $setSelection,
+  CONTROLLED_TEXT_INSERTION_COMMAND,
+  DELETE_CHARACTER_COMMAND,
+  DELETE_LINE_COMMAND,
+  KEY_ENTER_COMMAND,
+  COMMAND_PRIORITY_HIGH,
+  $getNodeByKey,
+} from "lexical";
+import { selectOnlyTopNodes } from "~/utils/lexical";
 
 const SelectBlocksPlugin = ({}) => {
   const [editor] = useLexicalComposerContext();
-  const selectedBlocks = useSelectedBlocks((state) => state.selectedBlocks);
-  const setSelectedBlocks = useSelectedBlocks(
-    (state) => state.setSelectedBlocks,
-  );
+  const prevSelectedBlocks = useRef<BlockContainerNode[] | null>(null);
 
   useEffect(() => {
     if (
       !editor.hasNodes([
         BlockContainerNode,
-        BlockTextNode,
+        BlockContentNode,
         BlockChildContainerNode,
       ])
     ) {
@@ -41,8 +44,15 @@ const SelectBlocksPlugin = ({}) => {
       editor.registerCommand(
         SELECTION_CHANGE_COMMAND,
         () => {
-          selectedBlocks?.forEach((node) => node.setSelected(false));
-          setSelectedBlocks(null);
+          console.log("SELECTION_CHANGE_COMMAND", prevSelectedBlocks.current);
+
+          prevSelectedBlocks.current?.forEach((block) => {
+            const isExistInEditor = $getNodeByKey(block.getKey());
+            isExistInEditor &&
+              $isBlockContainerNode(block) &&
+              block.setSelected(false);
+          });
+          prevSelectedBlocks.current = null;
 
           const selection = $getSelection();
 
@@ -50,37 +60,114 @@ const SelectBlocksPlugin = ({}) => {
             return false;
           }
 
-          const selectedNodes = selection.getNodes();
+          const selectedNodes = $getSelectedBlocks(selection);
 
-          if (!selectedNodes.some((node) => !$isTextNode(node))) {
-            // Don't add selected class if only one line is selected
+          // Don't add selected class if only one line is selected
+          if (selectedNodes?.length < 2) {
             return false;
           }
 
-          const cPContainers = [
-            ...new Set(
-              selectedNodes.flatMap((node) => {
-                const result = $findParentBlockContainer(node);
-                return !!result ? [result] : [];
-              }),
-            ),
-          ];
-          const onlyTopLevelNodes = selectOnlyTopNotes(cPContainers);
+          const onlyTopLevelNodes = selectOnlyTopNodes(selectedNodes);
 
-          setSelectedBlocks(onlyTopLevelNodes);
+          onlyTopLevelNodes.forEach((block) => block.setSelected(true));
+
+          prevSelectedBlocks.current = onlyTopLevelNodes;
 
           return true;
         },
         COMMAND_PRIORITY_NORMAL,
       ),
-    );
-  }, [editor, selectedBlocks]);
+      editor.registerCommand<KeyboardEvent | null>(
+        KEY_ENTER_COMMAND,
+        (event) => {
+          const selection = $getSelection();
 
-  useEffect(() => {
-    editor.update(() => {
-      selectedBlocks?.forEach((node) => node.setSelected(true));
-    });
-  }, [selectedBlocks]);
+          if (!$isRangeSelection(selection)) {
+            return false;
+          }
+
+          const selectedBlocks = $getSelectedBlocks(selection);
+          console.log("selectedBlocks", selectedBlocks);
+
+          if (selectedBlocks?.length > 1) {
+            event?.preventDefault();
+            console.log("select lastnode");
+
+            const lastNode = selectedBlocks.slice(-1)[0]; // TODO: Not the best method. They are not ordered any specific way
+            console.log("lastNode", lastNode);
+
+            lastNode?.selectEnd();
+            return true;
+          }
+
+          return false;
+        },
+        COMMAND_PRIORITY_HIGH,
+      ),
+      editor.registerCommand<boolean>(
+        DELETE_LINE_COMMAND,
+        () => {
+          const selection = $getSelection();
+          if (!$isRangeSelection(selection)) {
+            return false;
+          }
+
+          const selectedBlocks = $getSelectedBlocks(selection);
+
+          if (selectedBlocks?.length > 1) {
+            const prevBlock = selectedBlocks[0]?.getPreviousSibling();
+            selectedBlocks.forEach((node) => node.remove());
+            console.log("prevBlock", prevBlock);
+            prevBlock ? prevBlock.selectEnd() : $setSelection(null);
+            return true;
+          }
+
+          return false;
+        },
+        COMMAND_PRIORITY_HIGH,
+      ),
+      editor.registerCommand<boolean>(
+        DELETE_CHARACTER_COMMAND,
+        () => {
+          const selection = $getSelection();
+
+          if (!$isRangeSelection(selection)) {
+            return false;
+          }
+
+          const selectedBlocks = $getSelectedBlocks(selection);
+          if (selectedBlocks?.length > 1) {
+            const prevBlock = selectedBlocks[0]?.getPreviousSibling();
+            selectedBlocks.forEach((node) => node.remove());
+            prevBlock ? prevBlock.selectEnd() : $setSelection(null);
+            return true;
+          }
+
+          return false;
+        },
+        COMMAND_PRIORITY_HIGH,
+      ),
+      editor.registerCommand<InputEvent | string>(
+        CONTROLLED_TEXT_INSERTION_COMMAND,
+        () => {
+          const selection = $getSelection();
+
+          if (!$isRangeSelection(selection)) {
+            return false;
+          }
+
+          const selectedBlocks = $getSelectedBlocks(selection);
+
+          if (selectedBlocks?.length > 1) {
+            return true;
+          }
+
+          return false;
+        },
+        COMMAND_PRIORITY_HIGH,
+      ),
+    );
+  }, [editor]);
 
   return null;
 };

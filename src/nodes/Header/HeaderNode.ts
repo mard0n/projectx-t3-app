@@ -1,4 +1,4 @@
-import { addClassNamesToElement } from "build/chrome-mv3-dev/tooltip.0c599db0";
+import { addClassNamesToElement } from "@lexical/utils";
 import { ElementNode, isHTMLElement, $createParagraphNode } from "lexical";
 import type {
   NodeKey,
