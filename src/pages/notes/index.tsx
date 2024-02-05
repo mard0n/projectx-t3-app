@@ -7,67 +7,20 @@ import LexicalErrorBoundary from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { useRef } from "react";
 import {
-  BlockChildContainerNode,
-  BlockContainerNode,
-  BlockTextNode,
-} from "~/nodes/Block";
-import { HierarchicalBlockPlugin } from "~/plugins/HierarchicalBlocksPlugin";
-import { DraggableBlockPlugin } from "~/plugins/DraggableBlockPlugin";
-import {
-  SendingUpdatesPlugin,
   type UpdatedBlock,
   type Updates,
 } from "~/plugins/SendingUpdatesPlugin";
-import { create } from "zustand";
-import { SelectBlocksPlugin } from "~/plugins/SelectBlocksPlugin";
-import { ShortcutsPlugin } from "~/plugins/ShortcutsPlugin";
-import { BlockHeaderNode } from "~/nodes/BlockHeader";
 import TreeViewPlugin from "~/plugins/TreeViewPlugin";
+import { customTheme } from "~/utils/lexical/theme";
 import {
-  BLOCK_PARAGRAPH_TYPE,
-  BlockParagraphNode,
-} from "~/nodes/BlockParagraph";
-import { BLOCK_HIGHLIGHT_SLICE_TYPE, BlockHighlightSliceTextNode } from "~/nodes/BlockHighlightSlice";
-import { BlockHighlightSliceNode } from "~/nodes/BlockHighlightSlice/BlockHighlightSliceNode";
+  CONTAINER_TYPE,
+  BlockChildContainerNode,
+  BlockContainerNode,
+  BlockContentNode,
+} from "~/nodes/Block";
+import { HierarchicalBlockPlugin } from "~/plugins/HierarchicalBlocksPlugin";
+import { SelectBlocksPlugin } from "~/plugins/SelectBlocksPlugin";
 import { HeaderNode } from "~/nodes/Header";
-import {
-  BLOCK_HIGHLIGHT_PARAGRAPH_TYPE,
-  BlockHighlightParagraphNode,
-} from "~/nodes/BlockHighlightParagraph/BlockHighlightParagraphNode";
-import { BlockHighlightParagraphCommentNode } from "~/nodes/BlockHighlightParagraph/BlockHighlightParagraphCommentNode";
-import { BlockHighlightParagraphQuoteNode } from "~/nodes/BlockHighlightParagraph";
-
-type SelectedBlocks = {
-  selectedBlocks: BlockContainerNode[] | null;
-  setSelectedBlocks: (blocks: BlockContainerNode[] | null) => void;
-};
-
-export const useSelectedBlocks = create<SelectedBlocks>()((set) => ({
-  selectedBlocks: null,
-  setSelectedBlocks: (blocks: BlockContainerNode[] | null) =>
-    set(() => ({ selectedBlocks: blocks })),
-}));
-
-const theme = {
-  blockParagraph: "block-paragraph",
-  text: {
-    bold: "textBold",
-    italic: "textItalic",
-    strikethrough: "textStrikethrough",
-    underline: "textUnderline",
-  },
-  block: {
-    container: "block-container",
-    text: "block-text",
-    childContainer: "block-child-container",
-  },
-  header: {
-    h1: "block-h1",
-    h2: "block-h2",
-    h3: "block-h3",
-    h4: "block-h4",
-  },
-};
 
 function onError(error: Error) {
   console.error(error);
@@ -75,110 +28,83 @@ function onError(error: Error) {
 
 export default function Notes() {
   const anchorElemRef = useRef<HTMLDivElement>(null);
-  const notes = api.note.getAll.useQuery(undefined, {
-    refetchOnWindowFocus: false,
-  });
-  const saveChanges = api.note.saveChanges.useMutation();
+  // const notes = api.note.getAll.useQuery(undefined, {
+  //   refetchOnWindowFocus: false,
+  // });
+  // const saveChanges = api.note.saveChanges.useMutation();
 
-  if (notes.isLoading) {
-    return (
-      <div className="flex min-h-screen px-2">
-        <aside className="min-w-80 border-r pt-8">
-          <Link href="/notes">All notes</Link>
-        </aside>
-        <main className="flex-grow p-8">Loading...</main>
-      </div>
-    );
-  }
+  // if (notes.isLoading) {
+  //   return (
+  //     <div className="flex min-h-screen px-2">
+  //       <aside className="min-w-80 border-r pt-8">
+  //         <Link href="/notes">All notes</Link>
+  //       </aside>
+  //       <main className="flex-grow p-8">Loading...</main>
+  //     </div>
+  //   );
+  // }
 
-  if (notes.isError) {
-    <div className="flex min-h-screen px-2">
-      <aside className="min-w-80 border-r pt-8">
-        <Link href="/notes">All notes</Link>
-      </aside>
-      <main className="flex-grow p-8">Failed. Try again later</main>
-    </div>;
-  }
+  // if (notes.isError) {
+  //   <div className="flex min-h-screen px-2">
+  //     <aside className="min-w-80 border-r pt-8">
+  //       <Link href="/notes">All notes</Link>
+  //     </aside>
+  //     <main className="flex-grow p-8">Failed. Try again later</main>
+  //   </div>;
+  // }
 
-  const handleUpdates = (updates: Updates) => {
-    const updatedBlocks: UpdatedBlock[] = [];
-    for (const value of updates.values()) {
-      updatedBlocks.push(value);
-    }
-    console.log("updatedBlocks", updatedBlocks);
-    saveChanges.mutate(updatedBlocks);
-  };
+  // const handleUpdates = (updates: Updates) => {
+  //   const updatedBlocks: UpdatedBlock[] = [];
+  //   for (const value of updates.values()) {
+  //     updatedBlocks.push(value);
+  //   }
+  //   console.log("updatedBlocks", updatedBlocks);
+  //   saveChanges.mutate(updatedBlocks);
+  // };
 
   const initialConfig = {
     namespace: "MyEditor",
-    theme,
+    theme: customTheme,
     onError,
-    nodes: [
-      BlockContainerNode,
-      BlockTextNode,
-      BlockChildContainerNode,
-      BlockHeaderNode,
-      BlockParagraphNode,
-      HeaderNode,
-      BlockHighlightSliceNode,
-      BlockHighlightSliceTextNode,
-      BlockHighlightParagraphNode,
-      BlockHighlightParagraphCommentNode,
-      BlockHighlightParagraphQuoteNode,
-      
-    ],
+    nodes: [BlockContainerNode, BlockContentNode, BlockChildContainerNode, HeaderNode],
     editorState: JSON.stringify({
       root: {
         children: [
           {
-            children: [],
-            type: BLOCK_HIGHLIGHT_PARAGRAPH_TYPE,
+            type: CONTAINER_TYPE,
             version: 1,
-            title: "[]",
+            content: "# Hello world",
             open: true,
             id: crypto.randomUUID(),
-            highlightText:
-              "# Adding multiple content scripts \n Create a contents directory for multiple content scripts, and add your content scripts there. Make sure their names describe what they do!",
-            highlightUrl: "https://google.com",
-            highlightRangePath: "",
             childNotes: [
-              {
-                children: [],
-                type: BLOCK_HIGHLIGHT_SLICE_TYPE,
-                version: 1,
-                title:
-                  '[{"detail":0,"format":0,"mode":"normal","style":"","text":"this is what I think about adding multiple","type":"text","version":1}]',
-                childNotes: [],
-                open: true,
-                id: crypto.randomUUID(),
-                highlightText: "Adding multiple",
-                highlightUrl: "https://google.com",
-                highlightRangePath: "",
-                highlightIndexWithPage: 1,
-              },
-              {
-                children: [],
-                type: BLOCK_HIGHLIGHT_SLICE_TYPE,
-                version: 1,
-                title: "[]",
-                childNotes: [],
-                open: true,
-                id: crypto.randomUUID(),
-                highlightText: "directory for multiple",
-                highlightUrl: "https://google.com",
-                highlightRangePath: "",
-                highlightIndexWithPage: 1,
-              },
+              //   {
+              //     children: [],
+              //     type: BLOCK_HIGHLIGHT_SLICE_TYPE,
+              //     version: 1,
+              //     title:
+              //       '[{"detail":0,"format":0,"mode":"normal","style":"","text":"this is what I think about adding multiple","type":"text","version":1}]',
+              //     childNotes: [],
+              //     open: true,
+              //     id: crypto.randomUUID(),
+              //     highlightText: "Adding multiple",
+              //     highlightUrl: "https://google.com",
+              //     highlightRangePath: "",
+              //     highlightIndexWithPage: 1,
+              //   },
+              //   {
+              //     children: [],
+              //     type: BLOCK_HIGHLIGHT_SLICE_TYPE,
+              //     version: 1,
+              //     title: "[]",
+              //     childNotes: [],
+              //     open: true,
+              //     id: crypto.randomUUID(),
+              //     highlightText: "directory for multiple",
+              //     highlightUrl: "https://google.com",
+              //     highlightRangePath: "",
+              //     highlightIndexWithPage: 1,
+              //   },
             ],
-          },
-          {
-            children: [],
-            type: BLOCK_PARAGRAPH_TYPE,
-            version: 1,
-            title: "[]",
-            childNotes: [],
-            open: true,
-            id: crypto.randomUUID(),
           },
         ],
         direction: null,
@@ -209,13 +135,13 @@ export default function Notes() {
           <HierarchicalBlockPlugin />
           <HistoryPlugin />
           <SelectBlocksPlugin />
-          <SendingUpdatesPlugin handleUpdates={handleUpdates} />
-          {anchorElemRef.current ? (
+          {/* <SendingUpdatesPlugin handleUpdates={handleUpdates} /> */}
+          {/* {anchorElemRef.current ? (
             <DraggableBlockPlugin anchorElem={anchorElemRef.current} />
           ) : (
             <></>
-          )}
-          <ShortcutsPlugin />
+          )} */}
+          {/* <ShortcutsPlugin /> */}
           <TreeViewPlugin />
         </LexicalComposer>
       </main>

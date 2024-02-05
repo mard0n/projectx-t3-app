@@ -1,85 +1,66 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import { useEffect } from "react";
-
-import type {
-  BaseSelection,
-  ElementNode,
-  GridSelection,
-  LexicalEditor,
-  LexicalNode,
-  RangeSelection,
-  SerializedLexicalNode,
-  TextFormatType,
-} from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $generateNodesFromSerializedNodes,
-  $getHtmlContent,
   $insertDataTransferForPlainText,
 } from "@lexical/clipboard";
-import { $generateNodesFromDOM } from "@lexical/html";
-import type { LineBreakNode, TextNode } from "lexical";
+import type {
+  TextNode,
+  ElementNode,
+  LexicalNode,
+  TextFormatType,
+  SerializedLexicalNode,
+} from "lexical";
 import {
-  ParagraphNode,
   COMMAND_PRIORITY_NORMAL,
   $isTextNode,
   DELETE_CHARACTER_COMMAND,
   CONTROLLED_TEXT_INSERTION_COMMAND,
   KEY_ENTER_COMMAND,
-  INSERT_LINE_BREAK_COMMAND,
   INDENT_CONTENT_COMMAND,
   OUTDENT_CONTENT_COMMAND,
   KEY_TAB_COMMAND,
-  $getNodeByKey,
   $getRoot,
   COPY_COMMAND,
-  $isNodeSelection,
   CUT_COMMAND,
   PASTE_COMMAND,
-  $createTabNode,
-  $isLineBreakNode,
   $isElementNode,
   $getSelection,
   $isRangeSelection,
-  isSelectionWithinEditor,
   COMMAND_PRIORITY_EDITOR,
   FORMAT_TEXT_COMMAND,
   DELETE_LINE_COMMAND,
+  $isParagraphNode,
+  $createParagraphNode,
 } from "lexical";
-import { mergeRegister } from "@lexical/utils";
+import { $findMatchingParent, mergeRegister } from "@lexical/utils";
 import {
   BlockContainerNode,
-  BlockTextNode,
+  BlockContentNode,
   BlockChildContainerNode,
   $isBlockChildContainerNode,
   $createBlockChildContainerNode,
   $isBlockContainerNode,
-  $createBlockTextNode,
-  $isBlockTextNode,
-  $findParentBlockContainer,
+  $createBlockContentNode,
+  $isBlockContentNode,
+  $createBlockContainerNode,
+  $getSelectedBlocks,
 } from "~/nodes/Block";
-import { selectOnlyTopNotes } from "~/utils/lexical";
-import { useSelectedBlocks } from "~/pages/notes";
-import {
-  $createBlockParagraphNode,
-  BlockParagraphNode,
-} from "~/nodes/BlockParagraph";
-import { BlockHeaderNode } from "~/nodes/BlockHeader";
+import { selectOnlyTopNodes } from "~/utils/lexical";
+import { $findParentBlockContainer } from "~/nodes/Block";
+import { $isHeaderNode } from "~/nodes/Header";
+import { $convertSelectionIntoLexicalContent } from "~/utils/lexical/extractSelectedText";
 
 const HierarchicalBlockPlugin = ({}) => {
   const [editor] = useLexicalComposerContext();
-  const selectedBlocks = useSelectedBlocks((state) => state.selectedBlocks);
-  const setSelectedBlocks = useSelectedBlocks(
-    (state) => state.setSelectedBlocks,
-  );
 
   useEffect(() => {
     if (
       !editor.hasNodes([
         BlockContainerNode,
-        BlockTextNode,
+        BlockContentNode,
         BlockChildContainerNode,
-        BlockParagraphNode,
       ])
     ) {
       throw new Error(
@@ -88,206 +69,83 @@ const HierarchicalBlockPlugin = ({}) => {
     }
 
     return mergeRegister(
-      // To make sure all ParagraphNodes are replaced by BlockParagraphNode
-      editor.registerMutationListener(ParagraphNode, (mutations) => {
+      // To make sure the Editor is never empty
+      editor.registerMutationListener(BlockContainerNode, () => {
         editor.update(() => {
-          for (const [nodeKey, mutation] of mutations) {
-            if (mutation === "created") {
-              const paragraph = $getNodeByKey<ParagraphNode>(nodeKey);
-              if (!paragraph) return;
-              const textContent = paragraph.getChildren();
-              const collapsible = $createBlockParagraphNode({
-                titleNode: textContent,
-              });
-              paragraph.insertBefore(collapsible);
-            }
+          if ($getRoot().isEmpty()) {
+            const containerNode = $createBlockContainerNode();
+            const contentNode = $createBlockContentNode().append(
+              $createParagraphNode(),
+            );
+            const childContainer = $createBlockChildContainerNode();
+            containerNode.append(contentNode, childContainer);
+            $getRoot().append(containerNode);
+            const firstDecendent = containerNode.getFirstDescendant();
+            $isElementNode(firstDecendent) && firstDecendent.select();
           }
         });
       }),
-      ...[BlockContainerNode, BlockParagraphNode, BlockHeaderNode].map(
-        (BlockNode) => {
-          // To make sure all the Editor is never empty
-          return mergeRegister(
-            editor.registerMutationListener(BlockNode, () => {
-              editor.update(() => {
-                if ($getRoot().isEmpty()) {
-                  const collapsible = $createBlockParagraphNode();
-                  $getRoot().append(collapsible);
-                  const firstDecendent = collapsible.getFirstDescendant();
-                  $isElementNode(firstDecendent) && firstDecendent.select();
-                }
-              });
-            }),
-            // To make sure there is always childContainer
-            editor.registerNodeTransform(BlockNode, (node) => {
-              const children = node.getChildren<LexicalNode>();
-              const blockChildContainer = children.find((node) =>
-                $isBlockChildContainerNode(node),
-              );
-              if (!blockChildContainer) {
-                const newChildContainerNode = $createBlockChildContainerNode();
-                node.append(newChildContainerNode);
-              }
-            }),
-            // When title is deleted, upwrap the childContent into a sibling or parent or root
-            editor.registerNodeTransform(BlockNode, (node) => {
-              const containerNode = node;
-              const childContainerNode =
-                containerNode.getBlockChildContainerNode();
-              const titleNode = containerNode.getBlockTextNode();
+      // To make sure there is always childContainer
+      editor.registerNodeTransform(BlockContainerNode, (node) => {
+        const children = node.getChildren<LexicalNode>();
+        const blockChildContainer = children.find((node) =>
+          $isBlockChildContainerNode(node),
+        );
+        if (!blockChildContainer) {
+          const newChildContainerNode = $createBlockChildContainerNode();
+          node.append(newChildContainerNode);
+        }
+      }),
+      // When title is deleted, upwrap the childContent into a sibling or parent or root
+      editor.registerNodeTransform(BlockContainerNode, (node) => {
+        const containerNode = node;
+        const childContainerNode = containerNode.getBlockChildContainerNode();
+        const titleNode = containerNode.getBlockContentNode();
 
-              if (!childContainerNode) return;
+        if (!childContainerNode) return;
 
-              if (!titleNode) {
-                const childContainerChildren =
-                  childContainerNode.getChildren<BlockContainerNode>();
-                const prevSiblingNode =
-                  containerNode.getPreviousSibling<BlockContainerNode>();
+        if (!titleNode) {
+          const childContainerChildren =
+            childContainerNode.getChildren<BlockContainerNode>();
+          const prevSiblingNode =
+            containerNode.getPreviousSibling<BlockContainerNode>();
 
-                if (prevSiblingNode && $isBlockContainerNode(prevSiblingNode)) {
-                  const prevSiblingChildContainerNode =
-                    prevSiblingNode.getBlockChildContainerNode();
+          if (prevSiblingNode && $isBlockContainerNode(prevSiblingNode)) {
+            const prevSiblingChildContainerNode =
+              prevSiblingNode.getBlockChildContainerNode();
 
-                  // HACK: somehow when a sibling title of a node is getting deleted, the empty childContainer of the node is also getting deleted
-                  if (prevSiblingChildContainerNode) {
-                    prevSiblingChildContainerNode.append(
-                      ...childContainerChildren,
-                    );
-                    containerNode.remove();
-                    return;
-                  } else {
-                    const newChildContainerNode =
-                      $createBlockChildContainerNode().append(
-                        ...childContainerChildren,
-                      );
-                    prevSiblingNode.append(newChildContainerNode);
-                    containerNode.remove();
-                    return;
-                  }
-                }
-
-                const parentNode = containerNode.getParent<ElementNode>();
-                if (parentNode) {
-                  childContainerChildren.forEach((node) =>
-                    containerNode.insertBefore(node),
-                  );
-                  containerNode.remove();
-                  return;
-                }
-
-                if (childContainerChildren.length) {
-                  $getRoot().append(...childContainerChildren);
-                  containerNode.remove();
-                  return;
-                }
-              }
-            }),
-          );
-        },
-      ),
-
-      editor.registerCommand<boolean>(
-        DELETE_LINE_COMMAND,
-        (isBackward) => {
-          const selection = $getSelection();
-          if (!$isRangeSelection(selection)) {
-            return false;
-          }
-          const textNode = selection.focus.getNode() as TextNode | ElementNode;
-
-          const blockContainer = $findParentBlockContainer(textNode);
-
-          selection.deleteLine(isBackward); // if text is the whole line it deletes the parent as well. which we don't want
-          const blockTextNode = blockContainer?.getBlockTextNode();
-
-          if (!blockTextNode) {
-            const newBlockTextNode = $createBlockTextNode();
-            blockContainer?.getChildAtIndex(0)?.insertBefore(newBlockTextNode);
-            newBlockTextNode.selectEnd();
-          }
-          return true;
-        },
-        COMMAND_PRIORITY_NORMAL,
-      ),
-      editor.registerCommand<boolean>(
-        DELETE_CHARACTER_COMMAND,
-        (isBackward) => {
-          if (selectedBlocks?.length) {
-            selectedBlocks.forEach((node) => node.remove());
-            setSelectedBlocks(null);
-            return true;
-          }
-
-          const selection = $getSelection();
-
-          if (!$isRangeSelection(selection)) {
-            return false;
-          }
-
-          if (selection.isCollapsed()) {
-            // To prevent deleting when CPContainer is closed and cursor is at the end
-            const currentNode = selection.focus.getNode() as
-              | ElementNode
-              | TextNode;
-
-            const containerNode = $findParentBlockContainer(currentNode);
-            const titleNode = containerNode?.getBlockTextNode();
-
-            const offset = selection.anchor.offset;
-            const node = selection.anchor.getNode() as ElementNode | TextNode;
-
-            const isSelectionAtTheEndOfText =
-              $isTextNode(node) && node.getTextContentSize() === offset;
-
-            if (
-              $isBlockTextNode(titleNode) &&
-              $isBlockContainerNode(containerNode) &&
-              !containerNode.getOpen() &&
-              !isBackward &&
-              isSelectionAtTheEndOfText
-            ) {
-              return true;
-            }
-          }
-
-          selection.deleteCharacter(isBackward);
-          return true;
-        },
-        COMMAND_PRIORITY_NORMAL,
-      ),
-      editor.registerCommand<InputEvent | string>(
-        CONTROLLED_TEXT_INSERTION_COMMAND,
-        (eventOrText) => {
-          if (selectedBlocks?.length) {
-            return true;
-          }
-
-          const selection = $getSelection();
-
-          if (!$isRangeSelection(selection)) {
-            return false;
-          }
-
-          if (typeof eventOrText === "string") {
-            selection.insertText(eventOrText);
-          } else {
-            const dataTransfer = eventOrText.dataTransfer;
-
-            if (dataTransfer != null) {
-              $insertDataTransferForPlainText(dataTransfer, selection);
+            // HACK: somehow when a sibling title of a node is getting deleted, the empty childContainer of the node is also getting deleted
+            if (prevSiblingChildContainerNode) {
+              prevSiblingChildContainerNode.append(...childContainerChildren);
+              containerNode.remove();
+              return;
             } else {
-              const data = eventOrText.data;
-
-              if (data) {
-                selection.insertText(data);
-              }
+              const newChildContainerNode =
+                $createBlockChildContainerNode().append(
+                  ...childContainerChildren,
+                );
+              prevSiblingNode.append(newChildContainerNode);
+              containerNode.remove();
+              return;
             }
           }
 
-          return true;
-        },
-        COMMAND_PRIORITY_NORMAL,
-      ),
+          const parentNode = containerNode.getParent<ElementNode>();
+          if (parentNode) {
+            childContainerChildren.forEach((node) =>
+              containerNode.insertBefore(node),
+            );
+            containerNode.remove();
+            return;
+          }
+
+          if (childContainerChildren.length) {
+            $getRoot().append(...childContainerChildren);
+            containerNode.remove();
+            return;
+          }
+        }
+      }),
       editor.registerCommand<KeyboardEvent | null>(
         KEY_ENTER_COMMAND,
         (event) => {
@@ -295,11 +153,6 @@ const HierarchicalBlockPlugin = ({}) => {
 
           if (!$isRangeSelection(selection)) {
             return false;
-          }
-
-          if (selectedBlocks?.length) {
-            const lastNode = selectedBlocks.slice(-1)[0]; // TODO: Not the best method. is not ordered any specific way
-            lastNode?.selectEnd();
           }
 
           if (event !== null) {
@@ -319,26 +172,28 @@ const HierarchicalBlockPlugin = ({}) => {
 
             event.preventDefault();
             if (event.shiftKey) {
-              return editor.dispatchCommand(INSERT_LINE_BREAK_COMMAND, false);
+              // return editor.dispatchCommand(INSERT_LINE_BREAK_COMMAND, false);
+              selection.insertParagraph();
+              return true;
             }
           }
 
           const insertedNode = selection.insertParagraph();
 
-          if (insertedNode) {
+          if (
+            insertedNode &&
+            ($isParagraphNode(insertedNode) || $isHeaderNode(insertedNode))
+          ) {
             const containerNode = $findParentBlockContainer(insertedNode);
-            // const containerNode = insertedNode.getParent();
             if (!containerNode) return false;
-
-            const insertedNodeContent = insertedNode.getChildren();
-            const newParagraph = $createBlockParagraphNode({
-              titleNode: insertedNodeContent,
-            });
+            const newParagraph = $createBlockContainerNode();
+            const contentNode = $createBlockContentNode().append(insertedNode);
+            const childContainerNode = $createBlockChildContainerNode();
+            newParagraph.append(contentNode, childContainerNode);
 
             if (!containerNode?.getOpen()) {
               containerNode.insertAfter(newParagraph);
               newParagraph.selectStart();
-              insertedNode.remove();
               return true;
             }
 
@@ -347,13 +202,11 @@ const HierarchicalBlockPlugin = ({}) => {
               const firstChild = childContainer.getChildren()[0];
               firstChild?.insertBefore(newParagraph);
               newParagraph.selectStart();
-              insertedNode.remove();
               return true;
             }
 
             containerNode.insertAfter(newParagraph);
             newParagraph.selectStart();
-            insertedNode.remove();
           }
           return true;
         },
@@ -368,17 +221,9 @@ const HierarchicalBlockPlugin = ({}) => {
             return false;
           }
 
-          const nodes = selection.getNodes();
-          const paragraphs = [
-            ...new Set(
-              nodes.flatMap((node) => {
-                const result = $findParentBlockContainer(node);
-                return !!result ? [result] : [];
-              }),
-            ),
-          ];
+          const selectedBlocks = $getSelectedBlocks(selection);
 
-          const onlyTopLevelNodes = selectOnlyTopNotes(paragraphs);
+          const onlyTopLevelNodes = selectOnlyTopNodes(selectedBlocks);
 
           let commonPrevSibling: BlockContainerNode | undefined;
           for (const node of onlyTopLevelNodes) {
@@ -419,19 +264,10 @@ const HierarchicalBlockPlugin = ({}) => {
           if (!$isRangeSelection(selection)) {
             return false;
           }
-          const nodes = selection.getNodes();
 
-          // Whatever nodes you select, their parents will connect and will have common parent and siblings
-          const paragraphs = [
-            ...new Set(
-              nodes.flatMap((node) => {
-                const result = $findParentBlockContainer(node);
-                return !!result ? [result] : [];
-              }),
-            ),
-          ];
+          const selectedBlocks = $getSelectedBlocks(selection);
 
-          let onlyTopLevelNodes = selectOnlyTopNotes(paragraphs);
+          let onlyTopLevelNodes = selectOnlyTopNodes(selectedBlocks);
 
           onlyTopLevelNodes = onlyTopLevelNodes.reverse(); // To work with insertAfter
 
@@ -456,126 +292,77 @@ const HierarchicalBlockPlugin = ({}) => {
         },
         COMMAND_PRIORITY_NORMAL,
       ),
-      editor.registerCommand(
-        COPY_COMMAND,
-        (event) => {
-          return copy(event, editor, selectedBlocks);
-        },
-        COMMAND_PRIORITY_NORMAL,
-      ),
-      editor.registerCommand(
-        CUT_COMMAND,
-        (event) => {
-          copy(event, editor, selectedBlocks);
+      editor.registerCommand<boolean>(
+        DELETE_LINE_COMMAND,
+        (isBackward) => {
+          const selection = $getSelection();
+          if (!$isRangeSelection(selection)) {
+            return false;
+          }
 
-          editor.update(() => {
-            if (selectedBlocks?.length) {
-              selectedBlocks.forEach((node) => node.remove());
-              setSelectedBlocks(null);
-              return;
-            }
-            const selection = $getSelection();
-            if ($isRangeSelection(selection)) {
-              selection.removeText();
-            } else if ($isNodeSelection(selection)) {
-              selection.getNodes().forEach((node) => node.remove());
-            }
-          });
+          selection.deleteLine(isBackward);
+
+          // TODO: When you delete the whole line, don't delete the whole line and jump to the prev line
+          // but stop at the beginning of the line you're deleting
+          // const textNode = selection.focus.getNode() as TextNode | ElementNode;
+          // const blockContainer = $findParentBlockContainer(textNode);
+
+          // if (!blockContainer?.getBlockContentNode().getChildren().length) {
+          //   editor.dispatchCommand(DELETE_CHARACTER_COMMAND, isBackward);
+          // } else {
+
+          //   // if text is the whole line it deletes the parent as well. which we don't want
+          //   const blockContentNode = blockContainer?.getBlockContentNode();
+          //   if (!blockContentNode) {
+          //     const newBlockTextNode = $createBlockContentNode();
+          //     blockContainer
+          //       ?.getChildAtIndex(0)
+          //       ?.insertBefore(newBlockTextNode);
+          //     newBlockTextNode.selectEnd();
+          //   }
+
+          //   // TODO: Fix. When the first line of a text is deleted and there are still texts after that it moves the whole text into prev block
+          // }
           return true;
         },
         COMMAND_PRIORITY_NORMAL,
       ),
-      editor.registerCommand(
-        PASTE_COMMAND,
-        (event) => {
+      editor.registerCommand<boolean>(
+        DELETE_CHARACTER_COMMAND,
+        (isBackward) => {
           const selection = $getSelection();
-          if (!$isRangeSelection(selection)) return false;
-          event.preventDefault();
 
-          const clipboardData =
-            event instanceof InputEvent || event instanceof KeyboardEvent
-              ? null
-              : event.clipboardData;
-
-          if (clipboardData === null) return false;
-
-          const lexicalString = clipboardData.getData(
-            "application/x-lexical-editor",
-          );
-
-          if (lexicalString) {
-            try {
-              const payload = JSON.parse(lexicalString, (key, value) => {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-                return key !== "id" ? value : null; // To make sure on paste new ids are created
-              }) as {
-                namespace: string;
-                nodes: SerializedLexicalNode[];
-              };
-
-              if (
-                payload.namespace === editor._config.namespace &&
-                Array.isArray(payload.nodes)
-              ) {
-                const nodes = $generateNodesFromSerializedNodes(
-                  payload.nodes,
-                ) as COPIABLE_NODES[];
-                console.log("paste nodes", nodes);
-
-                insertGeneratedNodes(editor, nodes, selection);
-                return true;
-              }
-            } catch {
-              // Fail silently.
-            }
+          if (!$isRangeSelection(selection)) {
+            return false;
           }
 
-          const htmlString = clipboardData.getData("text/html");
-          if (htmlString) {
-            try {
-              const parser = new DOMParser();
-              const dom = parser.parseFromString(htmlString, "text/html");
-              const nodes = $generateNodesFromDOM(
-                editor,
-                dom,
-              ) as COPIABLE_NODES[];
-              insertGeneratedNodes(editor, nodes, selection);
+          if (selection.isCollapsed()) {
+            // To prevent deleting when CPContainer is closed and cursor is at the end
+            const currentNode = selection.focus.getNode() as
+              | ElementNode
+              | TextNode;
+
+            const containerNode = $findParentBlockContainer(currentNode);
+            const titleNode = containerNode?.getBlockContentNode();
+
+            const offset = selection.anchor.offset;
+            const node = selection.anchor.getNode() as ElementNode | TextNode;
+
+            const isSelectionAtTheEndOfText =
+              $isTextNode(node) && node.getTextContentSize() === offset;
+
+            if (
+              $isBlockContentNode(titleNode) &&
+              $isBlockContainerNode(containerNode) &&
+              !containerNode.getOpen() &&
+              !isBackward &&
+              isSelectionAtTheEndOfText
+            ) {
               return true;
-            } catch {
-              // Fail silently.
             }
           }
 
-          // Multi-line plain text in rich text mode pasted as separate paragraphs
-          // instead of single paragraph with linebreaks.
-          // Webkit-specific: Supports read 'text/uri-list' in clipboard.
-          const text =
-            clipboardData.getData("text/plain") ||
-            clipboardData.getData("text/uri-list");
-          console.log("text", text);
-
-          if (text) {
-            if ($isRangeSelection(selection)) {
-              const parts = text.split(/(\r?\n|\t)/);
-              if (parts[parts.length - 1] === "") {
-                parts.pop();
-              }
-              for (const part of parts) {
-                if (part === "\n" || part === "\r\n") {
-                  const newContainer = $createBlockParagraphNode();
-                  selection.insertNodes([newContainer]);
-                  // selection.insertParagraph()
-                } else if (part === "\t") {
-                  selection.insertNodes([$createTabNode()]);
-                } else {
-                  selection.insertText(part);
-                }
-              }
-            } else {
-              (selection as BaseSelection).insertRawText(text);
-            }
-          }
-
+          selection.deleteCharacter(isBackward);
           return true;
         },
         COMMAND_PRIORITY_NORMAL,
@@ -592,147 +379,232 @@ const HierarchicalBlockPlugin = ({}) => {
         },
         COMMAND_PRIORITY_EDITOR,
       ),
+      editor.registerCommand<InputEvent | string>(
+        CONTROLLED_TEXT_INSERTION_COMMAND,
+        (eventOrText) => {
+          const selection = $getSelection();
+
+          if (!$isRangeSelection(selection)) {
+            return false;
+          }
+
+          const selectedBlocks = $getSelectedBlocks(selection);
+
+          if (selectedBlocks?.length > 1) {
+            return true;
+          }
+
+          if (typeof eventOrText === "string") {
+            selection.insertText(eventOrText);
+          } else {
+            const dataTransfer = eventOrText.dataTransfer;
+
+            if (dataTransfer != null) {
+              $insertDataTransferForPlainText(dataTransfer, selection);
+            } else {
+              const data = eventOrText.data;
+
+              if (data) {
+                selection.insertText(data);
+              }
+            }
+          }
+
+          return true;
+        },
+        COMMAND_PRIORITY_NORMAL,
+      ),
+      editor.registerCommand(
+        COPY_COMMAND,
+        (event) => {
+          if (!event) return false;
+          event.preventDefault();
+
+          const clipboardData =
+            event instanceof InputEvent || event instanceof KeyboardEvent
+              ? null
+              : event.clipboardData;
+
+          if (clipboardData === null) return false;
+
+          const selection = $getSelection();
+          if (!$isRangeSelection(selection)) return false;
+
+          const lexicalString = $convertSelectionIntoLexicalContent(
+            selection,
+            editor,
+          );
+          console.log("lexicalString", lexicalString);
+
+          if (lexicalString !== null) {
+            clipboardData.setData(
+              "application/x-lexical-editor",
+              lexicalString,
+            );
+          }
+
+          return true;
+        },
+        COMMAND_PRIORITY_NORMAL,
+      ),
+      editor.registerCommand(
+        CUT_COMMAND,
+        (event) => {
+          // copy(event, editor, selectedBlocks);
+
+          // editor.update(() => {
+          //   const selection = $getSelection();
+          //   if (selectedBlocks?.length) {
+          //     selectedBlocks.forEach((node) => node.remove());
+          //     setSelectedBlocks(null);
+          //     return;
+          //   }
+          //   if ($isRangeSelection(selection)) {
+          //     selection.removeText();
+          //   } else if ($isNodeSelection(selection)) {
+          //     selection.getNodes().forEach((node) => node.remove());
+          //   }
+          // });
+          return true;
+        },
+        COMMAND_PRIORITY_NORMAL,
+      ),
+      editor.registerCommand(
+        PASTE_COMMAND,
+        (event) => {
+          const selection = $getSelection();
+
+          if (!$isRangeSelection(selection)) return false;
+
+          event.preventDefault();
+
+          const clipboardData =
+            event instanceof InputEvent || event instanceof KeyboardEvent
+              ? null
+              : event.clipboardData;
+
+          if (clipboardData === null) return false;
+
+          const lexicalString = clipboardData.getData(
+            "application/x-lexical-editor",
+          );
+          console.log("paste lexicalString", lexicalString);
+
+          if (!lexicalString) return true;
+
+          let payload: {
+            namespace: string;
+            nodes: SerializedLexicalNode[];
+          } | null = null;
+
+          try {
+            payload = JSON.parse(lexicalString, (key, value) => {
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+              return key !== "id" ? value : null; // To make sure on paste new ids are created
+            }) as {
+              namespace: string;
+              nodes: SerializedLexicalNode[];
+            };
+          } catch {
+            // Fail silently.
+            return true;
+          }
+          console.log("editor._config.namespace", editor._config.namespace);
+
+          if (
+            payload?.namespace === editor._config.namespace &&
+            Array.isArray(payload?.nodes)
+          ) {
+            const nodes = $generateNodesFromSerializedNodes(payload?.nodes);
+            console.log("paste nodes", nodes);
+
+            function findFocusableNode(node: BlockContainerNode | ElementNode) {
+              let nodeToFocus = null;
+              if ($isBlockContainerNode(node)) {
+                nodeToFocus = node.getBlockContentNode().getLastDescendant()!;
+              } else {
+                nodeToFocus = node.getLastDescendant()!;
+              }
+
+              return nodeToFocus as ElementNode | TextNode;
+            }
+
+            let nextFocusNode = selection.anchor.getNode() as
+              | TextNode
+              | ElementNode;
+
+            for (const pasteNode of nodes) {
+              const nextFocusContainer =
+                $findParentBlockContainer(nextFocusNode);
+
+              if (!nextFocusContainer) return false;
+
+              if (
+                $isBlockContainerNode(pasteNode) &&
+                $isBlockContainerNode(nextFocusContainer) &&
+                !nextFocusContainer
+                  .getBlockContentNode()
+                  .getTextContentSize() &&
+                !nextFocusContainer.getBlockChildContainerNode().getChildren()
+                  .length
+              ) {
+                nextFocusContainer.insertAfter(pasteNode);
+                nextFocusContainer.remove();
+                nextFocusNode = findFocusableNode(pasteNode);
+                continue;
+              }
+
+              if ($isBlockContainerNode(pasteNode)) {
+                // Special case
+                if (
+                  !nextFocusContainer.getBlockContentNode().getChildrenSize() &&
+                  !pasteNode.getBlockChildContainerNode().getChildren().length
+                ) {
+                  const focusContent = nextFocusContainer.getBlockContentNode();
+                  const pasteContent = pasteNode.getBlockContentNode();
+                  focusContent.insertAfter(pasteContent);
+                  focusContent.remove();
+                  nextFocusNode = findFocusableNode(pasteNode);
+                  continue;
+                }
+
+                nextFocusContainer.insertAfter(pasteNode);
+                nextFocusNode = findFocusableNode(pasteNode);
+              } else if ($isElementNode(pasteNode)) {
+                const focusElementNode = $findMatchingParent(
+                  nextFocusNode,
+                  (node): node is ElementNode =>
+                    $isElementNode(node) && !$isBlockContentNode(node),
+                );
+                focusElementNode?.insertAfter(pasteNode);
+                nextFocusNode = pasteNode;
+                if (!focusElementNode?.getTextContentSize()) {
+                  focusElementNode?.remove();
+                }
+              } else if ($isTextNode(pasteNode)) {
+                if ($isElementNode(nextFocusNode)) {
+                  nextFocusNode.append(pasteNode);
+                  nextFocusNode = pasteNode;
+                } else if ($isTextNode(nextFocusNode)) {
+                  nextFocusNode.insertAfter(pasteNode);
+                  nextFocusNode = pasteNode;
+                }
+              } else {
+                console.error("no appropriate place to paste");
+              }
+            }
+            nextFocusNode.selectEnd();
+            return true;
+          }
+
+          return true;
+        },
+        COMMAND_PRIORITY_NORMAL,
+      ),
     );
-  }, [editor, selectedBlocks]);
+  }, [editor]);
 
   return <></>;
 };
 
-type COPIABLE_NODES =
-  | TextNode
-  | LineBreakNode
-  | BlockContainerNode
-  | BlockTextNode
-  | BlockChildContainerNode;
-
-function insertGeneratedNodes(
-  editor: LexicalEditor,
-  nodes: COPIABLE_NODES[],
-  selection: RangeSelection | GridSelection,
-): void {
-  const currentNode = selection.anchor.getNode() as TextNode | ElementNode;
-  const anchorContainer = $findParentBlockContainer(currentNode);
-
-  if (!anchorContainer) return;
-
-  let anchorNextSibling = null;
-  // Wrap text and inline nodes in paragraph nodes so we have all blocks at the top-level
-  for (const node of nodes) {
-    if ($isLineBreakNode(node) || $isTextNode(node)) {
-      anchorContainer.getBlockTextNode()?.append(node);
-    } else if ($isBlockContainerNode(node)) {
-      if (!anchorNextSibling) {
-        const isTextEmpty = anchorContainer
-          .getChildAtIndex(0)
-          ?.getTextContentSize();
-
-        if (!isTextEmpty) {
-          anchorContainer.insertAfter(node);
-          anchorContainer.remove();
-        } else {
-          anchorContainer.insertAfter(node);
-        }
-      } else {
-        anchorNextSibling.insertAfter(node);
-      }
-      anchorNextSibling = node;
-    } else if ($isBlockTextNode(node)) {
-      anchorContainer.getBlockTextNode()?.append(...node.getChildren());
-    } else if ($isBlockChildContainerNode(node)) {
-      anchorContainer
-        .getBlockChildContainerNode()
-        ?.append(...node.getChildren());
-    }
-  }
-
-  // TO set selection at the end
-  const last = nodes[nodes.length - 1]!;
-  const nodeToSelect = $isElementNode(last)
-    ? last.getLastDescendant() ?? last
-    : last;
-
-  const nodeToSelectSize = nodeToSelect.getTextContentSize();
-
-  if ($isElementNode(nodeToSelect)) {
-    nodeToSelect.select(nodeToSelectSize, nodeToSelectSize);
-  } else {
-    nodeToSelect.selectNext(0, 0);
-  }
-
-  return;
-}
-
-function copy(
-  event: KeyboardEvent | ClipboardEvent | null,
-  editor: LexicalEditor,
-  selectedBlocks: BlockContainerNode[] | null,
-) {
-  if (!event) return false;
-  event.preventDefault();
-
-  const clipboardData =
-    event instanceof InputEvent || event instanceof KeyboardEvent
-      ? null
-      : event.clipboardData;
-
-  if (clipboardData === null) return false;
-
-  const domSelection = editor._window?.getSelection();
-  if (!domSelection) {
-    return false;
-  }
-  const anchorDOM = domSelection.anchorNode;
-  const focusDOM = domSelection.focusNode;
-  if (
-    anchorDOM !== null &&
-    focusDOM !== null &&
-    !isSelectionWithinEditor(editor, anchorDOM, focusDOM)
-  ) {
-    return false;
-  }
-
-  const selection = $getSelection();
-  if (selection === null) {
-    return false;
-  }
-
-  if (selectedBlocks?.length) {
-    const json = selectedBlocks.map((node) => node.exportJSON());
-    clipboardData.setData(
-      "application/x-lexical-editor",
-      JSON.stringify({ namespace: editor._config.namespace, nodes: json }),
-    );
-    return true;
-  }
-
-  const selectedNodes = selection.extract();
-  const jsonNodes = selectedNodes.map((node) => node.exportJSON());
-
-  const lexicalString = {
-    namespace: editor._config.namespace,
-    nodes: jsonNodes,
-  };
-  if (lexicalString !== null) {
-    clipboardData.setData(
-      "application/x-lexical-editor",
-      JSON.stringify(lexicalString),
-    );
-  }
-
-  const htmlString = $getHtmlContent(editor);
-  clipboardData.setData("text/html", htmlString);
-
-  const plainString = selection.getTextContent();
-  clipboardData.setData("text/plain", plainString);
-
-  return true;
-}
-
 export { HierarchicalBlockPlugin };
-export { $createBlockParagraphNode, $isBlockContainerNode, BlockContainerNode };
-export { $createBlockTextNode, $isBlockTextNode, BlockTextNode };
-export {
-  $createBlockChildContainerNode,
-  $isBlockChildContainerNode,
-  BlockChildContainerNode,
-};

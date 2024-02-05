@@ -1,19 +1,20 @@
 export {
   $createBlockContainerNode,
   $isBlockContainerNode,
-  $findParentBlockContainer,
   BlockContainerNode,
   type SerializedBlockContainerNode,
   SerializedBlockContainerNodeSchema,
-} from "./BlockContainer";
+  CONTAINER_TYPE,
+  $findParentBlockContainer,
+  $getSelectedBlocks
+} from "./Container";
 export {
-  $createBlockTextNode,
-  $isBlockTextNode,
-  BlockTextNode,
-  type SerializedBlockTextNode
-} from "./BlockText";
+  $createBlockContentNode,
+  $isBlockContentNode,
+  BlockContentNode,
+} from "./Content";
 export {
   $createBlockChildContainerNode,
   $isBlockChildContainerNode,
   BlockChildContainerNode,
-} from "./BlockChildContainer";
+} from "./ChildContainer";

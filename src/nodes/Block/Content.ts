@@ -1,47 +1,42 @@
-/**
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- */
-
 import { addClassNamesToElement } from "@lexical/utils";
-import type { BlockContainerNode } from ".";
 import type {
   NodeKey,
   Spread,
-  SerializedParagraphNode,
   RangeSelection,
   LexicalNode,
-  TextNode,
-  LineBreakNode,
   EditorConfig,
+  SerializedElementNode,
+  ParagraphNode,
 } from "lexical";
 import { ElementNode, $isTextNode } from "lexical";
+import { type BlockContainerNode } from ".";
+import type { HeaderNode } from "../Header";
+import type { CustomTheme } from "~/utils/lexical/theme";
 
-export type SerializedBlockTextNode = Spread<object, SerializedParagraphNode>;
+type SerializedContentNode = Spread<object, SerializedElementNode>;
 
-const TEXT_BLOCK_TYPE = "block-text" as const;
+const CONTENT_TYPE = "block-content" as const;
 
-export class BlockTextNode extends ElementNode {
+type ContentNodeChildren = ParagraphNode | HeaderNode;
+
+export class BlockContentNode extends ElementNode {
   constructor(key?: NodeKey) {
     super(key);
   }
 
   static getType(): string {
-    return TEXT_BLOCK_TYPE;
+    return CONTENT_TYPE;
   }
 
-  static clone(node: BlockTextNode): BlockTextNode {
-    return new BlockTextNode(node.__key);
+  static clone(node: BlockContentNode): BlockContentNode {
+    return new BlockContentNode(node.__key);
   }
 
   // View
   createDOM(config: EditorConfig): HTMLElement {
     const dom = document.createElement("div");
-    const theme = config.theme;
-    const className = (theme.block as { text: string }).text;
+    const theme = config.theme as CustomTheme;
+    const className = theme.block.content;
     if (className !== undefined) {
       addClassNamesToElement(dom, className);
     }
@@ -52,38 +47,37 @@ export class BlockTextNode extends ElementNode {
     return false;
   }
 
-  static importJSON(serializedNode: SerializedBlockTextNode): BlockTextNode {
-    const node = $createBlockTextNode();
-    node.setFormat(serializedNode.format);
-    node.setIndent(serializedNode.indent);
-    node.setDirection(serializedNode.direction);
+  static importJSON(serializedNode: SerializedContentNode): BlockContentNode {
+    const node = $createBlockContentNode();
     return node;
   }
 
-  exportJSON(): SerializedBlockTextNode {
-    const children = this.getLatest()
-      .getChildren()
-      .map((node) => node.exportJSON());
-
+  exportJSON(): SerializedContentNode {
     return {
       ...super.exportJSON(),
-      type: TEXT_BLOCK_TYPE,
+      type: CONTENT_TYPE,
       version: 1,
-      children,
     };
   }
 
   // Mutation
+  append(...nodesToAppend: ContentNodeChildren[]): this {
+    return super.append(...nodesToAppend);
+  }
+
   getParent<T extends ElementNode = BlockContainerNode>(): T | null {
     return super.getParent();
   }
 
-  getChildren<T extends LexicalNode = TextNode | LineBreakNode>(): T[] {
+  getChildren<T extends LexicalNode = ContentNodeChildren>(): T[] {
     return super.getChildren();
   }
 
-  insertNewAfter(_: RangeSelection, restoreSelection: boolean): BlockTextNode {
-    const newElement = $createBlockTextNode();
+  insertNewAfter(
+    _: RangeSelection,
+    restoreSelection: boolean,
+  ): BlockContentNode {
+    const newElement = $createBlockContentNode();
     const direction = this.getDirection();
     newElement.setDirection(direction);
     this.insertAfter(newElement, restoreSelection);
@@ -115,16 +109,12 @@ export class BlockTextNode extends ElementNode {
   }
 }
 
-export function $createBlockTextNode(
-  content?: (TextNode | LineBreakNode | LexicalNode)[],
-): BlockTextNode {
-  return content?.length
-    ? new BlockTextNode().append(...content)
-    : new BlockTextNode();
+export function $createBlockContentNode(): BlockContentNode {
+  return new BlockContentNode();
 }
 
-export function $isBlockTextNode(
+export function $isBlockContentNode(
   node: LexicalNode | null | undefined,
-): node is BlockTextNode {
-  return node instanceof BlockTextNode;
+): node is BlockContentNode {
+  return node instanceof BlockContentNode;
 }

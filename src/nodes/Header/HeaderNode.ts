@@ -1,3 +1,4 @@
+import { addClassNamesToElement } from "build/chrome-mv3-dev/tooltip.0c599db0";
 import { ElementNode, isHTMLElement, $createParagraphNode } from "lexical";
 import type {
   NodeKey,
@@ -13,17 +14,18 @@ import type {
   SerializedElementNode,
   Spread,
 } from "lexical";
+import type { CustomTheme } from "~/utils/lexical/theme";
 
 export type SerializedHeaderNode = Spread<
   {
-    tag: "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+    tag: "h1" | "h2" | "h3" | "h4";
   },
   SerializedElementNode
 >;
 
 const HEADER_TYPE = "Header" as const;
 
-export type HeaderTagType = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+export type HeaderTagType = "h1" | "h2" | "h3" | "h4";
 
 /** @noInheritDoc */
 export class HeaderNode extends ElementNode {
@@ -52,13 +54,12 @@ export class HeaderNode extends ElementNode {
   createDOM(config: EditorConfig): HTMLElement {
     const tag = this.__tag;
     const element = document.createElement(tag);
-    element.classList.add('block-h1')
-    // const theme = config.theme;
-    // const classNames = theme.header;
-    // if (classNames !== undefined) {
-    //   const className = classNames[tag];
-    //   addClassNamesToElement(element, className);
-    // }
+    const theme = config.theme as CustomTheme;
+    const classNames = theme.header;
+    if (classNames !== undefined) {
+      const className = classNames[tag];
+      addClassNamesToElement(element, className);
+    }
     return element;
   }
 
@@ -171,10 +172,10 @@ export class HeaderNode extends ElementNode {
     newElement.setDirection(direction);
     this.insertAfter(newElement, restoreSelection);
     if (anchorOffet === 0 && !this.isEmpty() && selection) {
-      // TODO: Figure out if it's a right decision. 
-      // Because when you press enter at the beginning of the line it leaves empty paragraph at the place where 
+      // TODO: Figure out if it's a right decision.
+      // Because when you press enter at the beginning of the line it leaves empty paragraph at the place where
       // the Header was and we don't need that
-      this.remove() 
+      this.remove();
       // this.replace($createParagraphNode(), restoreSelection);
     }
     return newElement;
@@ -202,9 +203,7 @@ function convertHeaderElement(element: HTMLElement): DOMConversionOutput {
     nodeName === "h1" ||
     nodeName === "h2" ||
     nodeName === "h3" ||
-    nodeName === "h4" ||
-    nodeName === "h5" ||
-    nodeName === "h6"
+    nodeName === "h4"
   ) {
     node = $createHeaderNode(nodeName);
     if (element.style !== null) {

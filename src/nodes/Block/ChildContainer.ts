@@ -17,10 +17,11 @@ import type {
   EditorConfig,
 } from "lexical";
 import { ElementNode } from "lexical";
+import type { CustomTheme } from "~/utils/lexical/theme";
 
 type SerializedBlockChildContainerNode = Spread<object, SerializedElementNode>;
 
-const CHILD_CONTAINER_BLOCK_TYPE = "block-child-container" as const;
+const CHILD_CONTAINER_TYPE = "block-child-container" as const;
 
 export class BlockChildContainerNode extends ElementNode {
   constructor(key?: NodeKey) {
@@ -28,7 +29,7 @@ export class BlockChildContainerNode extends ElementNode {
   }
 
   static getType(): string {
-    return CHILD_CONTAINER_BLOCK_TYPE;
+    return CHILD_CONTAINER_TYPE;
   }
 
   static clone(node: BlockChildContainerNode): BlockChildContainerNode {
@@ -38,9 +39,8 @@ export class BlockChildContainerNode extends ElementNode {
   // View
   createDOM(config: EditorConfig): HTMLElement {
     const dom = document.createElement("div");
-    const theme = config.theme;
-    const className = (theme.block as { childContainer: string })
-      .childContainer;
+    const theme = config.theme as CustomTheme;
+    const className = theme.block.childContainer;
     if (className !== undefined) {
       addClassNamesToElement(dom, className);
     }
@@ -66,26 +66,22 @@ export class BlockChildContainerNode extends ElementNode {
     serializedNode: SerializedBlockChildContainerNode,
   ): BlockChildContainerNode {
     const node = $createBlockChildContainerNode();
-    node.setFormat(serializedNode.format);
-    node.setIndent(serializedNode.indent);
-    node.setDirection(serializedNode.direction);
     return node;
   }
 
   exportJSON(): SerializedBlockChildContainerNode {
-    const children = this.getLatest()
-      .getChildren()
-      .map((node) => node.exportJSON());
-
     return {
       ...super.exportJSON(),
-      type: CHILD_CONTAINER_BLOCK_TYPE,
+      type: CHILD_CONTAINER_TYPE,
       version: 1,
-      children,
     };
   }
 
   // Mutation
+  append(...nodesToAppend: BlockContainerNode[]): this {
+    return super.append(...nodesToAppend);
+  }
+
   getParent<T extends ElementNode = BlockContainerNode>(): T | null {
     return super.getParent();
   }
@@ -95,14 +91,8 @@ export class BlockChildContainerNode extends ElementNode {
   }
 }
 
-export function $createBlockChildContainerNode(
-  children?: BlockContainerNode[],
-): BlockChildContainerNode {
-  if (children?.length) {
-    return new BlockChildContainerNode().append(...children);
-  } else {
-    return new BlockChildContainerNode().append();
-  }
+export function $createBlockChildContainerNode(): BlockChildContainerNode {
+  return new BlockChildContainerNode();
 }
 
 export function $isBlockChildContainerNode(

@@ -1,15 +1,13 @@
+/* eslint-disable @typescript-eslint/prefer-for-of */
 import {
-  $setSelection,
+  $isElementNode,
+  $isRootNode,
   type ElementNode,
   type LexicalNode,
   type PasteCommandType,
   type RootNode,
 } from "lexical";
 import { z } from "zod";
-import type {
-  BlockContainerNode,
-  BlockChildContainerNode,
-} from "~/nodes/Block";
 import type { Updates } from "~/plugins/SendingUpdatesPlugin";
 
 export function hasToggleElemClicked(e: MouseEvent): boolean {
@@ -272,13 +270,15 @@ export class Rect {
   }
 }
 
-export const selectOnlyTopNotes = (nodes: BlockContainerNode[]) => {
+export function selectOnlyTopNodes<T extends LexicalNode = LexicalNode>(
+  nodes: T[],
+): T[] {
   const commonAncesstor = nodes.reduce<
-    BlockContainerNode | BlockChildContainerNode | RootNode | undefined | null
+    LexicalNode | ElementNode | RootNode | undefined | null
   >((acc, current) => {
     if (!acc) return current;
     if (acc === current) {
-      return acc.getParent<BlockChildContainerNode | RootNode>();
+      return acc.getParent<ElementNode | RootNode>();
     }
 
     return acc.getCommonAncestor(current);
@@ -287,13 +287,16 @@ export const selectOnlyTopNotes = (nodes: BlockContainerNode[]) => {
   if (!commonAncesstor) return [];
 
   const onlyTopLevelNodes = nodes.filter((node) => {
-    return commonAncesstor
-      .getChildren()
-      .some((child) => child.getKey() === node.getKey());
+    if ($isElementNode(commonAncesstor) || $isRootNode(commonAncesstor)) {
+      return commonAncesstor
+        .getChildren()
+        .some((child) => child.getKey() === node.getKey());
+    }
+    return false;
   });
 
   return onlyTopLevelNodes;
-};
+}
 
 export const throttle = (
   fn: (updates: Updates, updatesRef: React.MutableRefObject<Updates>) => void,
