@@ -7,6 +7,7 @@ import LexicalErrorBoundary from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { useRef, useState } from "react";
 import {
+  SendingUpdatesPlugin,
   type UpdatedBlock,
   type Updates,
 } from "~/plugins/SendingUpdatesPlugin";
@@ -34,39 +35,41 @@ export default function Notes() {
       setEditorRef(editorRef);
     }
   };
-  // const notes = api.note.getAll.useQuery(undefined, {
-  //   refetchOnWindowFocus: false,
-  // });
-  // const saveChanges = api.note.saveChanges.useMutation();
+  const notes = api.note.getAll.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
+  console.log("notes", notes);
 
-  // if (notes.isLoading) {
-  //   return (
-  //     <div className="flex min-h-screen px-2">
-  //       <aside className="min-w-80 border-r pt-8">
-  //         <Link href="/notes">All notes</Link>
-  //       </aside>
-  //       <main className="flex-grow p-8">Loading...</main>
-  //     </div>
-  //   );
-  // }
+  const saveChanges = api.note.saveChanges.useMutation();
 
-  // if (notes.isError) {
-  //   <div className="flex min-h-screen px-2">
-  //     <aside className="min-w-80 border-r pt-8">
-  //       <Link href="/notes">All notes</Link>
-  //     </aside>
-  //     <main className="flex-grow p-8">Failed. Try again later</main>
-  //   </div>;
-  // }
+  if (notes.isLoading) {
+    return (
+      <div className="flex min-h-screen px-2">
+        <aside className="min-w-80 border-r pt-8">
+          <Link href="/notes">All notes</Link>
+        </aside>
+        <main className="flex-grow p-8">Loading...</main>
+      </div>
+    );
+  }
 
-  // const handleUpdates = (updates: Updates) => {
-  //   const updatedBlocks: UpdatedBlock[] = [];
-  //   for (const value of updates.values()) {
-  //     updatedBlocks.push(value);
-  //   }
-  //   console.log("updatedBlocks", updatedBlocks);
-  //   saveChanges.mutate(updatedBlocks);
-  // };
+  if (notes.isError) {
+    <div className="flex min-h-screen px-2">
+      <aside className="min-w-80 border-r pt-8">
+        <Link href="/notes">All notes</Link>
+      </aside>
+      <main className="flex-grow p-8">Failed. Try again later</main>
+    </div>;
+  }
+
+  const handleUpdates = (updates: Updates) => {
+    const updatedBlocks: UpdatedBlock[] = [];
+    for (const value of updates.values()) {
+      updatedBlocks.push(value);
+    }
+    console.log("updatedBlocks", updatedBlocks);
+    saveChanges.mutate(updatedBlocks);
+  };
 
   const initialConfig = {
     namespace: "MyEditor",
@@ -80,44 +83,18 @@ export default function Notes() {
     ],
     editorState: JSON.stringify({
       root: {
-        children: [
-          {
-            type: CONTAINER_TYPE,
-            version: 1,
-            content: "# Hello world",
-            open: true,
-            id: crypto.randomUUID(),
-            childNotes: [
-              //   {
-              //     children: [],
-              //     type: BLOCK_HIGHLIGHT_SLICE_TYPE,
-              //     version: 1,
-              //     title:
-              //       '[{"detail":0,"format":0,"mode":"normal","style":"","text":"this is what I think about adding multiple","type":"text","version":1}]',
-              //     childNotes: [],
-              //     open: true,
-              //     id: crypto.randomUUID(),
-              //     highlightText: "Adding multiple",
-              //     highlightUrl: "https://google.com",
-              //     highlightRangePath: "",
-              //     highlightIndexWithPage: 1,
-              //   },
-              //   {
-              //     children: [],
-              //     type: BLOCK_HIGHLIGHT_SLICE_TYPE,
-              //     version: 1,
-              //     title: "[]",
-              //     childNotes: [],
-              //     open: true,
-              //     id: crypto.randomUUID(),
-              //     highlightText: "directory for multiple",
-              //     highlightUrl: "https://google.com",
-              //     highlightRangePath: "",
-              //     highlightIndexWithPage: 1,
-              //   },
+        children: notes.data?.length
+          ? notes.data
+          : [
+              {
+                type: CONTAINER_TYPE,
+                version: 1,
+                content: "",
+                open: true,
+                id: crypto.randomUUID(),
+                childNotes: [],
+              },
             ],
-          },
-        ],
         direction: null,
         type: "root",
         version: 1,
@@ -144,7 +121,7 @@ export default function Notes() {
           <HierarchicalBlockPlugin />
           <HistoryPlugin />
           <SelectBlocksPlugin />
-          {/* <SendingUpdatesPlugin handleUpdates={handleUpdates} /> */}
+          <SendingUpdatesPlugin handleUpdates={handleUpdates} />
           {editorRef ? <DraggableBlockPlugin editorRef={editorRef} /> : <></>}
           {/* <ShortcutsPlugin /> */}
           <TreeViewPlugin />

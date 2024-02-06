@@ -22,7 +22,15 @@ export const noteRouter = createTRPCRouter({
         switch (note.updateType) {
           case "created":
             if (note.updatedBlock) {
-              const { id, childNotes, children, ...rest } = note.updatedBlock;
+              const {
+                id,
+                childBlocks,
+                children,
+                direction,
+                format,
+                indent,
+                ...rest
+              } = note.updatedBlock; // TODO: find a better way of detecting unnecessary values
               await ctx.db
                 .insert(notes)
                 .values(note.updatedBlock)
@@ -33,7 +41,14 @@ export const noteRouter = createTRPCRouter({
             break;
           case "updated":
             if (note.updatedBlock) {
-              const { childNotes, children, ...rest } = note.updatedBlock;
+              const {
+                childBlocks,
+                children,
+                direction,
+                format,
+                indent,
+                ...rest
+              } = note.updatedBlock;
 
               const isDataExist = await ctx.db.query.notes.findFirst({
                 where: eq(notes.id, note.updatedBlockId),
