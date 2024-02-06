@@ -5,7 +5,7 @@ import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import LexicalErrorBoundary from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import {
   type UpdatedBlock,
   type Updates,
@@ -21,13 +21,19 @@ import {
 import { HierarchicalBlockPlugin } from "~/plugins/HierarchicalBlocksPlugin";
 import { SelectBlocksPlugin } from "~/plugins/SelectBlocksPlugin";
 import { HeaderNode } from "~/nodes/Header";
+import { DraggableBlockPlugin } from "~/plugins/DraggableBlockPlugin";
 
 function onError(error: Error) {
   console.error(error);
 }
 
 export default function Notes() {
-  const anchorElemRef = useRef<HTMLDivElement>(null);
+  const [editorRef, setEditorRef] = useState<HTMLDivElement>();
+  const onRef = (editorRef: HTMLDivElement) => {
+    if (editorRef !== null) {
+      setEditorRef(editorRef);
+    }
+  };
   // const notes = api.note.getAll.useQuery(undefined, {
   //   refetchOnWindowFocus: false,
   // });
@@ -66,7 +72,12 @@ export default function Notes() {
     namespace: "MyEditor",
     theme: customTheme,
     onError,
-    nodes: [BlockContainerNode, BlockContentNode, BlockChildContainerNode, HeaderNode],
+    nodes: [
+      BlockContainerNode,
+      BlockContentNode,
+      BlockChildContainerNode,
+      HeaderNode,
+    ],
     editorState: JSON.stringify({
       root: {
         children: [
@@ -123,10 +134,8 @@ export default function Notes() {
         <LexicalComposer initialConfig={initialConfig}>
           <PlainTextPlugin
             contentEditable={
-              <div className="editor-scroller">
-                <div className="editor" ref={anchorElemRef}>
-                  <ContentEditable />
-                </div>
+              <div className="editor" ref={onRef}>
+                <ContentEditable />
               </div>
             }
             placeholder={<div>Enter some text...</div>}
@@ -136,11 +145,7 @@ export default function Notes() {
           <HistoryPlugin />
           <SelectBlocksPlugin />
           {/* <SendingUpdatesPlugin handleUpdates={handleUpdates} /> */}
-          {/* {anchorElemRef.current ? (
-            <DraggableBlockPlugin anchorElem={anchorElemRef.current} />
-          ) : (
-            <></>
-          )} */}
+          {editorRef ? <DraggableBlockPlugin editorRef={editorRef} /> : <></>}
           {/* <ShortcutsPlugin /> */}
           <TreeViewPlugin />
         </LexicalComposer>

@@ -1,14 +1,11 @@
-// import "./index.css";
-
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { mergeRegister } from "@lexical/utils";
-import type { ElementNode, LexicalEditor, LexicalNode } from "lexical";
+import type { LexicalEditor } from "lexical";
 import {
   $getNearestNodeFromDOMNode,
-  $getNodeByKey,
-  $getRoot,
+  $getSelection,
+  $isRangeSelection,
   COMMAND_PRIORITY_HIGH,
-  COMMAND_PRIORITY_LOW,
   DRAGOVER_COMMAND,
   DROP_COMMAND,
   isHTMLElement,
@@ -19,187 +16,14 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   type BlockContainerNode,
-  $isBlockContainerNode,
-} from "../HierarchicalBlocksPlugin";
-import { Rect, eventFiles, Point } from "~/utils/lexical";
+  $findParentBlockContainer,
+  $getSelectedBlocks,
+} from "~/nodes/Block";
+import { eventFiles } from "~/utils/lexical";
 
-function getBlockElement(
-  draggingBlock: string[] | false,
-  editor: LexicalEditor,
-  event: MouseEvent,
-  useEdgeAsDefault = false,
-): HTMLElement | null {
-  // const anchorElementRect = anchorElem.getBoundingClientRect();
-  const topLevelNodeKeys = editor
-    .getEditorState()
-    .read(() => $getRoot().getChildrenKeys());
-  const allBlockContainerNodes = editor.getEditorState().read(() => {
-    const result: LexicalNode[] = [];
-
-    const children = $getRoot()
-      .getChildren()
-      .filter((node): node is BlockContainerNode =>
-        $isBlockContainerNode(node),
-      );
-    while (children.length) {
-      const child = children[0];
-      if (!child) continue;
-      result.push(child);
-      const cPContainerChildren = child
-        .getBlockChildContainerNode()
-        ?.getChildren<BlockContainerNode>();
-
-      if (cPContainerChildren?.length) {
-        children.push(...cPContainerChildren);
-      }
-      children.shift();
-    }
-
-    return result;
-  });
-
-  let blockElem: HTMLElement | null = null;
-
-  editor.getEditorState().read(() => {
-    if (useEdgeAsDefault && topLevelNodeKeys.length) {
-      const firstNode = topLevelNodeKeys[0];
-      const lastNode = topLevelNodeKeys[topLevelNodeKeys.length - 1];
-      const firstElem = firstNode && editor.getElementByKey(firstNode);
-      const lastElem = lastNode && editor.getElementByKey(lastNode);
-
-      if (firstElem && lastElem) {
-        const [firstNodeRect, lastNodeRect] = [
-          firstElem?.getBoundingClientRect(),
-          lastElem?.getBoundingClientRect(),
-        ];
-
-        if (firstNodeRect && lastNodeRect) {
-          if (event.y < firstNodeRect.top) {
-            blockElem = firstElem;
-          } else if (event.y > lastNodeRect.bottom) {
-            blockElem = lastElem;
-          }
-
-          if (blockElem) {
-            return;
-          }
-        }
-      }
-    }
-
-    let index = 0;
-    // let index = getCurrentIndex(allBlockContainerNodes.length);
-    // let direction = Indeterminate;
-
-    const paragraphsContainingPoint: HTMLElement[] = [];
-
-    while (index >= 0 && index < allBlockContainerNodes.length) {
-      const paragraph = allBlockContainerNodes[index];
-      const elem = paragraph
-        ? editor.getElementByKey(paragraph.getKey())
-        : null;
-
-      if (elem === null) {
-        break;
-      }
-      const point = new Point(event.x, event.y);
-      const domRect = Rect.fromDOM(elem);
-      const { marginTop, marginBottom } = getCollapsedMargins(elem);
-
-      const rect = domRect.generateNewRect({
-        bottom: domRect.bottom + marginBottom,
-        left: domRect.left,
-        right: domRect.right,
-        top: domRect.top - marginTop,
-      });
-
-      const {
-        result,
-        reason: { isOnTopSide, isOnBottomSide },
-      } = rect.contains(point);
-
-      if (result) {
-        paragraphsContainingPoint.push(elem);
-      }
-
-      index += 1;
-    }
-
-    // console.log('paragraphsContainingPoint', paragraphsContainingPoint);
-
-    const getElemAreaRect = (elem: HTMLElement) => {
-      const pElemRect = elem.getBoundingClientRect();
-      const width: number = pElemRect.right - pElemRect.left,
-        height: number = pElemRect.bottom - pElemRect.top;
-      return width * height;
-    };
-
-    // console.log("paragraphsContainingPoint", paragraphsContainingPoint);
-
-    const elementWithSmallestArea = [...paragraphsContainingPoint].reduce(
-      (acc, current) => {
-        if (!acc) return current;
-        const accArea = getElemAreaRect(acc);
-        const currentArea = getElemAreaRect(current);
-        return currentArea < accArea ? current : acc;
-      },
-      paragraphsContainingPoint[0],
-    );
-
-    // console.log("elementWithSmallestArea", elementWithSmallestArea);
-
-    if (elementWithSmallestArea) {
-      blockElem = elementWithSmallestArea;
-    }
-  });
-
-  if (draggingBlock && blockElem) {
-    const draggingBlockNodes = draggingBlock.map((node) => {
-      return $getNodeByKey(node);
-    }) as LexicalNode[];
-    const targetBlockToDrop = $getNearestNodeFromDOMNode(blockElem);
-
-    const isDescendantsContain = (
-      parentNode: (ElementNode | LexicalNode)[],
-      targetNode: LexicalNode,
-    ): boolean => {
-      for (const block of parentNode) {
-        if (block.getKey() === targetNode.getKey()) {
-          return true;
-        }
-
-        if (
-          "getChildren" in block &&
-          (block as ElementNode).getChildren().length > 0
-        ) {
-          // Recursively check in the children
-          if (
-            isDescendantsContain(
-              (block as ElementNode).getChildren(),
-              targetNode,
-            )
-          ) {
-            return true;
-          }
-        }
-      }
-
-      return false;
-    };
-
-    if (
-      draggingBlockNodes.length &&
-      isDescendantsContain(draggingBlockNodes, targetBlockToDrop!)
-    )
-      return null;
-  }
-  return blockElem;
-}
-
-function setDragBoxPosition(
+function setDragCirclePosition(
   targetElem: HTMLElement | null,
   floatingElem: HTMLElement,
-  anchorElem: HTMLElement,
 ) {
   if (!targetElem) {
     floatingElem.style.opacity = "0";
@@ -231,227 +55,215 @@ function setDragImage(
   });
 }
 
+function getFocusedElem(target: HTMLElement, editor: LexicalEditor) {
+  return new Promise<HTMLElement>((resolve, reject) => {
+    editor.update(() => {
+      const targetNode = $getNearestNodeFromDOMNode(target);
+      if (!targetNode) {
+        return;
+      }
+
+      const blockNode = $findParentBlockContainer(targetNode);
+      const blockNodeKey = blockNode?.getKey();
+      const blockElem = editor.getElementByKey(blockNodeKey!);
+
+      if (blockElem) {
+        resolve(blockElem);
+      } else {
+        reject();
+      }
+    });
+  });
+}
+
 function setTargetLine(
   targetLineElem: HTMLElement,
   targetBlockElem: HTMLElement,
-  mouseY: number,
-  anchorElem: HTMLElement,
 ) {
-  const {
-    top: targetBlockElemTop,
-    height: targetBlockElemHeight,
-    left: targetBlockElemLeft,
-  } = targetBlockElem.getBoundingClientRect();
-  const { top: anchorTop, width: anchorWidth } =
-    anchorElem.getBoundingClientRect();
-
-  // const { marginTop, marginBottom } = getCollapsedMargins(targetBlockElem);
-
-  const top = targetBlockElemTop + targetBlockElemHeight;
-  const left = targetBlockElemLeft;
-
-  targetLineElem.style.transform = `translate(${left}px, ${top}px)`;
-  targetLineElem.style.width = `${anchorWidth}px`;
+  const { top, height, left, width } = targetBlockElem.getBoundingClientRect();
+  targetLineElem.style.transform = `translate(${left}px, ${top + height}px)`;
+  targetLineElem.style.width = `${width}px`;
   targetLineElem.style.opacity = ".4";
 }
 
 export function DraggableBlockPlugin({
-  anchorElem = document.body,
+  editorRef,
 }: {
-  anchorElem: HTMLElement;
+  editorRef: HTMLDivElement;
 }): JSX.Element {
   const [editor] = useLexicalComposerContext();
-  // console.log("anchorElem", anchorElem);
 
-  const scrollerElem = anchorElem?.parentElement;
-
-  const dragBoxRef = useRef<HTMLDivElement>(null);
   const targetLineRef = useRef<HTMLDivElement>(null);
-  const draggingBlockRef = useRef<string[] | false>(false); // To prevent parent to dropping into its child
-  const [draggableBlockElem, setDraggableBlockElem] =
-    useState<HTMLElement | null>(null);
+  const dragCircleRef = useRef<HTMLDivElement>(null);
+  const dragImageContainer = useRef<HTMLDivElement | null>(null);
+  const [draggableBlockElems, setDraggableBlockElems] = useState<HTMLElement[]>(
+    [],
+  );
 
   useEffect(() => {
     function onMouseMove(event: MouseEvent) {
       const target = event.target;
-      if (!isHTMLElement(target!)) {
-        setDraggableBlockElem(null);
-        return;
-      }
+      if (!isHTMLElement(target!)) return;
 
-      const _draggableBlockElem = getBlockElement(
-        draggingBlockRef.current,
-        editor,
-        event,
-      );
+      let selectedBlockElements: HTMLElement[] = [];
+      editor.getEditorState().read(() => {
+        const selection = $getSelection();
+        if ($isRangeSelection(selection)) {
+          const selectedBlocks = $getSelectedBlocks(selection);
+          selectedBlockElements = selectedBlocks
+            .map((block) => editor.getElementByKey(block.getKey()))
+            .flatMap((node) => {
+              const result = node;
+              return !!result ? [result] : [];
+            });
+        }
+      });
 
-      setDraggableBlockElem(_draggableBlockElem);
+      getFocusedElem(target, editor)
+        .then((_draggableBlockElem) => {
+          if (selectedBlockElements.length > 1) {
+            setDraggableBlockElems(selectedBlockElements);
+          } else if (_draggableBlockElem) {
+            setDraggableBlockElems([_draggableBlockElem]);
+          } else {
+            setDraggableBlockElems([]);
+          }
+        })
+        .catch((err) => console.error("onmousemove", err));
     }
 
     function onMouseLeave() {
-      setDraggableBlockElem(null);
+      console.log("onMouseLeave");
     }
 
-    scrollerElem?.addEventListener("mousemove", onMouseMove);
-    scrollerElem?.addEventListener("mouseleave", onMouseLeave);
+    editorRef.addEventListener("mousemove", onMouseMove);
+    editorRef.addEventListener("mouseleave", onMouseLeave);
 
     return () => {
-      scrollerElem?.removeEventListener("mousemove", onMouseMove);
-      scrollerElem?.removeEventListener("mouseleave", onMouseLeave);
+      editorRef.removeEventListener("mousemove", onMouseMove);
+      editorRef.removeEventListener("mouseleave", onMouseLeave);
     };
-  }, [scrollerElem, anchorElem, editor]);
+  }, [editor, editorRef]);
 
   useEffect(() => {
-    if (dragBoxRef.current) {
-      setDragBoxPosition(draggableBlockElem, dragBoxRef.current, anchorElem);
+    if (dragCircleRef.current) {
+      setDragCirclePosition(draggableBlockElems[0]!, dragCircleRef.current);
     }
-  }, [anchorElem, draggableBlockElem]);
+  }, [draggableBlockElems]);
 
   useEffect(() => {
-    function onDragover(event: DragEvent): boolean {
-      if (!draggingBlockRef.current) {
-        return false;
-      }
-      const [isFileTransfer] = eventFiles(event);
-      if (isFileTransfer) {
-        return false;
-      }
-      const { pageY, target } = event;
-      if (!isHTMLElement(target!)) {
-        return false;
-      }
-      const targetBlockElem = getBlockElement(
-        draggingBlockRef.current,
-        editor,
-        event,
-        true,
-      );
-
-      const targetLineElem = targetLineRef.current;
-      if (targetBlockElem === null || targetLineElem === null) {
-        return false;
-      }
-      setTargetLine(targetLineElem, targetBlockElem, pageY, anchorElem);
-      // Prevent default event to be able to trigger onDrop events
-      event.preventDefault();
-      return true;
-    }
-
-    function onDrop(event: DragEvent): boolean {
-      if (!draggingBlockRef.current) {
-        return false;
-      }
-      const [isFileTransfer] = eventFiles(event);
-      if (isFileTransfer) {
-        return false;
-      }
-      const { target, dataTransfer, pageY } = event;
-      // const dragData = dataTransfer?.getData(DRAG_DATA_FORMAT) ?? "";
-
-      const draggedNodes = draggingBlockRef.current?.length
-        ? (draggingBlockRef.current
-            .map((key) => {
-              return $getNodeByKey(key);
-            })
-            .filter(Boolean) as LexicalNode[])
-        : null;
-      if (!draggedNodes) {
-        return false;
-      }
-      if (!isHTMLElement(target!)) {
-        return false;
-      }
-      const targetBlockElem = getBlockElement(
-        draggingBlockRef.current,
-        editor,
-        event,
-        true,
-      );
-      if (!targetBlockElem) {
-        return false;
-      }
-      const targetNode = $getNearestNodeFromDOMNode(targetBlockElem);
-      if (!targetNode) {
-        return false;
-      }
-      if (draggedNodes.includes(targetNode)) {
-        return true;
-      }
-
-      draggedNodes.forEach((node) => {
-        targetNode.insertAfter(node);
-      });
-
-      setDraggableBlockElem(null);
-
-      return true;
-    }
-
     return mergeRegister(
       editor.registerCommand(
         DRAGOVER_COMMAND,
         (event) => {
-          return onDragover(event);
+          event.preventDefault();
+          const targetLineElem = targetLineRef.current;
+
+          const [isFileTransfer] = eventFiles(event);
+          if (isFileTransfer) return false;
+
+          const target = event.target;
+          if (!isHTMLElement(target!)) return false;
+
+          if (!targetLineElem) return false;
+
+          getFocusedElem(target, editor)
+            .then((targetBlockElem) => {
+              setTargetLine(targetLineElem, targetBlockElem);
+            })
+            .catch((err) => console.error(err));
+
+          return true;
         },
-        COMMAND_PRIORITY_LOW,
+        COMMAND_PRIORITY_HIGH,
       ),
       editor.registerCommand(
         DROP_COMMAND,
         (event) => {
-          return onDrop(event);
+          event.preventDefault();
+          const [isFileTransfer] = eventFiles(event);
+          if (isFileTransfer) return false;
+
+          const { target } = event;
+          if (!isHTMLElement(target!)) return false;
+
+          getFocusedElem(target, editor)
+            .then((targetBlockElem) => {
+              editor.update(() => {
+                const targetNode = $getNearestNodeFromDOMNode(
+                  targetBlockElem,
+                ) as BlockContainerNode;
+                if (!targetNode) return false;
+
+                const draggableBlockNodes = draggableBlockElems.map((elem) =>
+                  $getNearestNodeFromDOMNode(elem),
+                ) as BlockContainerNode[];
+
+                // To prevent the selected element from being dropped inside its children
+                const children = [...draggableBlockNodes];
+                while (children.length) {
+                  const currentNode = children.pop();
+
+                  if (currentNode?.getKey() === targetNode.getKey()) {
+                    return false;
+                  }
+
+                  const childContainers = currentNode
+                    ?.getBlockChildContainerNode()
+                    .getChildren();
+                  if (childContainers?.length) {
+                    for (const child of childContainers) {
+                      children.push(child);
+                    }
+                  }
+                }
+
+                draggableBlockNodes.reverse().forEach((node) => {
+                  targetNode.insertAfter(node);
+                });
+
+                setDraggableBlockElems([]);
+              });
+            })
+            .catch((err) => console.error(err));
+
+          return true;
         },
         COMMAND_PRIORITY_HIGH,
       ),
     );
-  }, [anchorElem, editor]);
+  }, [editor, draggableBlockElems]);
 
-  function onDragStart(event: ReactDragEvent<HTMLDivElement>): void {
+  function onDragStart(
+    event: ReactDragEvent<HTMLDivElement>,
+    draggableBlockElems: HTMLElement[],
+    dragImageContainer: HTMLDivElement,
+  ): void {
     const dataTransfer = event.dataTransfer;
 
-    // if (selectedBlocks.current?.length) {
-    //   const wrapperDiv = document.getElementById("drag-image-wrapper")!;
-    //   const selectedBlockElems = selectedBlocks.current.flatMap((node) => {
-    //     const result = editor.getElementByKey(node.getKey());
-    //     return !!result ? [result] : [];
-    //   });
-    //   selectedBlockElems.forEach((element) => {
-    //     const clonedDiv = element.cloneNode(true) as HTMLElement;
-    //     clonedDiv?.classList?.remove("selected");
-    //     wrapperDiv.appendChild(clonedDiv);
-    //   });
-    //   setDragImage(dataTransfer, wrapperDiv);
-
-    //   const selectedBlockKeys = selectedBlocks.current.map((node) =>
-    //     node.getKey(),
-    //   );
-    //   draggingBlockRef.current = selectedBlockKeys;
-
-    //   return;
-    // }
-
-    if (draggableBlockElem) {
-      setDragImage(dataTransfer, draggableBlockElem);
-
-      let nodeKey = "";
-      editor.update(() => {
-        const node = $getNearestNodeFromDOMNode(draggableBlockElem);
-        if (node) {
-          nodeKey = node.getKey();
-        }
+    if (draggableBlockElems.length) {
+      draggableBlockElems.forEach((element) => {
+        const clonedDiv = element.cloneNode(true) as HTMLElement;
+        clonedDiv?.classList?.remove("selected");
+        dragImageContainer.appendChild(clonedDiv);
       });
-
-      draggingBlockRef.current = [nodeKey];
+      setDragImage(dataTransfer, dragImageContainer);
       return;
     }
   }
 
-  function onDragEnd(): void {
-    draggingBlockRef.current = false;
-    const wrapperDiv = document.getElementById("drag-image-wrapper")!;
-    wrapperDiv.innerHTML = ""; // To clean up dragImage
-    if (targetLineRef.current) {
-      targetLineRef.current.style.opacity = "0";
-      targetLineRef.current.style.transform = "translate(-10000px, -10000px)";
+  function onDragEnd(
+    targetLineRef: HTMLDivElement | null,
+    dragImageContainer: HTMLDivElement | null,
+  ): void {
+    if (dragImageContainer) {
+      dragImageContainer.innerHTML = ""; // To clean up dragImage
+      dragImageContainer.style.opacity = "0";
+      dragImageContainer.style.transform = "translate(-10000px, -10000px)";
+    }
+    if (targetLineRef) {
+      targetLineRef.style.opacity = "0";
+      targetLineRef.style.transform = "translate(-10000px, -10000px)";
     }
   }
 
@@ -459,48 +271,22 @@ export function DraggableBlockPlugin({
     <>
       <div
         className="draggable-block-menu"
-        ref={dragBoxRef}
+        ref={dragCircleRef}
         draggable={true}
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
-      ></div>
+        onDragStart={(event) =>
+          onDragStart(event, draggableBlockElems, dragImageContainer.current!)
+        }
+        onDragEnd={() =>
+          onDragEnd(targetLineRef.current, dragImageContainer.current)
+        }
+      />
       <div className="draggable-block-target-line" ref={targetLineRef} />
-      <div id="drag-image-wrapper" className=" translate-x-[100000px]">
-        Wrapper Div
-      </div>
       {/* HACK: to show multiple dragImages */}
+      <div
+        className="absolute translate-x-[10000px]"
+        ref={dragImageContainer}
+      ></div>
     </>,
-    anchorElem,
+    editorRef,
   );
-}
-
-function getCollapsedMargins(elem: HTMLElement): {
-  marginTop: number;
-  marginBottom: number;
-} {
-  const getMargin = (
-    element: Element | null,
-    margin: "marginTop" | "marginBottom",
-  ): number =>
-    element ? parseFloat(window.getComputedStyle(element)[margin]) : 0;
-
-  const { marginTop, marginBottom } = window.getComputedStyle(elem);
-  const prevElemSiblingMarginBottom = getMargin(
-    elem.previousElementSibling,
-    "marginBottom",
-  );
-  const nextElemSiblingMarginTop = getMargin(
-    elem.nextElementSibling,
-    "marginTop",
-  );
-  const collapsedTopMargin = Math.max(
-    parseFloat(marginTop),
-    prevElemSiblingMarginBottom,
-  );
-  const collapsedBottomMargin = Math.max(
-    parseFloat(marginBottom),
-    nextElemSiblingMarginTop,
-  );
-
-  return { marginBottom: collapsedBottomMargin, marginTop: collapsedTopMargin };
 }

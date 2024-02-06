@@ -223,16 +223,14 @@ const HierarchicalBlockPlugin = ({}) => {
 
           const selectedBlocks = $getSelectedBlocks(selection);
 
-          const onlyTopLevelNodes = selectOnlyTopNodes(selectedBlocks);
-
           let commonPrevSibling: BlockContainerNode | undefined;
-          for (const node of onlyTopLevelNodes) {
+          for (const node of selectedBlocks) {
             const prevNode = node.getPreviousSibling();
 
             if (!prevNode || !$isBlockContainerNode(prevNode)) continue;
 
             if (
-              !onlyTopLevelNodes.some(
+              !selectedBlocks.some(
                 (node) => node.getKey() === prevNode.getKey(),
               )
             ) {
@@ -245,12 +243,12 @@ const HierarchicalBlockPlugin = ({}) => {
           const childContainer = commonPrevSibling.getBlockChildContainerNode();
           if (!childContainer) {
             const childContainerNode = $createBlockChildContainerNode().append(
-              ...onlyTopLevelNodes,
+              ...selectedBlocks,
             );
             commonPrevSibling.append(childContainerNode);
             return false;
           }
-          childContainer.append(...onlyTopLevelNodes);
+          childContainer.append(...selectedBlocks);
           return true;
         },
         COMMAND_PRIORITY_NORMAL,
@@ -265,13 +263,9 @@ const HierarchicalBlockPlugin = ({}) => {
             return false;
           }
 
-          const selectedBlocks = $getSelectedBlocks(selection);
+          const selectedBlocks = $getSelectedBlocks(selection).reverse(); // To work with insertAfter
 
-          let onlyTopLevelNodes = selectOnlyTopNodes(selectedBlocks);
-
-          onlyTopLevelNodes = onlyTopLevelNodes.reverse(); // To work with insertAfter
-
-          for (const paragraph of onlyTopLevelNodes) {
+          for (const paragraph of selectedBlocks) {
             const parentContainerNode = paragraph.getParentCPContainer();
             parentContainerNode?.insertAfter(paragraph);
           }

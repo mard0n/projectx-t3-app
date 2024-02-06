@@ -1,14 +1,21 @@
+import type { SerializedBlockContainerNode } from "~/nodes/Block";
 import type { Note } from "~/server/db/schema";
 
+type NoteType = Note & { childBlocks?: Note[] };
+type SerializedBlockNodeType = Omit<
+  SerializedBlockContainerNode,
+  "children" | "direction" | "indent" | "format"
+> & { childBlocks?: SerializedBlockNodeType[] };
+
 // TODO: Refactor utils folder
-export function buildHierarchy(items: (Note & { childNotes?: Note[] })[]) {
-  const tree: (Note & { childNotes: Note[] })[] = [];
-  const mappedArr: Record<string, Note & { childNotes: Note[] }> = {};
+export function buildHierarchy(items: (NoteType | SerializedBlockNodeType)[]) {
+  const tree: (NoteType | SerializedBlockNodeType)[] = [];
+  const mappedArr: Record<string, NoteType | SerializedBlockNodeType> = {};
 
   for (const item of items) {
     const id = item.id;
     if (!mappedArr.hasOwnProperty(id)) {
-      mappedArr[id] = { ...item, childNotes: [] };
+      mappedArr[id] = { ...item, childBlocks: [] };
     }
   }
 
@@ -22,12 +29,12 @@ export function buildHierarchy(items: (Note & { childNotes?: Note[] })[]) {
         const parentNote = mappedArr[parentId];
         if (parentNote) {
           // TODO: Need to find a better way of sorting
-          const childNotes = parentNote.childNotes;
-          childNotes.push(mappedElem);
-          const sortedChildNotes = childNotes.sort(
-            (a, b) => a.indexWithinParent! - b.indexWithinParent!,
+          const childBlocks = parentNote.childBlocks;
+          childBlocks?.push(mappedElem);
+          const sortedChildNotes = childBlocks?.sort(
+            (a, b) => a.indexWithinParent - b.indexWithinParent,
           );
-          parentNote.childNotes = sortedChildNotes;
+          parentNote.childBlocks = sortedChildNotes;
         }
       } else {
         tree.push(mappedElem);

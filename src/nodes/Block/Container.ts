@@ -12,6 +12,7 @@ import { z } from "zod";
 import {
   SerializedElementNodeSchema,
   hasToggleElemClicked,
+  selectOnlyTopNodes,
 } from "~/utils/lexical";
 import type { CustomTheme } from "~/utils/lexical/theme";
 import {
@@ -280,5 +281,7 @@ export function $getSelectedBlocks(
       }),
     ),
   ];
-  return blocks;
+
+  const onlyTopNodes = selectOnlyTopNodes(blocks)
+  return onlyTopNodes;
 }
