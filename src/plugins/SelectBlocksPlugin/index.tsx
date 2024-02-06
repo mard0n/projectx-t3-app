@@ -67,11 +67,9 @@ const SelectBlocksPlugin = ({}) => {
             return false;
           }
 
-          const onlyTopLevelNodes = selectOnlyTopNodes(selectedNodes);
+          selectedNodes.forEach((block) => block.setSelected(true));
 
-          onlyTopLevelNodes.forEach((block) => block.setSelected(true));
-
-          prevSelectedBlocks.current = onlyTopLevelNodes;
+          prevSelectedBlocks.current = selectedNodes;
 
           return true;
         },

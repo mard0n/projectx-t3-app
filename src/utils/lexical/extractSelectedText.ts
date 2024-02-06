@@ -16,7 +16,7 @@ import {
   $isRangeSelection,
   isSelectionWithinEditor,
 } from "lexical";
-import { selectOnlyTopNodes } from "../lexical";
+import { selectOnlyTopNodes } from ".";
 import { $isBlockContainerNode, type BlockContainerNode } from "~/nodes/Block";
 
 function $sliceSelectedTextNodeContent(

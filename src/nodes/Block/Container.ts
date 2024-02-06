@@ -27,7 +27,7 @@ import {
   $convertFromMarkdownString,
   $convertToMarkdownString,
 } from "@lexical/markdown";
-import { CUSTOM_TRANSFORMERS } from "~/utils/markdown-transformers";
+import { CUSTOM_TRANSFORMERS } from "~/utils/lexical/markdown-transformers";
 
 export const CONTAINER_TYPE = "block-container" as const;
 

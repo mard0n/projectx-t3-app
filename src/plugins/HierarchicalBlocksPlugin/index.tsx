@@ -47,7 +47,6 @@ import {
   $createBlockContainerNode,
   $getSelectedBlocks,
 } from "~/nodes/Block";
-import { selectOnlyTopNodes } from "~/utils/lexical";
 import { $findParentBlockContainer } from "~/nodes/Block";
 import { $isHeaderNode } from "~/nodes/Header";
 import { $convertSelectionIntoLexicalContent } from "~/utils/lexical/extractSelectedText";
