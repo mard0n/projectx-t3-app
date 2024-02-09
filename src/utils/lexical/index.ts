@@ -131,16 +131,19 @@ export const SerializedLexicalNodeSchema = z.object({
 export const SerializedElementNodeSchema = z
   .object({
     children: z.array(SerializedLexicalNodeSchema),
-    direction: z.union([z.literal("ltr"), z.literal("rtl")]).nullable(),
-    format: z.union([
-      z.literal("left"),
-      z.literal("start"),
-      z.literal("center"),
-      z.literal("right"),
-      z.literal("end"),
-      z.literal("justify"),
-      z.literal(""),
-    ]),
+    direction: z
+      .union([z.literal("ltr"), z.literal("rtl")])
+      .nullable(),
+    format: z
+      .union([
+        z.literal("left"),
+        z.literal("start"),
+        z.literal("center"),
+        z.literal("right"),
+        z.literal("end"),
+        z.literal("justify"),
+        z.literal(""),
+      ]),
     indent: z.number(),
   })
   .merge(SerializedLexicalNodeSchema);

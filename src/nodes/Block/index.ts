@@ -1,10 +1,9 @@
 export {
-  $createBlockContainerNode,
   $isBlockContainerNode,
   BlockContainerNode,
   type SerializedBlockContainerNode,
   SerializedBlockContainerNodeSchema,
-  CONTAINER_TYPE,
+  BLOCK_CONTAINER_TYPE,
   $findParentBlockContainer,
   $getSelectedBlocks
 } from "./Container";

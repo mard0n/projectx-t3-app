@@ -7,7 +7,7 @@ const handler: PlasmoMessaging.MessageHandler<
   ReqGetCurrentUrl,
   ResGetCurrentUrl
 > = async (req, res) => {
-  const queryOptions = { active: true, lastFocusedWindow: true };
+  const queryOptions = { active: true };
   const [tab] = await chrome.tabs.query(queryOptions);
 
   res.send(tab?.url);
@@ -17,6 +17,7 @@ export async function getCurrentUrl() {
   const res = await sendToBackground<ReqGetCurrentUrl, ResGetCurrentUrl>({
     name: "getCurrentUrl",
   });
+  // return 'http://localhost:5500';
   return res;
 }
 

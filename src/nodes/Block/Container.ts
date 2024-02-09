@@ -7,7 +7,11 @@ import type {
   LexicalNode,
   RangeSelection,
 } from "lexical";
-import { $parseSerializedNode, ElementNode } from "lexical";
+import {
+  $createParagraphNode,
+  $parseSerializedNode,
+  ElementNode,
+} from "lexical";
 import { z } from "zod";
 import {
   SerializedElementNodeSchema,
@@ -28,11 +32,12 @@ import {
   $convertToMarkdownString,
 } from "@lexical/markdown";
 import { CUSTOM_TRANSFORMERS } from "~/utils/lexical/markdown-transformers";
+import type { Prettify } from "~/utils/types";
 
-export const CONTAINER_TYPE = "block-container" as const;
+export const BLOCK_CONTAINER_TYPE = "block-container" as const;
 
 const BaseContainerNodeSchema = SerializedElementNodeSchema.extend({
-  type: z.literal(CONTAINER_TYPE),
+  type: z.string(),
   id: z.string(),
   open: z.boolean(),
   content: z.string(),
@@ -40,16 +45,24 @@ const BaseContainerNodeSchema = SerializedElementNodeSchema.extend({
   indexWithinParent: z.number(),
 });
 
-export type SerializedBlockContainerNode = z.infer<
-  typeof BaseContainerNodeSchema
-> & {
-  childBlocks?: SerializedBlockContainerNode[];
-};
+export type SerializedBlockContainerNode = Prettify<
+  z.infer<typeof BaseContainerNodeSchema> & {
+    childBlocks?: SerializedBlockContainerNode[];
+  }
+>;
 
-export const SerializedBlockContainerNodeSchema: z.ZodType<SerializedBlockContainerNode> =
+// HACK: Limitation of zod. To make SerializedBlockContainerNodeSchema extendable
+const _SerializedBlockContainerNodeSchema: z.ZodType<SerializedBlockContainerNode> =
   BaseContainerNodeSchema.extend({
     childBlocks: z.lazy(() =>
-      SerializedBlockContainerNodeSchema.array().optional(),
+      _SerializedBlockContainerNodeSchema.array().optional(),
+    ),
+  });
+
+export const SerializedBlockContainerNodeSchema =
+  BaseContainerNodeSchema.extend({
+    childBlocks: z.lazy(() =>
+      _SerializedBlockContainerNodeSchema.array().optional(),
     ),
   });
 
@@ -80,7 +93,7 @@ export class BlockContainerNode extends ElementNode {
   }
 
   static getType(): string {
-    return CONTAINER_TYPE;
+    return BLOCK_CONTAINER_TYPE;
   }
 
   // View
@@ -141,13 +154,16 @@ export class BlockContainerNode extends ElementNode {
     const containerNode = $createBlockContainerNode();
 
     const contentNode = $createBlockContentNode();
-    $convertFromMarkdownString(
-      serializedNode.content,
-      CUSTOM_TRANSFORMERS,
-      contentNode,
-    );
-    // const paragraph = $createParagraphNode();
-    // contentNode.append(paragraph);
+    if (serializedNode.content) {
+      $convertFromMarkdownString(
+        serializedNode.content,
+        CUSTOM_TRANSFORMERS,
+        contentNode,
+      );
+    } else {
+      const paragraph = $createParagraphNode();
+      contentNode.append(paragraph);
+    }
 
     const childContainerNode = $createBlockChildContainerNode();
     const containerNodes =
@@ -174,18 +190,19 @@ export class BlockContainerNode extends ElementNode {
       parentId: parentBlockContainerNodeId ?? null,
       indexWithinParent: this.getIndexWithinParent(),
       open: this.getOpen(),
-      type: CONTAINER_TYPE,
+      type: BLOCK_CONTAINER_TYPE,
       id: this.getId(),
       version: 1,
     };
   }
 
   // Mutation
-  append(
-    ...nodesToAppend: (BlockContentNode | BlockChildContainerNode)[]
-  ): this {
-    return super.append(...nodesToAppend);
-  }
+  // TODO: For later
+  // append(
+  //   ...nodesToAppend: (BlockContentNode | BlockChildContainerNode)[]
+  // ): this {
+  //   return super.append(...nodesToAppend);
+  // }
 
   getBlockContentNode() {
     return this.getLatest()
@@ -212,7 +229,7 @@ export class BlockContainerNode extends ElementNode {
       BlockChildContainerNode | RootNode
     >();
     if ($isBlockChildContainerNode(parent)) {
-      const parentContainer = parent.getParent<BlockContainerNode>();
+      const parentContainer = parent.getParent();
       if (parentContainer) {
         return parentContainer;
       }
@@ -268,9 +285,7 @@ export function $findParentBlockContainer(node: LexicalNode) {
   );
 }
 
-export function $getSelectedBlocks(
-  selection: RangeSelection,
-): BlockContainerNode[] {
+export function $getSelectedBlocks(selection: RangeSelection) {
   const nodes = selection.getNodes();
 
   const blocks = [
@@ -282,6 +297,6 @@ export function $getSelectedBlocks(
     ),
   ];
 
-  const onlyTopNodes = selectOnlyTopNodes(blocks)
+  const onlyTopNodes = selectOnlyTopNodes(blocks);
   return onlyTopNodes;
 }

@@ -1,14 +1,18 @@
 /* eslint-disable @typescript-eslint/no-floating-promises */
-import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
+import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import { type AppRouter } from "~/server/api/root";
 import superjson from "superjson";
+import { QueryClient } from "@tanstack/react-query";
+import { createTRPCQueryUtils } from "@trpc/react-query";
+
+const queryClient = new QueryClient();
 
 export {};
 console.log(
   "Live now; make now always the most precious time. Now will never come again.",
 );
 
-export const client = createTRPCProxyClient<AppRouter>({
+export const client = createTRPCClient<AppRouter>({
   links: [
     httpBatchLink({
       url: "http://localhost:3000/api/trpc",
@@ -18,10 +22,11 @@ export const client = createTRPCProxyClient<AppRouter>({
       //     authorization: getAuthCookie(),
       //   };
       // },
+      transformer: superjson,
     }),
   ],
-  transformer: superjson,
 });
+export const clientUtils = createTRPCQueryUtils({ queryClient, client });
 
 const main = async () => {
   console.log("main background script");

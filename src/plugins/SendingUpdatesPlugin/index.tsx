@@ -1,38 +1,44 @@
 import React, { type FC, useEffect, useRef } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { mergeRegister } from "@lexical/utils";
-import type { NodeMutation } from "lexical";
 import { $getNodeByKey, TextNode, LineBreakNode, ParagraphNode } from "lexical";
 import { throttle } from "~/utils/lexical";
 import {
   BlockContainerNode,
   BlockContentNode,
   BlockChildContainerNode,
-  type SerializedBlockContainerNode,
+  $isBlockContainerNode,
 } from "~/nodes/Block";
-
 import { z } from "zod";
-import {
-  SerializedBlockContainerNodeSchema,
-  $findParentBlockContainer,
-} from "~/nodes/Block";
+import { $findParentBlockContainer } from "~/nodes/Block";
 import { HeaderNode } from "~/nodes/Header";
+import {
+  $isBlockHighlightNode,
+  BlockHighlightNode,
+  SerializedBlockHighlightNodeSchema,
+} from "~/nodes/BlockHighlight";
+import {
+  $isBlockParagraphNode,
+  BlockParagraphNode,
+  SerializedBlockParagraphNodeSchema,
+} from "~/nodes/BlockParagraph/BlockParagraph";
 
-export const updatedBlocksSchema: z.ZodSchema<UpdatedBlock> = z.object({
+export const updatedBlocksSchema = z.object({
   updateType: z.union([
     z.literal("created"),
     z.literal("updated"),
     z.literal("destroyed"),
   ]),
   updatedBlockId: z.string().uuid(),
-  updatedBlock: SerializedBlockContainerNodeSchema.nullable(),
+  updatedBlock: z
+    .union([
+      SerializedBlockParagraphNodeSchema,
+      SerializedBlockHighlightNodeSchema,
+    ])
+    .nullable(),
 });
 
-export type UpdatedBlock = {
-  updateType: NodeMutation;
-  updatedBlockId: string;
-  updatedBlock: SerializedBlockContainerNode | null;
-};
+export type UpdatedBlock = z.infer<typeof updatedBlocksSchema>;
 
 export type Updates = Map<string, UpdatedBlock>;
 
@@ -96,10 +102,13 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
 
                     if (!parentKey) return;
                     editor.getEditorState().read(() => {
-                      const updatedParentNode =
-                        $getNodeByKey<BlockContainerNode>(parentKey);
+                      const updatedParentNode = $getNodeByKey(parentKey);
 
-                      if (updatedParentNode) {
+                      if (
+                        updatedParentNode &&
+                        ($isBlockParagraphNode(updatedParentNode) ||
+                          $isBlockHighlightNode(updatedParentNode))
+                      ) {
                         updatesRef.current.set(
                           `${updatedParentNode.getKey()}:updated`,
                           {
@@ -116,7 +125,11 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
 
                 const parentContainer = $findParentBlockContainer(node);
 
-                if (parentContainer) {
+                if (
+                  parentContainer &&
+                  ($isBlockParagraphNode(parentContainer) ||
+                    $isBlockHighlightNode(parentContainer))
+                ) {
                   updatesRef.current.set(
                     `${parentContainer.getKey()}:${mutation}`,
                     {
@@ -133,18 +146,18 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
           },
         ),
       ),
-      ...[BlockContainerNode].map((node) => {
+      ...[BlockParagraphNode, BlockHighlightNode].map((Node) => {
         return editor.registerMutationListener(
-          node,
+          Node,
           (mutations, { prevEditorState }) => {
             editor.getEditorState().read(() => {
               for (const [nodeKey, mutation] of mutations) {
-                const node = $getNodeByKey<BlockContainerNode>(nodeKey);
+                const node = $getNodeByKey(nodeKey);
 
                 if (!node || mutation === "destroyed") {
                   prevEditorState.read(() => {
-                    const prevNode = $getNodeByKey<BlockContainerNode>(nodeKey);
-                    if (!prevNode) return;
+                    const prevNode = $getNodeByKey(nodeKey);
+                    if (!prevNode || !$isBlockContainerNode(prevNode)) return;
 
                     updatesRef.current.set(`${nodeKey}:destroyed`, {
                       updateType: "destroyed",
@@ -154,6 +167,13 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
                   });
                   continue;
                 }
+
+                if (
+                  !$isBlockContainerNode(node) ||
+                  !$isBlockParagraphNode(node) ||
+                  !$isBlockHighlightNode(node)
+                )
+                  continue;
 
                 updatesRef.current.set(`${nodeKey}:${mutation}`, {
                   updateType: mutation,

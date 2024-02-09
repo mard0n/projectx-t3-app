@@ -1,20 +1,20 @@
 /* eslint-disable @typescript-eslint/no-floating-promises */
 import {
   getSelectedTextPosition,
-  highlight,
   isAnchorBeforeFocus,
   serializeSelectionPath,
 } from "~/utils/extension";
 import type { PlasmoCSConfig } from "plasmo";
 import TurndownService from "turndown";
 import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
-import { saveCommentHighlightsToStorage } from "~/utils/extension-store";
 import {
-  BLOCK_HIGHLIGHT_SLICE_TYPE,
-  type SerializedBlockHighlightSliceNode,
-} from "~/nodes/BlockHighlightSlice";
-import { saveHighlight } from "~/background/messages/saveHighlight";
+  BLOCK_HIGHLIGHT_TYPE,
+  type SerializedBlockHighlightNode,
+} from "~/nodes/BlockHighlight";
+import { sendHighlightToServer } from "~/background/messages/sendHighlightToServer";
 import type { RouterInputs } from "~/utils/api";
+import { highlight } from "./highlight";
+import type { UpdatedBlock } from "~/plugins/SendingUpdatesPlugin";
 
 console.log(
   "You may find that having is not so pleasing a thing as wanting. This is not logical, but it is often true.",
@@ -30,6 +30,7 @@ export const config: PlasmoCSConfig = {
 const TOOLTIP_WIDTH = 32;
 const TOOLTIP_HEIGHT = 32;
 const TOOLTIP_ID = "projectx-tooltip";
+const DELETE_HIGHLIGHT_ID = "projectx-delete-highlight-btn";
 // This was the easiest way to store the range
 // I could serialize and store the range in chrome.storage but it might be too slow and requires lot of effort
 let lastRange: Range | null = null;
@@ -38,13 +39,20 @@ async function handleTooltipClick() {
   const range = lastRange?.cloneRange();
   if (!range) return;
 
-  const { startContainer, startOffset, endContainer, endOffset } = range;
-  const selectionPath = serializeSelectionPath(
+  const {
     startContainer,
     startOffset,
     endContainer,
     endOffset,
-  );
+    commonAncestorContainer,
+  } = range;
+
+  const selectionPath = serializeSelectionPath({
+    startContainer,
+    startOffset,
+    endContainer,
+    endOffset,
+  });
 
   const turndownService = new TurndownService();
   const html = range.cloneContents();
@@ -53,10 +61,10 @@ async function handleTooltipClick() {
   const currentUrl = await getCurrentUrl();
 
   // TODO: need to figure out ways to sync this data and BlockHighlightParagraph or easier way to create data
-  const data: SerializedBlockHighlightSliceNode = {
-    type: BLOCK_HIGHLIGHT_SLICE_TYPE,
+  const data: SerializedBlockHighlightNode = {
+    type: BLOCK_HIGHLIGHT_TYPE,
     id: crypto.randomUUID(),
-    title: "",
+    content: "",
     parentId: null,
     indexWithinParent: 0,
     // indexWithinParent: this.getIndexWithinParent(),
@@ -66,13 +74,11 @@ async function handleTooltipClick() {
     direction: "ltr",
     format: "left",
     indent: 0,
-    childNotes: [],
+    childBlocks: [],
     highlightText: markdown,
     highlightUrl: currentUrl!,
     highlightRangePath: selectionPath,
   };
-
-  saveCommentHighlightsToStorage(data);
 
   const update: RouterInputs["note"]["saveChanges"] = [
     {
@@ -82,20 +88,47 @@ async function handleTooltipClick() {
     },
   ];
 
-  saveHighlight(update);
+  sendHighlightToServer(update);
 
-  highlight(range);
+  highlight({
+    container: commonAncestorContainer,
+    startContainer,
+    startOffset,
+    endContainer,
+    endOffset,
+    highlightId: data.id,
+  });
+}
+
+async function handleHighlightDelete(highlightId: string) {
+  const update: UpdatedBlock = {
+    updateType: "destroyed",
+    updatedBlockId: highlightId,
+    updatedBlock: null,
+  };
+
+  sendHighlightToServer([update]);
+
+  const highlightElems = document.querySelectorAll(
+    `projectx-highlight[data-highlight-id="${highlightId}"]`,
+  );
+
+  highlightElems.forEach((element) => {
+    const parent = element.parentNode;
+    while (element.firstChild) {
+      parent?.insertBefore(element.firstChild, element);
+    }
+    parent?.removeChild(element);
+  });
+
+  hideDeleteHighlightElem();
 }
 
 // selectionchange didn't work because when you click on tooltip
 // and hold your click selectionchange was firing and hidingTooltip before it's able to handle the click event
 document.addEventListener("mousedown", (event) => {
-  const isTooltipClicked = getTooltipElem()?.contains(event.target as Node);
-  if (isTooltipClicked) {
-    handleTooltipClick();
-  }
-
   hideTooltip();
+  // hideDeleteHighlightElem();
 });
 
 document.addEventListener("selectionchange", () => {
@@ -148,6 +181,30 @@ function hideTooltip() {
   if (tooltip) tooltip.style.visibility = "hidden";
 }
 
+function getDeleteHighlightElem() {
+  return document.getElementById(DELETE_HIGHLIGHT_ID);
+}
+
+export function showDeleteHighlightElem(
+  { top, left }: DOMRect,
+  highlightId: string,
+) {
+  const deleteHighlightBtn = getDeleteHighlightElem();
+  if (!deleteHighlightBtn) return;
+
+  if (!top || !left) return;
+  deleteHighlightBtn.style.transform = `translate(${left - 24}px, ${top}px)`;
+
+  deleteHighlightBtn.style.visibility = "visible";
+  deleteHighlightBtn.setAttribute("data-highlight-id", highlightId);
+  return deleteHighlightBtn;
+}
+
+export function hideDeleteHighlightElem() {
+  const deleteHighlightBtn = getDeleteHighlightElem();
+  if (deleteHighlightBtn) deleteHighlightBtn.style.visibility = "hidden";
+}
+
 function renderTooltipOnLoad() {
   console.log("rendered");
   const tooltipElem = document.createElement("div");
@@ -163,9 +220,37 @@ function renderTooltipOnLoad() {
   tooltipElem.style.cursor = "pointer";
   tooltipElem.style.visibility = "hidden";
 
+  tooltipElem.addEventListener("mousedown", () => {
+    handleTooltipClick();
+  });
   document.body.appendChild(tooltipElem);
 }
+function renderHighlightDeleteBtnOnLoad() {
+  const deleteHighlightBtn = document.createElement("div");
+  deleteHighlightBtn.setAttribute("id", DELETE_HIGHLIGHT_ID);
+  deleteHighlightBtn.style.width = "24px";
+  deleteHighlightBtn.style.height = "24px";
+  deleteHighlightBtn.style.borderRadius = "100px";
+  deleteHighlightBtn.style.backgroundColor = "red";
+  deleteHighlightBtn.style.position = "absolute";
+  deleteHighlightBtn.style.top = "0px";
+  deleteHighlightBtn.style.left = "0px";
+  deleteHighlightBtn.style.cursor = "pointer";
+  deleteHighlightBtn.style.visibility = "hidden";
+
+  deleteHighlightBtn.addEventListener("mousedown", (event) => {
+    const target = event.target as HTMLElement | null;
+
+    if (!target) return;
+    const highlightId = target.getAttribute("data-highlight-id");
+
+    if (!highlightId) return;
+    handleHighlightDelete(highlightId);
+  });
+  document.body.appendChild(deleteHighlightBtn);
+}
 renderTooltipOnLoad();
+renderHighlightDeleteBtnOnLoad();
 
 /*
   React tooltip component didn't work because we need to capture selection before it's changed (i.e. on mousedown)

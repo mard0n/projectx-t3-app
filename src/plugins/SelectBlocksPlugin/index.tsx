@@ -12,7 +12,6 @@ import {
   SELECTION_CHANGE_COMMAND,
   $getSelection,
   $isRangeSelection,
-  COMMAND_PRIORITY_NORMAL,
   $setSelection,
   CONTROLLED_TEXT_INSERTION_COMMAND,
   DELETE_CHARACTER_COMMAND,
@@ -21,7 +20,6 @@ import {
   COMMAND_PRIORITY_HIGH,
   $getNodeByKey,
 } from "lexical";
-import { selectOnlyTopNodes } from "~/utils/lexical";
 
 const SelectBlocksPlugin = ({}) => {
   const [editor] = useLexicalComposerContext();
@@ -73,7 +71,7 @@ const SelectBlocksPlugin = ({}) => {
 
           return true;
         },
-        COMMAND_PRIORITY_NORMAL,
+        COMMAND_PRIORITY_HIGH,
       ),
       editor.registerCommand<KeyboardEvent | null>(
         KEY_ENTER_COMMAND,

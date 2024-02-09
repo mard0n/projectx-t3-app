@@ -1,5 +1,5 @@
 import { sendToBackground, type PlasmoMessaging } from "@plasmohq/messaging";
-import { client } from "..";
+import { client, clientUtils } from "..";
 import type { RouterInputs, RouterOutputs } from "~/utils/api";
 
 type Request = RouterInputs["note"]["saveChanges"];
@@ -10,14 +10,14 @@ const handler: PlasmoMessaging.MessageHandler<Request, Response> = async (
   res,
 ) => {
   if (!req.body) return;
-  const response = await client.note.saveChanges.mutate(req.body);
-  console.log("response", response);
+  await client.note.saveChanges.mutate(req.body);
+  await clientUtils.note.fetchHighlights.refetch();
 };
 
-export async function saveHighlight(highlight: Request) {
+export async function sendHighlightToServer(update: Request) {
   const res = await sendToBackground<Request, Response>({
-    name: "saveHighlight",
-    body: highlight,
+    name: "sendHighlightToServer",
+    body: update,
   });
   return res;
 }

@@ -1,16 +1,11 @@
-import type { SerializedBlockContainerNode } from "~/nodes/Block";
 import type { Note } from "~/server/db/schema";
 
 type NoteType = Note & { childBlocks?: Note[] };
-type SerializedBlockNodeType = Omit<
-  SerializedBlockContainerNode,
-  "children" | "direction" | "indent" | "format"
-> & { childBlocks?: SerializedBlockNodeType[] };
 
 // TODO: Refactor utils folder
-export function buildHierarchy(items: (NoteType | SerializedBlockNodeType)[]) {
-  const tree: (NoteType | SerializedBlockNodeType)[] = [];
-  const mappedArr: Record<string, NoteType | SerializedBlockNodeType> = {};
+export function buildHierarchy(items: NoteType[]) {
+  const tree: NoteType[] = [];
+  const mappedArr: Record<string, NoteType> = {};
 
   for (const item of items) {
     const id = item.id;
@@ -42,5 +37,5 @@ export function buildHierarchy(items: (NoteType | SerializedBlockNodeType)[]) {
     }
   }
 
-  return tree.sort((a, b) => a.indexWithinParent! - b.indexWithinParent!); // TODO: Better way of sorting
+  return tree.sort((a, b) => a.indexWithinParent - b.indexWithinParent); // TODO: Better way of sorting
 }

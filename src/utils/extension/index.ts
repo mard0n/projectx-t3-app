@@ -1,108 +1,4 @@
-function getNextNode(node: Node, container: Node) {
-  if (node.firstChild) {
-    return node.firstChild;
-  }
-
-  while (node) {
-    if (node.nextSibling) {
-      return node.nextSibling;
-    }
-
-    if (node.parentNode) {
-      node = node.parentNode;
-    } else {
-      console.error("no parentNode");
-      break;
-    }
-
-    if (node === container) {
-      break;
-    }
-  }
-
-  return null;
-}
-
-function surroundTextWithWrapper(
-  range: Range,
-  startContainer: Node,
-  startOffset: number,
-  endContainer: Node,
-  endOffset: number,
-) {
-  const wrapper = document.createElement("projectx-highlight");
-  // HACK: couldn't figure out how to add global styles
-  wrapper.style.backgroundColor = "#b2dbff";
-  const customRange = range.cloneRange();
-  customRange.setStart(startContainer, startOffset);
-  customRange.setEnd(endContainer, endOffset);
-  customRange.surroundContents(wrapper);
-  window.getSelection()?.removeRange(customRange);
-}
-
-// TODO: Highlight fucks up the range. Place it on the bottom before any range dependent fns
-export function highlight(range: Range) {
-  const rangeClone = range.cloneRange();
-  const container = rangeClone.commonAncestorContainer;
-  const startContainer = rangeClone.startContainer as Node | Text;
-  const startOffset = rangeClone.startOffset;
-  const endContainer = rangeClone.endContainer;
-  const endOffset = rangeClone.endOffset;
-
-  let currentNode: Node | Text | null = startContainer;
-
-  if (currentNode === startContainer && currentNode === endContainer) {
-    surroundTextWithWrapper(
-      rangeClone,
-      startContainer,
-      startOffset,
-      endContainer,
-      endOffset,
-    );
-    return;
-  }
-
-  while (currentNode) {
-    const nextNodeBeforeWrapperApplied = getNextNode(currentNode, container);
-
-    if (currentNode.nodeType !== Node.TEXT_NODE) {
-      currentNode = nextNodeBeforeWrapperApplied;
-      continue;
-    }
-    const textNode = currentNode as Text;
-
-    if (
-      startContainer.nodeType === Node.TEXT_NODE &&
-      textNode === startContainer
-    ) {
-      surroundTextWithWrapper(
-        rangeClone,
-        startContainer,
-        startOffset,
-        startContainer,
-        (startContainer as Text).length,
-      );
-      currentNode = nextNodeBeforeWrapperApplied;
-      continue;
-    }
-
-    if (textNode === endContainer) {
-      surroundTextWithWrapper(
-        rangeClone,
-        endContainer,
-        0,
-        endContainer,
-        endOffset,
-      );
-      break;
-    }
-
-    surroundTextWithWrapper(rangeClone, textNode, 0, textNode, textNode.length);
-    currentNode = nextNodeBeforeWrapperApplied;
-  }
-}
-
-function getSelectionPath(el: Node) {
+export function getSelectionPath(el: Node) {
   const stack = [];
   let textNode = "";
 
@@ -152,12 +48,17 @@ function getSelectionPath(el: Node) {
   return stack.join(">") + "-|-" + textNode;
 }
 
-export function serializeSelectionPath(
-  startContainer: Node,
-  startOffset: number,
-  endContainer: Node,
-  endOffset: number,
-): string {
+export function serializeSelectionPath({
+  startContainer,
+  startOffset,
+  endContainer,
+  endOffset,
+}: {
+  startContainer: Node;
+  startOffset: number;
+  endContainer: Node;
+  endOffset: number;
+}): string {
   const selectionStartPath = getSelectionPath(startContainer);
   const selectionStartOffset = startOffset;
   const selectionEndPath = getSelectionPath(endContainer);
@@ -205,7 +106,6 @@ export function deserializeSelectionPath(path: string): Range | null {
   }
   if (!endContainer) return null;
   const endOffset = parseInt(endOffsetStr!) ?? 0;
-
   const range = new Range();
   range.setStart(startContainer, startOffset);
   range.setEnd(endContainer, endOffset);

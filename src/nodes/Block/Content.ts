@@ -17,7 +17,7 @@ type SerializedContentNode = Spread<object, SerializedElementNode>;
 
 const CONTENT_TYPE = "block-content" as const;
 
-type ContentNodeChildren = ParagraphNode | HeaderNode;
+type ContentNodeChildren = ParagraphNode | HeaderNode; // TODO: Make it automatically extending from Markdown Transforms
 
 export class BlockContentNode extends ElementNode {
   constructor(key?: NodeKey) {
@@ -61,10 +61,6 @@ export class BlockContentNode extends ElementNode {
   }
 
   // Mutation
-  append(...nodesToAppend: ContentNodeChildren[]): this {
-    return super.append(...nodesToAppend);
-  }
-
   getParent<T extends ElementNode = BlockContainerNode>(): T | null {
     return super.getParent();
   }
