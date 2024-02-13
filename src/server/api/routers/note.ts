@@ -100,14 +100,14 @@ export const noteRouter = createTRPCRouter({
     }),
   fetchHighlights: publicProcedure
     .input(z.object({ url: z.string().url() }))
-    .output(
-      SerializedBlockHighlightNodeSchema.omit({
-        children: true,
-        direction: true,
-        format: true,
-        indent: true,
-      }).array(),
-    )
+    // .output(
+    //   SerializedBlockHighlightNodeSchema.omit({
+    //     children: true,
+    //     direction: true,
+    //     format: true,
+    //     indent: true,
+    //   }).array(),
+    // )
     .query(async ({ ctx, input }) => {
       const result = await ctx.db.query.notes.findMany({
         where: and(

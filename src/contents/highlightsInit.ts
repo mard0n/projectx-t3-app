@@ -8,61 +8,63 @@ console.log("highlightInit");
 
 export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
+  exclude_matches: ["https://*.youtube.com/*"],
   all_frames: true,
   run_at: "document_idle",
 };
+setTimeout(() => {
+  (async () => {
+    const currentUrl = await getCurrentUrl();
 
-(async () => {
-  const currentUrl = await getCurrentUrl();
-
-  if (!currentUrl) return;
-  const highlights = await fetchHighlightsFromServer({ url: currentUrl ?? "" });
-  setTimeout(() => {
+    if (!currentUrl) return;
+    const highlights = await fetchHighlightsFromServer({
+      url: currentUrl ?? "",
+    });
     // TODO: figure out better solution.
     // We need to show highlights only after the page is fully loaded. run_at: "document_idle" doesn't do the job
     // This only doesn't work on certain cites. e.g. https://docs.plasmo.com
-    const transformed = highlights.map((hc) => {
-      if (!hc.highlightRangePath) return;
-      const range = deserializeSelectionPath(hc.highlightRangePath);
-      if (!range) return;
-      const {
-        startContainer,
-        startOffset,
-        endContainer,
-        endOffset,
-        commonAncestorContainer,
-      } = range;
+    highlights
+      .map((hc) => {
+        if (!hc.highlightRangePath) return;
+        const range = deserializeSelectionPath(hc.highlightRangePath);
+        if (!range) return;
+        const {
+          startContainer,
+          startOffset,
+          endContainer,
+          endOffset,
+          commonAncestorContainer,
+        } = range;
 
-      return {
-        container: commonAncestorContainer,
-        startContainer,
-        startOffset,
-        endContainer,
-        endOffset,
-        highlightId: hc.id,
-      };
-    });
+        return {
+          container: commonAncestorContainer,
+          startContainer,
+          startOffset,
+          endContainer,
+          endOffset,
+          highlightId: hc.id,
+        };
+      })
+      .forEach((data) => {
+        if (!data) return;
 
-    transformed.forEach((data) => {
-      if (!data) return;
+        const {
+          container,
+          startContainer,
+          startOffset,
+          endContainer,
+          endOffset,
+          highlightId,
+        } = data;
 
-      const {
-        container,
-        startContainer,
-        startOffset,
-        endContainer,
-        endOffset,
-        highlightId,
-      } = data;
-
-      highlight({
-        container,
-        startContainer,
-        startOffset,
-        endContainer,
-        endOffset,
-        highlightId,
+        highlight({
+          container,
+          startContainer,
+          startOffset,
+          endContainer,
+          endOffset,
+          highlightId,
+        });
       });
-    });
-  }, 500);
-})();
+  })();
+}, 500);

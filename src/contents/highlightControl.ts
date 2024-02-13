@@ -22,7 +22,7 @@ console.log(
 
 export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
-  exclude_matches: ["https://github.com/*"],
+  exclude_matches: ["https://github.com/*", "https://*.youtube.com/*"],
   all_frames: true,
   run_at: "document_idle",
 };
