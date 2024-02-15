@@ -16,6 +16,8 @@
     "start": "next start"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.511.0",
+    "@aws-sdk/s3-request-presigner": "^3.511.0",
     "@lexical/clipboard": "^0.12.5",
     "@lexical/history": "^0.12.5",
     "@lexical/html": "^0.12.5",
@@ -72,7 +74,12 @@
   "packageManager": "pnpm@8.9.2",
   "manifest": {
     "host_permissions": [
-      "https://*/*"
+      "https://*/*",
+      "http://*/*",
+      "<all_urls>"
+    ],
+    "permissions": [
+      "tabs"
     ]
   }
 }

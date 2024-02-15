@@ -14,9 +14,30 @@ export const env = createEnv({
         (str) => !str.includes("YOUR_MYSQL_URL_HERE"),
         "You forgot to change the default URL",
       ),
+    MYSQL_DB_URL: z
+      .string()
+      .url()
+      .refine(
+        (str) => !str.includes("YOUR_MYSQL_URL_HERE"),
+        "You forgot to change the default MYSQL_DB_URL",
+      ),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
+    PLASMO_PUBLIC_BASE_URL: z
+      .string()
+      .url()
+      .refine(
+        (str) => !str.includes("YOUR_PLASMO_PUBLIC_BASE_URL_HERE"),
+        "You forgot to change the default PLASMO_PUBLIC_BASE_URL",
+      ),
+    PLASMO_PUBLIC_CLOUDFRONT_BASE_URL: z
+      .string()
+      .url()
+      .refine(
+        (str) => !str.includes("YOUR_PLASMO_PUBLIC_CLOUDFRONT_BASE_URL_HERE"),
+        "You forgot to change the default PLASMO_PUBLIC_CLOUDFRONT_BASE_URL",
+      ),
   },
 
   /**
@@ -34,7 +55,11 @@ export const env = createEnv({
    */
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
+    MYSQL_DB_URL: process.env.MYSQL_DB_URL,
     NODE_ENV: process.env.NODE_ENV,
+    PLASMO_PUBLIC_BASE_URL: process.env.PLASMO_PUBLIC_BASE_URL,
+    PLASMO_PUBLIC_CLOUDFRONT_BASE_URL:
+      process.env.PLASMO_PUBLIC_CLOUDFRONT_BASE_URL,
     // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
   },
   /**
