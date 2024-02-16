@@ -14,9 +14,37 @@
 @import "../plugins/DraggableBlockPlugin/styles.css";
 @import "../plugins/SelectBlocksPlugin/styles.css";
 @import "../nodes/BlockNote/styles.css";
+@import "../nodes/BlockHighlight/styles.css";
 
 [contenteditable]:focus {
   outline: 0px solid transparent;
+}
+
+.block-h1,
+h1 {
+  font-size: 32px;
+  line-height: 48px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.block-h2,
+h2 {
+  font-size: 24px;
+  line-height: 36px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.block-h3,
+h3 {
+  font-size: 18px;
+  line-height: 27px;
+  font-weight: 600;
+}
+.block-h4,
+h4 {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
 }
 
 .textBold {

@@ -7,10 +7,12 @@ import {
   type SerializedLexicalNode,
   CLICK_COMMAND,
   COMMAND_PRIORITY_LOW,
+  type EditorConfig,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { mergeRegister } from "@lexical/utils";
+import { addClassNamesToElement, mergeRegister } from "@lexical/utils";
 import Markdown from "react-markdown";
+import type { CustomTheme } from "~/utils/lexical/theme";
 
 export type SerializedBlockQuoteDecoratorNode = Spread<
   {
@@ -96,8 +98,16 @@ export class BlockQuoteDecorator extends DecoratorNode<ReactNode> {
     };
   }
 
-  createDOM(): HTMLElement {
-    return document.createElement("div");
+  createDOM(config: EditorConfig): HTMLElement {
+    const dom = document.createElement("div");
+    const theme = config.theme as CustomTheme;
+    const className = theme.block.content;
+    const classNameHighlight = theme.blockHighlight.content;
+    if (className !== undefined) {
+      addClassNamesToElement(dom, className, classNameHighlight);
+    }
+    dom.style.whiteSpace = "normal";
+    return dom;
   }
 
   updateDOM(): false {

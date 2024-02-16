@@ -1,0 +1,29 @@
+.block-highlight-content {
+  font-family: Georgia, "Times New Roman", Times, serif;
+}
+
+.block-highlight-content p {
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.block-highlight-content ul li > p,
+.block-highlight-content ol li > p {
+  display: inline;
+}
+
+.block-highlight-content ol {
+  list-style: decimal;
+  list-style-position: inside;
+}
+
+.block-highlight-content ul {
+  list-style: unset;
+  list-style-position: inside;
+}
+
+.block-highlight-content a {
+  color: #006bff;
+  text-decoration: none;
+  cursor: pointer;
+}

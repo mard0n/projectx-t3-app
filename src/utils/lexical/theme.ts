@@ -13,14 +13,19 @@ export const customTheme = {
     content: "block-content",
     childContainer: "block-child-container",
   },
-  note: 'block-note',
+  blockHighlight: {
+    container: "block-highlight-container",
+    content: "block-highlight-content",
+    childContainer: "block-highlight-child-container",
+  },
+  note: "block-note",
   header: {
     h1: "block-h1",
     h2: "block-h2",
     h3: "block-h3",
     h4: "block-h4",
   },
-  link: 'inline-link'
+  link: "inline-link",
 } as const;
 
 export type CustomTheme = EditorThemeClasses & typeof customTheme;

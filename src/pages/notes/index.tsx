@@ -132,36 +132,38 @@ export default function Notes() {
     ],
     editorState: JSON.stringify({
       root: {
-        children: [
-          {
-            ...blockparagraph,
-            type: BLOCK_NOTE_TYPE,
-            childBlocks: [
+        children: notes.data?.length
+          ? notes.data
+          : [
               {
                 ...blockparagraph,
-                content:
-                  "## [Kevin Hale - How to Pitch Your Startup - Y Combinator](https://youtube.com/watch?v=231x3123)",
+                type: BLOCK_NOTE_TYPE,
+                childBlocks: [
+                  {
+                    ...blockparagraph,
+                    content:
+                      "## [Kevin Hale - How to Pitch Your Startup - Y Combinator](https://youtube.com/watch?v=231x3123)",
+                  },
+                  { ...blockparagraph, content: "## Hello world2" },
+                  { ...blockparagraph, content: "### Hello world3" },
+                  { ...blockparagraph, content: "#### Hello world4" },
+                  { ...blockparagraph, content: "normal text" },
+                  { ...blockparagraph, content: "**bold text**" },
+                ],
               },
-              { ...blockparagraph, content: "## Hello world2" },
-              { ...blockparagraph, content: "### Hello world3" },
-              { ...blockparagraph, content: "#### Hello world4" },
-              { ...blockparagraph, content: "normal text" },
-              { ...blockparagraph, content: "**bold text**" },
+              {
+                ...blockparagraph,
+                type: BLOCK_NOTE_TYPE,
+                childBlocks: [
+                  { ...blockparagraph, content: "# Hello world1" },
+                  { ...blockparagraph, content: "## Hello world2" },
+                  { ...blockparagraph, content: "### Hello world3" },
+                  { ...blockparagraph, content: "#### Hello world4" },
+                  { ...blockparagraph, content: "normal text" },
+                  { ...blockparagraph, content: "**bold text**" },
+                ],
+              },
             ],
-          },
-          {
-            ...blockparagraph,
-            type: BLOCK_NOTE_TYPE,
-            childBlocks: [
-              { ...blockparagraph, content: "# Hello world1" },
-              { ...blockparagraph, content: "## Hello world2" },
-              { ...blockparagraph, content: "### Hello world3" },
-              { ...blockparagraph, content: "#### Hello world4" },
-              { ...blockparagraph, content: "normal text" },
-              { ...blockparagraph, content: "**bold text**" },
-            ],
-          },
-        ],
         direction: null,
         type: "root",
         version: 1,
