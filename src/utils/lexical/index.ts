@@ -11,34 +11,37 @@ import { z } from "zod";
 import type { Updates } from "~/plugins/SendingUpdatesPlugin";
 
 export function hasToggleElemClicked(e: MouseEvent): boolean {
-  const target = e.currentTarget ?? e.target;
+  let target: HTMLElement | undefined | null = (e.currentTarget ??
+    e.target) as HTMLElement;
+  target = target?.querySelector(".block-content")?.firstChild as HTMLElement;
   if (!target) return false;
-  const after = getComputedStyle(target as Element, "::before");
 
+  const toggleBtn = getComputedStyle(target, ":after");
+  if (!toggleBtn) return false;
   // Then we parse out the dimensions
-  const atop = Number(after.getPropertyValue("top").slice(0, -2));
-  const aleft = Number(after.getPropertyValue("left").slice(0, -2));
+  const atop = Number(toggleBtn.getPropertyValue("top").slice(0, -2));
+  const aleft = Number(toggleBtn.getPropertyValue("left").slice(0, -2));
   const aborderTopWidth = Number(
-    after.getPropertyValue("border-top-width").slice(0, -2),
+    toggleBtn.getPropertyValue("border-top-width").slice(0, -2),
   );
   const aborderBottomWidth = Number(
-    after.getPropertyValue("border-bottom-width").slice(0, -2),
+    toggleBtn.getPropertyValue("border-bottom-width").slice(0, -2),
   );
   const aborderLeftWidth = Number(
-    after.getPropertyValue("border-left-width").slice(0, -2),
+    toggleBtn.getPropertyValue("border-left-width").slice(0, -2),
   );
   const aborderRightWidth = Number(
-    after.getPropertyValue("border-right-width").slice(0, -2),
+    toggleBtn.getPropertyValue("border-right-width").slice(0, -2),
   );
 
-  const bbox = (target as Element).getBoundingClientRect();
+  const bbox = target.getBoundingClientRect();
   const ex = e.clientX - bbox.left;
   const ey = e.clientY - bbox.top;
   if (
-    ex >= aleft &&
-    ex <= aleft + aborderLeftWidth + aborderRightWidth &&
-    ey >= atop &&
-    ey <= atop + aborderTopWidth + aborderBottomWidth
+    ex >= aleft - 4 &&
+    ex <= aleft + aborderLeftWidth + aborderRightWidth + 4 &&
+    ey >= atop - 4 &&
+    ey <= atop + aborderTopWidth + aborderBottomWidth + 4
   ) {
     return true;
   }
@@ -131,19 +134,16 @@ export const SerializedLexicalNodeSchema = z.object({
 export const SerializedElementNodeSchema = z
   .object({
     children: z.array(SerializedLexicalNodeSchema),
-    direction: z
-      .union([z.literal("ltr"), z.literal("rtl")])
-      .nullable(),
-    format: z
-      .union([
-        z.literal("left"),
-        z.literal("start"),
-        z.literal("center"),
-        z.literal("right"),
-        z.literal("end"),
-        z.literal("justify"),
-        z.literal(""),
-      ]),
+    direction: z.union([z.literal("ltr"), z.literal("rtl")]).nullable(),
+    format: z.union([
+      z.literal("left"),
+      z.literal("start"),
+      z.literal("center"),
+      z.literal("right"),
+      z.literal("end"),
+      z.literal("justify"),
+      z.literal(""),
+    ]),
     indent: z.number(),
   })
   .merge(SerializedLexicalNodeSchema);

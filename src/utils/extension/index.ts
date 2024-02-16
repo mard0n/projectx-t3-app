@@ -113,7 +113,7 @@ export function deserializeSelectionPath(path: string): Range | null {
   return range;
 }
 
-function getOffsetRectRelativeToBody(el: HTMLElement): DOMRect {
+export function getOffsetRectRelativeToBody(el: HTMLElement): DOMRect {
   const rect = el.getBoundingClientRect();
 
   // add window scroll position to get the offset position
