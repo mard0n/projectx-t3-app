@@ -13,6 +13,7 @@ export const customTheme = {
     content: "block-content",
     childContainer: "block-child-container",
   },
+  note: 'block-note',
   header: {
     h1: "block-h1",
     h2: "block-h2",

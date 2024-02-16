@@ -5,9 +5,9 @@
   will-change: transform;
   top: 0;
   left: 0;
-  width: 16px;
-  height: 16px;
-  background-color: rgb(255, 36, 36);
+  width: 12px;
+  height: 12px;
+  /* background-color: rgba(113, 113, 113, 0.2); */
   border-radius: 100px;
 }
 

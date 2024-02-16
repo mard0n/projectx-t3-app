@@ -1,5 +1,6 @@
 import type { FC, ReactNode } from "react";
 import Navbar from "~/components/Navbar";
+import Sidebar from "../Sidebar";
 
 interface LayoutProps {
   children: ReactNode;
@@ -7,10 +8,15 @@ interface LayoutProps {
 
 const Layout: FC<LayoutProps> = ({ children }) => {
   return (
-    <>
-      <Navbar />
-      {children}
-    </>
+    <div className="flex divide-x min-h-screen">
+      <div className="flex">
+        <Sidebar />
+      </div>
+      <div className="flex flex-grow flex-col divide-y">
+        <Navbar />
+        {children}
+      </div>
+    </div>
   );
 };
 
