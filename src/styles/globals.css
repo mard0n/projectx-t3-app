@@ -10,6 +10,7 @@
 
 @import "../nodes/Block/styles.css";
 @import "../nodes/Header/styles.css";
+@import "../nodes/BlockNote/styles.css";
 @import "../plugins/DraggableBlockPlugin/styles.css";
 @import "../plugins/SelectBlocksPlugin/styles.css";
 @import "../nodes/BlockNote/styles.css";
@@ -29,4 +30,10 @@
 }
 .textUnderline {
   text-decoration: underline;
+}
+
+.inline-link {
+  color: #006bff;
+  text-decoration: none;
+  cursor: pointer;
 }

@@ -33,6 +33,9 @@ import {
   type SerializedBlockParagraphNode,
 } from "~/nodes/BlockParagraph";
 import { BLOCK_NOTE_TYPE, BlockNoteNode } from "~/nodes/BlockNote";
+import { AutoLinkNode, LinkNode } from "@lexical/link";
+import LexicalClickableLinkPlugin from "@lexical/react/LexicalClickableLinkPlugin";
+import LexicalAutoLinkPlugin from "~/plugins/LexicalAutoLinkPlugin";
 
 function onError(error: Error) {
   console.error(error);
@@ -124,6 +127,8 @@ export default function Notes() {
       BlockChildContainerNode,
       BlockNoteNode,
       HeaderNode,
+      AutoLinkNode,
+      LinkNode,
     ],
     editorState: JSON.stringify({
       root: {
@@ -132,7 +137,11 @@ export default function Notes() {
             ...blockparagraph,
             type: BLOCK_NOTE_TYPE,
             childBlocks: [
-              { ...blockparagraph, content: "[Kevin Hale - How to Pitch Your Startup - Y Combinator](https://youtube.com/watch?v=231x3123)" },
+              {
+                ...blockparagraph,
+                content:
+                  "## [Kevin Hale - How to Pitch Your Startup - Y Combinator](https://youtube.com/watch?v=231x3123)",
+              },
               { ...blockparagraph, content: "## Hello world2" },
               { ...blockparagraph, content: "### Hello world3" },
               { ...blockparagraph, content: "#### Hello world4" },
@@ -178,14 +187,9 @@ export default function Notes() {
         <SendingUpdatesPlugin handleUpdates={handleUpdates} />
         {editorRef ? <DraggableBlockPlugin editorRef={editorRef} /> : <></>}
         {/* <ShortcutsPlugin /> */}
-        {/* <br />
-        <br />
-        <br />
-        <br />
-        <br />
-        <br />
-        <br />
-        <TreeViewPlugin /> */}
+        <TreeViewPlugin />
+        <LexicalClickableLinkPlugin />
+        <LexicalAutoLinkPlugin />
       </LexicalComposer>
     </main>
   );

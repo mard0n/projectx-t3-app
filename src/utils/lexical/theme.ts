@@ -20,6 +20,7 @@ export const customTheme = {
     h3: "block-h3",
     h4: "block-h4",
   },
+  link: 'inline-link'
 } as const;
 
 export type CustomTheme = EditorThemeClasses & typeof customTheme;
