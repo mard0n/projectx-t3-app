@@ -10,11 +10,7 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "checkJs": true,
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "ES2022"
-    ],
+    "lib": ["dom", "dom.iterable", "ES2022"],
     "noEmit": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
@@ -27,9 +23,7 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "~/*": [
-        "./src/*"
-      ]
+      "~/*": ["./src/*"]
     }
   },
   "include": [
@@ -39,11 +33,9 @@
     "**/*.ts",
     "**/*.tsx",
     "**/*.cjs",
+    "**/*.mjs",
     "**/*.js",
     ".next/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "build"
-  ]
+  "exclude": ["node_modules", "build"]
 }
