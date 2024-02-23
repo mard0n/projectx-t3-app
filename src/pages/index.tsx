@@ -1,9 +1,7 @@
-import Notes from "./notes";
+import { Main } from "~/components/main"
 
-export default function Home() {
-  return (
-    <>
-      <Notes />
-    </>
-  );
+function IndexPage() {
+  return <Main name="App" />
 }
+
+export default IndexPage
