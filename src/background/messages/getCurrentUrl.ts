@@ -3,7 +3,7 @@ import { sendToBackground, type PlasmoMessaging } from "@plasmohq/messaging";
 export type ReqGetCurrentUrl = object;
 export type ResGetCurrentUrl = string | undefined;
 
-const extractUrlWithoutQueryParams = (url: string) => {
+export const extractUrlWithoutQueryParams = (url: string) => {
   const urlObj = new URL(url);
   let urlWithoutQueryParams = `${urlObj.origin}${urlObj.pathname}`;
   const isYoutube = urlObj.origin.includes("youtube");

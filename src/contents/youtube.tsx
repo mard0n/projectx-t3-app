@@ -1,5 +1,6 @@
 import type { PlasmoCSConfig, PlasmoGetInlineAnchor } from "plasmo";
 import { useEffect } from "react";
+import { fetchHighlightsFromServer } from "~/background/messages/fetchHighlightsFromServer";
 import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
 import { getTabTitle } from "~/background/messages/getTabTitle";
 import { sendHighlightToServer } from "~/background/messages/sendHighlightToServer";
@@ -33,12 +34,42 @@ export const getInlineAnchor: PlasmoGetInlineAnchor = async () =>
 // Use this to optimize unmount lookups
 export const getShadowHostId = () => "projectx-marker";
 
-const Marker = () => {
+const Youtube = () => {
   useEffect(() => {
     // TODO Find a better way to add styles to a page. getStyles not working
     document
       .querySelectorAll(YT_CHAPTER_CONTAINER)
       .forEach((node) => ((node as HTMLElement).style.flex = "none"));
+
+    fetchHighlightsFromServer()
+      .then((highlights) => {
+        highlights.forEach((marker) => {
+          const timeRegex = /(?:[?&](?:start|t)=(\d+))/;
+          let markedTime = 0;
+
+          const match = marker.highlightText?.match(timeRegex);
+
+          if (match?.[1]) {
+            markedTime = parseInt(match[1], 10);
+          } else {
+          }
+
+          const ytProgressBar = document.querySelector(YT_PROGRESS_BAR);
+          if (!ytProgressBar) return;
+
+          const fullVideoLengthTimeStr =
+            document.querySelector<HTMLElement>(YT_FULL_LENGTH_TIME);
+          if (!fullVideoLengthTimeStr) return;
+
+          const fullVideoLength = getTimelineInSeconds(
+            fullVideoLengthTimeStr.innerText,
+          );
+          if (!fullVideoLength) return;
+
+          placeMarkers(ytProgressBar, markedTime, fullVideoLength);
+        });
+      })
+      .catch(console.error);
   }, []);
 
   const handleMarkerClick = async () => {
@@ -129,4 +160,4 @@ const Marker = () => {
   );
 };
 
-export default Marker;
+export default Youtube;

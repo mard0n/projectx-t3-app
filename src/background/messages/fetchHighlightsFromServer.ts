@@ -5,22 +5,22 @@ import type { RouterInputs, RouterOutputs } from "~/utils/api";
 export type Request = RouterInputs["note"]["fetchHighlights"];
 export type Response = RouterOutputs["note"]["fetchHighlights"];
 
-const handler: PlasmoMessaging.MessageHandler<Request, Response> = async (
+const handler: PlasmoMessaging.MessageHandler<null, Response> = async (
   req,
   res,
 ) => {
+  const [tab] = await chrome.tabs.query({ active: true });
+  const currentUrl = tab?.url;
   const response = await clientUtils.note.fetchHighlights.ensureData({
-    url: req.body?.url ?? "",
+    url: currentUrl ?? "",
   });
   res.send(response);
 };
 
-export async function fetchHighlightsFromServer(req: Request) {
+export async function fetchHighlightsFromServer() {
   const res = await sendToBackground<Request, Response>({
     name: "fetchHighlightsFromServer",
-    body: req,
   });
-
 
   return res;
 }

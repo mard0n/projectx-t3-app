@@ -244,7 +244,7 @@ const Screenshot = () => {
           willChange: "transition",
         }}
         ref={screenshotArea}
-      ></div>
+      />
     </>
   );
 };
