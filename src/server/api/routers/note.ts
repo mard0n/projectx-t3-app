@@ -4,6 +4,7 @@ import {
   BLOCK_HIGHLIGHT_TYPE,
   SerializedBlockHighlightNodeSchema,
 } from "~/nodes/BlockHighlight";
+import { BLOCK_NOTE_TYPE } from "~/nodes/BlockNote";
 import { SerializedBlockParagraphNodeSchema } from "~/nodes/BlockParagraph";
 import { updatedBlocksSchema } from "~/plugins/SendingUpdatesPlugin";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
@@ -124,5 +125,17 @@ export const noteRouter = createTRPCRouter({
         })[]
       >;
       return result as HighlightBlockObjWithType;
+    }),
+  fetchHighlightNoteContainer: publicProcedure
+    .input(z.object({ url: z.string().url() }))
+    .query(async ({ ctx, input }) => {
+      const result = await ctx.db.query.notes.findFirst({
+        where: and(
+          eq(notes.type, BLOCK_NOTE_TYPE),
+          eq(notes.highlightUrl, input.url),
+        ),
+      });
+
+      return result;
     }),
 });

@@ -1,3 +1,5 @@
+import { generateFragment } from "./generateFragment";
+
 export function getSelectionPath(el: Node) {
   const stack = [];
   let textNode = "";
@@ -144,58 +146,6 @@ export function getOffsetRectRelativeToBody(el: HTMLElement): DOMRect {
   };
 }
 
-export function getSelectedTextPosition(selection: Selection) {
-  let selectionStartCoords: DOMRect | null = null,
-    selectionEndCoords: DOMRect | null = null;
-  if (selection?.rangeCount && selection.rangeCount > 0) {
-    const range = selection.getRangeAt(0).cloneRange();
-
-    // Create span elements
-    const startSpan = document.createElement("span");
-    const endSpan = document.createElement("span");
-
-    // Insert the spans before and after the selection
-    const startRange = range.cloneRange();
-    startRange.setStart(range.startContainer, range.startOffset);
-    startRange.collapse(true);
-    startRange.insertNode(startSpan);
-    selectionStartCoords = getOffsetRectRelativeToBody(startSpan);
-    const startSpanParent = startSpan.parentNode;
-    if (!startSpanParent) return;
-    startSpanParent.removeChild(startSpan);
-    startSpanParent.normalize();
-    selection.removeRange(startRange);
-
-    const endRange = range.cloneRange();
-    endRange.setStart(range.endContainer, range.endOffset);
-    endRange.collapse(true);
-    endRange.insertNode(endSpan);
-    selectionEndCoords = getOffsetRectRelativeToBody(endSpan);
-    const endSpanParent = endSpan.parentNode;
-    if (!endSpanParent) return;
-    endSpanParent.removeChild(endSpan);
-    endSpanParent.normalize();
-    selection.removeRange(endRange);
-
-    // Set the selection back to the original positions
-    selection.setBaseAndExtent(
-      selection.anchorNode!,
-      selection.anchorOffset,
-      selection.focusNode!,
-      selection.focusOffset,
-    );
-  }
-
-  if (!selectionStartCoords || !selectionEndCoords) return;
-
-  return {
-    left: selectionStartCoords.left,
-    right: selectionEndCoords.right,
-    top: selectionStartCoords.top,
-    bottom: selectionEndCoords.bottom,
-  };
-}
-
 export function isAnchorBeforeFocus(selection: Selection) {
   if (!selection) return;
   let isAnchorBeforeFocus = true;
@@ -241,4 +191,114 @@ export function isAnchorBeforeFocus(selection: Selection) {
     }
   }
   return isAnchorBeforeFocus;
+}
+
+export function getUrlFragment(range: Range) {
+  const result = generateFragment(range);
+  console.log("result", result);
+  let url = `${location.origin}${location.pathname}${location.search}`;
+  if (result?.status === 0) {
+    const fragment = result.fragment;
+    if (!fragment) return "";
+    const prefix = fragment.prefix
+      ? `${encodeURIComponent(fragment.prefix)}-,`
+      : "";
+    const suffix = fragment.suffix
+      ? `,-${encodeURIComponent(fragment.suffix)}`
+      : "";
+    const textStart = encodeURIComponent(fragment.textStart);
+    const textEnd = fragment.textEnd
+      ? `,${encodeURIComponent(fragment.textEnd)}`
+      : "";
+    url = `${url}#:~:text=${prefix}${textStart}${textEnd}${suffix}`;
+    // copyToClipboard(url, selection);
+    // reportSuccess();
+    return url;
+  } else {
+    // reportFailure(result.status);
+    // return `Could not create URL ${result.status}`;
+    return "";
+  }
+}
+
+const HIGHLIGHT_CONTEXT_TAGS = [
+  "P",
+  "H1",
+  "H2",
+  "H3",
+  "H4",
+  "H5",
+  "H6",
+  "BLOCKQUOTE",
+  "UL",
+  "OL",
+];
+
+const getValidContextParentNode = (node: Node) => {
+  let contextNode = null;
+  while (node) {
+    const parentNode = node.parentNode;
+
+    if (!parentNode) break;
+    if (!(parentNode instanceof Element)) {
+      node = parentNode;
+      continue;
+    }
+
+    if (HIGHLIGHT_CONTEXT_TAGS.includes(parentNode.tagName)) {
+      contextNode = parentNode;
+      break;
+    } else if (
+      parentNode.tagName === "ARTICLE" ||
+      parentNode.tagName === "BODY" ||
+      parentNode.tagName === "HTML"
+    ) {
+      contextNode = null;
+      break;
+    } else {
+      node = parentNode;
+    }
+  }
+  return contextNode;
+};
+
+export function getSelectionContextRange(selection: Selection): Range | null {
+  if (!selection) return null;
+  const range = selection.getRangeAt(0);
+  if (!range) return null;
+
+  const commonAncestorContainer = range.commonAncestorContainer;
+  const startContainer = range.startContainer;
+  const endContainer = range.endContainer;
+  const newRange = range.cloneRange();
+
+  // First case: both start and end are in the same container
+  if (
+    commonAncestorContainer === startContainer ||
+    commonAncestorContainer === endContainer
+  ) {
+    const contextNode = getValidContextParentNode(commonAncestorContainer);
+
+    if (contextNode) {
+      newRange.selectNodeContents(contextNode);
+    }
+  } else if (
+    commonAncestorContainer instanceof Element &&
+    HIGHLIGHT_CONTEXT_TAGS.includes(commonAncestorContainer.tagName)
+  ) {
+    // Second case: start and end points are in different nodes but the commonAncestorContainer is a valid context node.
+    newRange.selectNodeContents(commonAncestorContainer);
+  } else {
+    // Third case: start and end points are in different nodes
+    const startContextNode = getValidContextParentNode(startContainer);
+    const endContextNode = getValidContextParentNode(endContainer);
+
+    if (startContextNode && endContextNode) {
+      newRange.setStartBefore(startContextNode);
+      newRange.setEndAfter(endContextNode); // TODO: Figure out why sometimes this doesn't work
+      // newRange.setEnd(endContextNode, 0);
+    }
+  }
+
+  return newRange;
 }

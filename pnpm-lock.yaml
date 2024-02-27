@@ -25,16 +25,19 @@ dependencies:
     version: 0.12.6(lexical@0.12.6)
   '@lexical/markdown':
     specifier: ^0.12.5
-    version: 0.12.6(@lexical/clipboard@0.12.6)(@lexical/selection@0.13.1)(lexical@0.12.6)
+    version: 0.12.6(@lexical/clipboard@0.12.6)(@lexical/selection@0.12.6)(lexical@0.12.6)
   '@lexical/react':
     specifier: ^0.12.5
     version: 0.12.6(lexical@0.12.6)(react-dom@18.2.0)(react@18.2.0)(yjs@13.6.11)
   '@lexical/selection':
-    specifier: ^0.13.1
-    version: 0.13.1(lexical@0.12.6)
+    specifier: ^0.12.5
+    version: 0.12.6(lexical@0.12.6)
   '@lexical/utils':
     specifier: ^0.12.5
     version: 0.12.6(lexical@0.12.6)
+  '@mozilla/readability':
+    specifier: ^0.5.0
+    version: 0.5.0
   '@planetscale/database':
     specifier: ^1.11.0
     version: 1.15.0
@@ -1429,23 +1432,6 @@ packages:
       - '@lexical/selection'
     dev: false
 
-  /@lexical/markdown@0.12.6(@lexical/clipboard@0.12.6)(@lexical/selection@0.13.1)(lexical@0.12.6):
-    resolution: {integrity: sha512-q1cQ4w6KYxUF1N6nGwJTZwn8szLo0kbr8DzI62samZTxeztA0ByMSZLzvO5LSGhgeDremuWx5oa97s2qJMQZFw==}
-    peerDependencies:
-      lexical: 0.12.6
-    dependencies:
-      '@lexical/code': 0.12.6(lexical@0.12.6)
-      '@lexical/link': 0.12.6(lexical@0.12.6)
-      '@lexical/list': 0.12.6(lexical@0.12.6)
-      '@lexical/rich-text': 0.12.6(@lexical/clipboard@0.12.6)(@lexical/selection@0.13.1)(@lexical/utils@0.12.6)(lexical@0.12.6)
-      '@lexical/text': 0.12.6(lexical@0.12.6)
-      '@lexical/utils': 0.12.6(lexical@0.12.6)
-      lexical: 0.12.6
-    transitivePeerDependencies:
-      - '@lexical/clipboard'
-      - '@lexical/selection'
-    dev: false
-
   /@lexical/offset@0.12.6(lexical@0.12.6):
     resolution: {integrity: sha512-5NgIaWCvMuOQNf3SZSNn459QfsN7SmLl+Tu4ISqxyZRoMV5Sfojzion9MjCVmt1YSsIS4B29NYQvGQ/li1saOw==}
     peerDependencies:
@@ -1522,32 +1508,10 @@ packages:
       lexical: 0.12.6
     dev: false
 
-  /@lexical/rich-text@0.12.6(@lexical/clipboard@0.12.6)(@lexical/selection@0.13.1)(@lexical/utils@0.12.6)(lexical@0.12.6):
-    resolution: {integrity: sha512-fRZHy2ug6Pq+pJK7trr9phTGaD2ba3If8o36dphOsl27MtUllpz68lcXL6mUonzJhAu4um1e9u7GFR3dLp+cVA==}
-    peerDependencies:
-      '@lexical/clipboard': 0.12.6
-      '@lexical/selection': 0.12.6
-      '@lexical/utils': 0.12.6
-      lexical: 0.12.6
-    dependencies:
-      '@lexical/clipboard': 0.12.6(lexical@0.12.6)
-      '@lexical/selection': 0.13.1(lexical@0.12.6)
-      '@lexical/utils': 0.12.6(lexical@0.12.6)
-      lexical: 0.12.6
-    dev: false
-
   /@lexical/selection@0.12.6(lexical@0.12.6):
     resolution: {integrity: sha512-HJBEazVwOe6duyHV6+vB/MS4kUBlCV05Cfcigdx8HlLLFQRWPqHrTpaxKz4jfb9ar0SlI2W1BUNbySAxMkC/HQ==}
     peerDependencies:
       lexical: 0.12.6
-    dependencies:
-      lexical: 0.12.6
-    dev: false
-
-  /@lexical/selection@0.13.1(lexical@0.12.6):
-    resolution: {integrity: sha512-Kt9eSwjxPznj7yzIYipu9yYEgmRJhHiq3DNxHRxInYcZJWWNNHum2xKyxwwcN8QYBBzgfPegfM/geqQEJSV1lQ==}
-    peerDependencies:
-      lexical: 0.13.1
     dependencies:
       lexical: 0.12.6
     dev: false
@@ -1730,6 +1694,11 @@ packages:
       '@lezer/common': 1.2.1
       '@lezer/lr': 1.4.0
       json5: 2.2.3
+    dev: false
+
+  /@mozilla/readability@0.5.0:
+    resolution: {integrity: sha512-Z+CZ3QaosfFaTqvhQsIktyGrjFjSC0Fa4EMph4mqKnWhmyoGICsV/8QK+8HpXut6zV7zwfWwqDmEjtk1Qf6EgQ==}
+    engines: {node: '>=14.0.0'}
     dev: false
 
   /@msgpackr-extract/msgpackr-extract-darwin-arm64@3.0.2:
