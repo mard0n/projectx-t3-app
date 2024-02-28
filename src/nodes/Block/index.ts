@@ -11,6 +11,7 @@ export {
   $createBlockContentNode,
   $isBlockContentNode,
   BlockContentNode,
+  type SerializedContentNode
 } from "./Content";
 export {
   $createBlockChildContainerNode,

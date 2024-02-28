@@ -1,73 +1,64 @@
 .block-container {
   position: relative;
-  padding-top: 3px;
-  padding-bottom: 3px;
+  padding-left: 36px;
 }
 
 .block-content {
   margin-top: 0;
   margin-bottom: 0;
   position: relative;
-  padding-left: 36px;
 }
 
 .block-child-container {
-  margin-left: 27px;
   border-left: 1px solid #eee;
+  margin-left: -11px;
 }
 
-.block-content > * {
-  position: relative;
-}
-
-.block-content > *:first-child:before {
+/* Dots */
+.block-container:before {
   content: "";
   width: 6px;
   height: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  left: calc(-6px + -6px);
+  top: calc(9px);
+  left: calc(22px);
   display: block;
   background-color: #ddd;
   position: absolute;
   border-radius: 100px;
 }
 
-.block-container.open .block-content > *:first-child:after {
+/* Chevrons */
+.block-container.open:after {
   content: "";
-  display: none;
   overflow: hidden;
-  border-top: 8px solid #dddddd;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
+  border-top: 7px solid #dddddd;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
   vertical-align: top;
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  left: calc(-18px + -5px + -8px);
+  top: calc(9.5px);
+  left: calc(7.5px);
   cursor: pointer;
 }
 
-.block-container.closed .block-content > *:first-child:after {
+.block-container.closed:after {
   content: "";
-  display: none;
   overflow: hidden;
-  border-top: 6px solid transparent;
-  border-bottom: 6px solid transparent;
-  border-left: 8px solid #dddddd;
-  margin-right: 14px;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 7px solid #dddddd;
   vertical-align: top;
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  left: calc(-18px + -5px + -8px + 2px);
+  top: calc(8.5px);
+  left: calc(8.5px);
   cursor: pointer;
 }
 
 /* only show if block-content is hovered and block child container has children */
-.block-container:has(> .block-content:hover):has(> .block-child-container > div)
-  > .block-content
-  > *:first-child:after {
+.block-container:after {
+  display: none;
+}
+.block-container:hover:has(> .block-child-container > div):after {
   display: block;
 }
 
@@ -77,9 +68,4 @@
 
 .block-container.closed .block-child-container {
   display: none;
-}
-
-.block-container.closed > .block-content
-> *:first-child:after {
-  display: block !important;
 }

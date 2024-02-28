@@ -34,7 +34,7 @@ const SelectBlocksPlugin = ({}) => {
       ])
     ) {
       throw new Error(
-        "HierarchicalBlockPlugin: BlockContainerNode, BlockTextNode, or BlockChildContainerNode not registered on editor",
+        "SelectBlocksPlugin: BlockContainerNode, BlockTextNode, or BlockChildContainerNode not registered on editor",
       );
     }
 

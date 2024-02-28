@@ -7,11 +7,7 @@ import type {
   LexicalNode,
   RangeSelection,
 } from "lexical";
-import {
-  $createParagraphNode,
-  $parseSerializedNode,
-  ElementNode,
-} from "lexical";
+import { $parseSerializedNode, ElementNode } from "lexical";
 import { z } from "zod";
 import {
   SerializedElementNodeSchema,
@@ -27,11 +23,6 @@ import {
   type BlockChildContainerNode,
   type BlockContentNode,
 } from ".";
-import {
-  $convertFromMarkdownString,
-  $convertToMarkdownString,
-} from "@lexical/markdown";
-import { CUSTOM_TRANSFORMERS } from "~/utils/lexical/markdown-transformers";
 import type { Prettify } from "~/utils/types";
 
 export const BLOCK_CONTAINER_TYPE = "block-container" as const;
@@ -40,9 +31,9 @@ const BaseContainerNodeSchema = SerializedElementNodeSchema.extend({
   type: z.string(),
   id: z.string(),
   open: z.boolean(),
-  content: z.string(),
   parentId: z.string().nullable(),
   indexWithinParent: z.number(),
+  properties: z.unknown(),
 });
 
 export type SerializedBlockContainerNode = Prettify<
@@ -154,16 +145,6 @@ export class BlockContainerNode extends ElementNode {
     const containerNode = $createBlockContainerNode();
 
     const contentNode = $createBlockContentNode();
-    if (serializedNode.content) {
-      $convertFromMarkdownString(
-        serializedNode.content,
-        CUSTOM_TRANSFORMERS,
-        contentNode,
-      );
-    } else {
-      const paragraph = $createParagraphNode();
-      contentNode.append(paragraph);
-    }
 
     const childContainerNode = $createBlockChildContainerNode();
     const containerNodes =
@@ -179,14 +160,10 @@ export class BlockContainerNode extends ElementNode {
   }
 
   exportJSON(): SerializedBlockContainerNode {
-    const contentNode = this.getBlockContentNode();
-    const markdown = $convertToMarkdownString(CUSTOM_TRANSFORMERS, contentNode);
-
     const parentBlockContainerNodeId = this.getParentCPContainer()?.getId();
 
     return {
       ...super.exportJSON(),
-      content: markdown ?? "",
       parentId: parentBlockContainerNodeId ?? null,
       indexWithinParent: this.getIndexWithinParent(),
       open: this.getOpen(),
@@ -195,14 +172,6 @@ export class BlockContainerNode extends ElementNode {
       version: 1,
     };
   }
-
-  // Mutation
-  // TODO: For later
-  // append(
-  //   ...nodesToAppend: (BlockContentNode | BlockChildContainerNode)[]
-  // ): this {
-  //   return super.append(...nodesToAppend);
-  // }
 
   getBlockContentNode() {
     return this.getLatest()

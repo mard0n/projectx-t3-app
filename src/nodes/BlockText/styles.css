@@ -1,0 +1,96 @@
+.block-h1 h1 {
+  font-size: 24px;
+  line-height: 36px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.block-h2 h2 {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+}
+.block-h3 h3 {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
+.block-p {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+}
+
+.textBold {
+  font-weight: bold;
+}
+.textItalic {
+  font-style: italic;
+}
+.textStrikethrough {
+  text-decoration: line-through;
+}
+.textUnderline {
+  text-decoration: underline;
+}
+
+.block-container.block-h1:before {
+  top: calc(17px);
+}
+
+.block-container.block-h1.open:after {
+  top: calc(16.5px);
+}
+
+.block-container.block-h1.closed:after {
+  top: calc(15px);
+}
+
+
+
+.block-container.block-h2:before {
+  top: calc(11px);
+}
+
+.block-container.block-h2.open:after {
+  top: calc(10.5px);
+}
+
+.block-container.block-h2.closed:after {
+  top: calc(9px);
+}
+
+
+
+
+.block-container.block-h3:before {
+  top: calc(9px);
+}
+
+.block-container.block-h3.open:after {
+  top: calc(8.5px);
+}
+
+.block-container.block-h3.closed:after {
+  top: calc(7px);
+}
+
+
+
+.block-container.block-p:before {
+  top: calc(9px);
+}
+
+.block-container.block-p.open:after {
+  top: calc(8.5px);
+}
+
+.block-container.block-p.closed:after {
+  top: calc(7px);
+}
+
+.inline-link {
+  color: #006bff;
+  text-decoration: none;
+  cursor: pointer;
+}

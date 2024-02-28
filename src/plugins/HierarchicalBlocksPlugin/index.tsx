@@ -11,6 +11,7 @@ import type {
   LexicalNode,
   TextFormatType,
   SerializedLexicalNode,
+  LineBreakNode,
 } from "lexical";
 import {
   COMMAND_PRIORITY_NORMAL,
@@ -30,8 +31,7 @@ import {
   $isRangeSelection,
   FORMAT_TEXT_COMMAND,
   DELETE_LINE_COMMAND,
-  $isParagraphNode,
-  $createParagraphNode,
+  INSERT_LINE_BREAK_COMMAND,
 } from "lexical";
 import { $findMatchingParent, mergeRegister } from "@lexical/utils";
 import {
@@ -41,17 +41,15 @@ import {
   $isBlockChildContainerNode,
   $createBlockChildContainerNode,
   $isBlockContainerNode,
-  $createBlockContentNode,
   $isBlockContentNode,
   $getSelectedBlocks,
 } from "~/nodes/Block";
 import { $findParentBlockContainer } from "~/nodes/Block";
-import { $isHeaderNode } from "~/nodes/Header";
 import { $convertSelectionIntoLexicalContent } from "~/utils/lexical/extractSelectedText";
 import {
-  $createBlockParagraphNode,
-  BlockParagraphNode,
-} from "~/nodes/BlockParagraph/BlockParagraph";
+  $createBlockTextNode,
+  BlockTextNode,
+} from "~/nodes/BlockText";
 
 const HierarchicalBlockPlugin = ({}) => {
   const [editor] = useLexicalComposerContext();
@@ -62,27 +60,21 @@ const HierarchicalBlockPlugin = ({}) => {
         BlockContainerNode,
         BlockContentNode,
         BlockChildContainerNode,
-        BlockParagraphNode,
       ])
     ) {
       throw new Error(
-        "HierarchicalBlockPlugin: BlockContainerNode, BlockTextNode, or BlockChildContainerNode not registered on editor",
+        "HierarchicalBlockPlugin: Some nodes are not registered on editor",
       );
     }
 
     return mergeRegister(
-      ...[BlockContainerNode, BlockParagraphNode].map((BlockNode) => {
+      ...[BlockContainerNode, BlockTextNode].map((BlockNode) => {
         return mergeRegister(
           // To make sure the Editor is never empty
           editor.registerMutationListener(BlockNode, () => {
             editor.update(() => {
               if ($getRoot().isEmpty()) {
-                const containerNode = $createBlockParagraphNode();
-                const contentNode = $createBlockContentNode().append(
-                  $createParagraphNode(),
-                );
-                const childContainer = $createBlockChildContainerNode();
-                containerNode.append(contentNode, childContainer);
+                const containerNode = $createBlockTextNode("p");
                 $getRoot().append(containerNode);
                 const firstDecendent = containerNode.getFirstDescendant();
                 $isElementNode(firstDecendent) && firstDecendent.select();
@@ -197,41 +189,38 @@ const HierarchicalBlockPlugin = ({}) => {
 
             event.preventDefault();
             if (event.shiftKey) {
-              // return editor.dispatchCommand(INSERT_LINE_BREAK_COMMAND, false);
-              selection.insertParagraph();
-              return true;
+              return editor.dispatchCommand(INSERT_LINE_BREAK_COMMAND, false);
             }
           }
 
           const insertedNode = selection.insertParagraph();
 
-          if (
-            insertedNode &&
-            ($isParagraphNode(insertedNode) || $isHeaderNode(insertedNode))
-          ) {
+          if (insertedNode && $isElementNode(insertedNode)) {
             const containerNode = $findParentBlockContainer(insertedNode);
             if (!$isBlockContainerNode(containerNode)) return false;
-            const newParagraph = $createBlockParagraphNode();
-            const contentNode = $createBlockContentNode().append(insertedNode);
-            const childContainerNode = $createBlockChildContainerNode();
-            newParagraph.append(contentNode, childContainerNode);
+            const contentTexts = insertedNode.getChildren<
+              TextNode | LineBreakNode
+            >(); // TODO: Do proper type check
+
+            const newTextBlock = $createBlockTextNode("p", contentTexts);
+            insertedNode.remove();
 
             if (!containerNode?.getOpen()) {
-              containerNode.insertAfter(newParagraph);
-              newParagraph.selectStart();
+              containerNode.insertAfter(newTextBlock);
+              newTextBlock.selectStart();
               return true;
             }
 
             const childContainer = containerNode.getBlockChildContainerNode();
             if (childContainer?.getChildren().length) {
               const firstChild = childContainer.getChildren()[0];
-              firstChild?.insertBefore(newParagraph);
-              newParagraph.selectStart();
+              firstChild?.insertBefore(newTextBlock);
+              newTextBlock.selectStart();
               return true;
             }
 
-            containerNode.insertAfter(newParagraph);
-            newParagraph.selectStart();
+            containerNode.insertAfter(newTextBlock);
+            newTextBlock.selectStart();
           }
           return true;
         },

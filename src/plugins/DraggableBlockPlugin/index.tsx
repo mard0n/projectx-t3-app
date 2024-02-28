@@ -32,27 +32,22 @@ function setDragCirclePosition(
     return;
   }
 
-  const contentFirstChildElem =
-    targetElem.querySelector(".block-content")?.firstChild;
+  const targetRect = getOffsetRectRelativeToBody(targetElem);
 
-  if (!contentFirstChildElem) return;
-
-  const targetRect = getOffsetRectRelativeToBody(
-    contentFirstChildElem as HTMLElement,
-  );
+  const circle = getComputedStyle(targetElem, ":before");
+  if (!circle) return false;
+  const ctop = Number(circle.getPropertyValue("top").slice(0, -2));
+  const cleft = Number(circle.getPropertyValue("left").slice(0, -2));
+  const cheight = circle.getPropertyValue("height");
+  const cwidth = circle.getPropertyValue("width");
 
   const top = targetRect.top;
   const left = targetRect.left;
-  const height = targetRect.height;
-  const containerWidth = 18;
-  const dotDiameter = 12;
-  // console.log("top", top);
-  // console.log("left", left);
-  // console.log("dotDiameter", dotDiameter);
-  // console.log("height", height);
 
   floatingElem.style.opacity = "1";
-  floatingElem.style.transform = `translate(${left - (containerWidth - dotDiameter) / 2 - dotDiameter}px, ${top + height / 2 - dotDiameter / 2}px)`;
+  floatingElem.style.height = cheight;
+  floatingElem.style.width = cwidth;
+  floatingElem.style.transform = `translate(${left + cleft}px, ${top + ctop}px)`;
 }
 
 function setDragImage(
@@ -95,11 +90,10 @@ function setTargetLine(
   targetLineElem: HTMLElement,
   targetBlockElem: HTMLElement,
 ) {
-  const { top, height, left, width } = targetBlockElem.getBoundingClientRect();
-  const content = targetBlockElem.querySelector(".block-content");
-  
-  if (!content) return;
-  const targetStyles = window.getComputedStyle(content);
+  const { top, height, left, width } =
+    getOffsetRectRelativeToBody(targetBlockElem);
+
+  const targetStyles = window.getComputedStyle(targetBlockElem);
 
   const paddingLeft = Number(
     targetStyles.getPropertyValue("padding-left").slice(0, -2),

@@ -1,7 +1,7 @@
 .selected {
-  background-color: #7a7a7a33;
+  background-color: #adcaffa6;
 }
 
-.selected ::selection {
+.selected *::selection {
   background-color: transparent;
 }

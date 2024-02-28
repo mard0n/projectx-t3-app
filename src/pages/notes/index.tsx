@@ -1,12 +1,11 @@
 "use cient";
-import Link from "next/link";
 import { api } from "~/utils/api";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import LexicalErrorBoundary from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   SendingUpdatesPlugin,
   type UpdatedBlock,
@@ -20,22 +19,15 @@ import {
   BlockContentNode,
 } from "~/nodes/Block";
 import { HierarchicalBlockPlugin } from "~/plugins/HierarchicalBlocksPlugin";
-import { SelectBlocksPlugin } from "~/plugins/SelectBlocksPlugin";
-import { HeaderNode } from "~/nodes/Header";
-import { DraggableBlockPlugin } from "~/plugins/DraggableBlockPlugin";
-import {
-  BlockHighlightNode,
-  BlockQuoteDecorator,
-} from "~/nodes/BlockHighlight";
-import {
-  BLOCK_PARAGRAPH_TYPE,
-  BlockParagraphNode,
-  type SerializedBlockParagraphNode,
-} from "~/nodes/BlockParagraph";
 import { BLOCK_NOTE_TYPE, BlockNoteNode } from "~/nodes/BlockNote";
-import { AutoLinkNode, LinkNode } from "@lexical/link";
-import LexicalClickableLinkPlugin from "@lexical/react/LexicalClickableLinkPlugin";
-import LexicalAutoLinkPlugin from "~/plugins/LexicalAutoLinkPlugin";
+import {
+  BlockTextContentNode,
+  BLOCK_TEXT_TYPE,
+  BlockTextNode,
+  type SerializedBlockTextNode,
+} from "~/nodes/BlockText";
+import { SelectBlocksPlugin } from "~/plugins/SelectBlocksPlugin";
+import { DraggableBlockPlugin } from "~/plugins/DraggableBlockPlugin";
 
 function onError(error: Error) {
   console.error(error);
@@ -48,62 +40,44 @@ export default function Notes() {
       setEditorRef(editorRef);
     }
   };
-  const notes = api.note.getAll.useQuery(undefined, {
-    refetchOnWindowFocus: false,
-  });
+  // const notes = api.note.getAll.useQuery(undefined, {
+  //   refetchOnWindowFocus: false,
+  // });
 
   const saveChanges = api.note.saveChanges.useMutation();
 
-  if (notes.isLoading) {
-    return (
-      <div className="flex min-h-screen px-2">
-        <aside className="min-w-80 border-r pt-8">
-          <Link href="/notes">All notes</Link>
-        </aside>
-        <main className="flex-grow p-8">Loading...</main>
-      </div>
-    );
-  }
+  // if (notes.isLoading) {
+  //   return (
+  //     <div className="flex min-h-screen px-2">
+  //       <aside className="min-w-80 border-r pt-8">
+  //         <Link href="/notes">All notes</Link>
+  //       </aside>
+  //       <main className="flex-grow p-8">Loading...</main>
+  //     </div>
+  //   );
+  // }
 
-  if (notes.isError) {
-    <div className="flex min-h-screen px-2">
-      <aside className="min-w-80 border-r pt-8">
-        <Link href="/notes">All notes</Link>
-      </aside>
-      <main className="flex-grow p-8">Failed. Try again later</main>
-    </div>;
-  }
+  // if (notes.isError) {
+  //   <div className="flex min-h-screen px-2">
+  //     <aside className="min-w-80 border-r pt-8">
+  //       <Link href="/notes">All notes</Link>
+  //     </aside>
+  //     <main className="flex-grow p-8">Failed. Try again later</main>
+  //   </div>;
+  // }
 
   const handleUpdates = (updates: Updates) => {
-    // const updatedBlocks: UpdatedBlock[] = [];
-    // for (const value of updates.values()) {
-    //   updatedBlocks.push(value);
-    // }
-    // console.log("updatedBlocks", updatedBlocks);
-    // saveChanges.mutate(updatedBlocks);
+    const updatedBlocks: UpdatedBlock[] = [];
+    for (const value of updates.values()) {
+      updatedBlocks.push(value);
+    }
+    console.log("updates", updates);
+    saveChanges.mutate(updatedBlocks);
   };
 
-  // const highlight: SerializedBlockHighlightNode = {
-  //   type: BLOCK_HIGHLIGHT_TYPE,
-  //   version: 1,
-  //   content: "",
-  //   open: true,
-  //   id: crypto.randomUUID(),
-  //   indexWithinParent: 0,
-  //   highlightText:
-  //     "^[5:57 - Be clear](https://youtu.be/17XZGUX_9iM?si=uxGeSlL2kveoDyrM&t=357)",
-  //   highlightUrl: "",
-  //   highlightRangePath: "",
-  //   parentId: null,
-  //   direction: "ltr",
-  //   format: "",
-  //   indent: 0,
-  //   children: [],
-  // };
-  const blockparagraph: SerializedBlockParagraphNode = {
-    type: BLOCK_PARAGRAPH_TYPE,
+  const blockparagraph: SerializedBlockTextNode = {
+    type: BLOCK_TEXT_TYPE,
     version: 1,
-    content: "",
     open: true,
     id: crypto.randomUUID(),
     indexWithinParent: 0,
@@ -112,6 +86,10 @@ export default function Notes() {
     format: "",
     indent: 0,
     children: [],
+    properties: {
+      content: "[]",
+      tag: "p",
+    },
   };
 
   const initialConfig = {
@@ -119,51 +97,29 @@ export default function Notes() {
     theme: customTheme,
     onError,
     nodes: [
-      BlockHighlightNode,
-      BlockQuoteDecorator,
-      BlockParagraphNode,
+      BlockNoteNode,
       BlockContainerNode,
       BlockContentNode,
       BlockChildContainerNode,
-      BlockNoteNode,
-      HeaderNode,
-      AutoLinkNode,
-      LinkNode,
+      BlockTextNode,
+      BlockTextContentNode,
+      // AutoLinkNode,
+      // LinkNode,
     ],
     editorState: JSON.stringify({
       root: {
-        children: notes.data?.length
-          ? notes.data
-          : [
-              {
-                ...blockparagraph,
-                type: BLOCK_NOTE_TYPE,
-                childBlocks: [
-                  {
-                    ...blockparagraph,
-                    content:
-                      "## [Kevin Hale - How to Pitch Your Startup - Y Combinator](https://youtube.com/watch?v=231x3123)",
-                  },
-                  { ...blockparagraph, content: "## Hello world2" },
-                  { ...blockparagraph, content: "### Hello world3" },
-                  { ...blockparagraph, content: "#### Hello world4" },
-                  { ...blockparagraph, content: "normal text" },
-                  { ...blockparagraph, content: "**bold text**" },
-                ],
-              },
-              {
-                ...blockparagraph,
-                type: BLOCK_NOTE_TYPE,
-                childBlocks: [
-                  { ...blockparagraph, content: "# Hello world1" },
-                  { ...blockparagraph, content: "## Hello world2" },
-                  { ...blockparagraph, content: "### Hello world3" },
-                  { ...blockparagraph, content: "#### Hello world4" },
-                  { ...blockparagraph, content: "normal text" },
-                  { ...blockparagraph, content: "**bold text**" },
-                ],
-              },
+        children: [
+          {
+            ...blockparagraph,
+            type: BLOCK_NOTE_TYPE,
+            childBlocks: [
+              { ...blockparagraph, properties: { content: "[]", tag: "h1" } },
+              { ...blockparagraph, properties: { content: "[]", tag: "h2" } },
+              { ...blockparagraph, properties: { content: "[]", tag: "h3" } },
+              { ...blockparagraph, properties: { content: "[]", tag: "p" } },
             ],
+          },
+        ],
         direction: null,
         type: "root",
         version: 1,
@@ -172,7 +128,7 @@ export default function Notes() {
   };
 
   return (
-    <main className="flex-grow px-[4px] py-5">
+    <main className="flex-grow px-6 py-5">
       <LexicalComposer initialConfig={initialConfig}>
         <PlainTextPlugin
           contentEditable={
@@ -190,8 +146,8 @@ export default function Notes() {
         {editorRef ? <DraggableBlockPlugin editorRef={editorRef} /> : <></>}
         {/* <ShortcutsPlugin /> */}
         <TreeViewPlugin />
-        <LexicalClickableLinkPlugin />
-        <LexicalAutoLinkPlugin />
+        {/* <LexicalClickableLinkPlugin /> */}
+        {/* <LexicalAutoLinkPlugin /> */}
       </LexicalComposer>
     </main>
   );
