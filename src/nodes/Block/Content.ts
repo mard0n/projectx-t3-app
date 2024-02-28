@@ -6,18 +6,16 @@ import type {
   LexicalNode,
   EditorConfig,
   SerializedElementNode,
-  ParagraphNode,
+  TextNode,
+  LineBreakNode,
 } from "lexical";
 import { ElementNode, $isTextNode } from "lexical";
 import { type BlockContainerNode } from ".";
-import type { HeaderNode } from "../Header";
 import type { CustomTheme } from "~/utils/lexical/theme";
 
-type SerializedContentNode = Spread<object, SerializedElementNode>;
+export type SerializedContentNode = Spread<object, SerializedElementNode>;
 
 const CONTENT_TYPE = "block-content" as const;
-
-type ContentNodeChildren = ParagraphNode | HeaderNode; // TODO: Make it automatically extending from Markdown Transforms
 
 export class BlockContentNode extends ElementNode {
   constructor(key?: NodeKey) {
@@ -65,7 +63,7 @@ export class BlockContentNode extends ElementNode {
     return super.getParent();
   }
 
-  getChildren<T extends LexicalNode = ContentNodeChildren>(): T[] {
+  getChildren<T extends LexicalNode = TextNode | LineBreakNode>(): T[] {
     return super.getChildren();
   }
 

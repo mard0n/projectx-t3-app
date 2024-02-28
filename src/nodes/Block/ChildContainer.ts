@@ -1,11 +1,3 @@
-/**
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- */
-
 import { addClassNamesToElement } from "@lexical/utils";
 import type { BlockContainerNode } from ".";
 import type {
@@ -62,9 +54,7 @@ export class BlockChildContainerNode extends ElementNode {
     return false;
   }
 
-  static importJSON(
-    serializedNode: SerializedBlockChildContainerNode,
-  ): BlockChildContainerNode {
+  static importJSON(): BlockChildContainerNode {
     const node = $createBlockChildContainerNode();
     return node;
   }

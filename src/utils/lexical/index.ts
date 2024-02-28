@@ -11,9 +11,8 @@ import { z } from "zod";
 import type { Updates } from "~/plugins/SendingUpdatesPlugin";
 
 export function hasToggleElemClicked(e: MouseEvent): boolean {
-  let target: HTMLElement | undefined | null = (e.currentTarget ??
+  const target: HTMLElement | undefined | null = (e.currentTarget ??
     e.target) as HTMLElement;
-  target = target?.querySelector(".block-content")?.firstChild as HTMLElement;
   if (!target) return false;
 
   const toggleBtn = getComputedStyle(target, ":after");
