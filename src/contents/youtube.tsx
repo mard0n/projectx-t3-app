@@ -1,9 +1,9 @@
 import type { PlasmoCSConfig, PlasmoGetInlineAnchor } from "plasmo";
 import { useEffect } from "react";
-import { fetchHighlightsFromServer } from "~/background/messages/fetchHighlightsFromServer";
+import { fetchHighlights } from "~/background/messages/fetchHighlights";
 import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
 import { getTabTitle } from "~/background/messages/getTabTitle";
-import { sendHighlightToServer } from "~/background/messages/sendHighlightToServer";
+import { postHighlight } from "~/background/messages/postHighlight";
 import {
   BLOCK_HIGHLIGHT_TYPE,
   type SerializedBlockHighlightNode,
@@ -41,7 +41,7 @@ const Youtube = () => {
       .querySelectorAll(YT_CHAPTER_CONTAINER)
       .forEach((node) => ((node as HTMLElement).style.flex = "none"));
 
-    fetchHighlightsFromServer()
+    fetchHighlights()
       .then((highlights) => {
         highlights.forEach((marker) => {
           const timeRegex = /(?:[?&](?:start|t)=(\d+))/;
@@ -108,10 +108,6 @@ const Youtube = () => {
       // indexWithinParent: this.getIndexWithinParent(),
       open: true,
       version: 1,
-      children: [],
-      direction: null,
-      format: "",
-      indent: 0,
       childBlocks: [],
       highlightText: `[${tabTitle}](${currentUrl}&t=${markedTime}s)`,
       highlightUrl: currentUrl!,
@@ -126,7 +122,7 @@ const Youtube = () => {
       },
     ];
 
-    await sendHighlightToServer(update);
+    await postHighlight(update);
     // TODO LATER capture the picture as well
     // TODO shortcut
     // TODO add tooltip

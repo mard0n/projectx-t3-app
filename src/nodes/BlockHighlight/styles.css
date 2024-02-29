@@ -1,0 +1,45 @@
+.block-highlight-content {
+  padding: 8px 8px 8px 16px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  border-left: 2px dotted black;
+  background-color: #f5f5f5;
+}
+.block-highlight-content img {
+  border: 1px solid black;
+  border-right: 3px solid black;
+  border-bottom: 3px solid black;
+}
+
+.block-highlight-content h1 {
+  font-size: 24px;
+  line-height: 36px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.block-highlight-content h2 {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.block-highlight-content h3 {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+.block-highlight-content p {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+}
+
+.block-highlight-content code {
+  font-family: monospace;
+  line-height: normal;
+  background: #e3e3e3;
+  color: #0066ff;
+  border-radius: 4px;
+  font-size: 80%;
+  padding: 4px 8px;
+}

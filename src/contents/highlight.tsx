@@ -1,26 +1,27 @@
+import { Readability } from "@mozilla/readability";
 import { type PlasmoCSConfig } from "plasmo";
 import { useEffect, useRef, useState } from "react";
-import { fetchHighlightsFromServer } from "~/background/messages/fetchHighlightsFromServer";
+import TurndownService from "turndown";
+import { fetchNoteHighlightContainer } from "~/background/messages/fetchNoteHighlightContainer";
+import { fetchHighlights } from "~/background/messages/fetchHighlights";
+import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
+import { postNote } from "~/background/messages/postNote";
+import { postHighlight } from "~/background/messages/postHighlight";
 import {
-  deserializeSelectionPath,
+  BLOCK_HIGHLIGHT_TYPE,
+  type SerializedBlockHighlightNode,
+} from "~/nodes/BlockHighlight";
+import {
+  BLOCK_NOTE_TYPE,
+  type SerializedBlockNoteNode,
+} from "~/nodes/BlockNote";
+import { type UpdatedBlock } from "~/plugins/SendingUpdatesPlugin";
+import {
   getOffsetRectRelativeToBody,
   getSelectionContextRange,
   getUrlFragment,
   isAnchorBeforeFocus,
 } from "~/utils/extension";
-import TurndownService from "turndown";
-import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
-import { sendHighlightToServer } from "~/background/messages/sendHighlightToServer";
-import { BLOCK_HIGHLIGHT_TYPE } from "~/nodes/BlockHighlight";
-import { type RouterInputs } from "~/utils/api";
-import { type UpdatedBlock } from "~/plugins/SendingUpdatesPlugin";
-import { Readability } from "@mozilla/readability";
-import { fetchHighlightNoteContainer } from "~/background/messages/fetchHighlightNoteContainer";
-import {
-  BLOCK_NOTE_TYPE,
-  type SerializedBlockNoteNode,
-} from "~/nodes/BlockNote";
-import { saveNewNote } from "~/background/messages/saveNewNote";
 
 export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
@@ -63,6 +64,7 @@ const highlight = (range: Range, highlightId: string) => {
     customRange.surroundContents(wrapper);
     window.getSelection()?.removeRange(customRange);
   }
+
   function getNextNode(node: Node, container: Node) {
     if (node.firstChild) {
       return node.firstChild;
@@ -170,19 +172,70 @@ const checkIfSelectionInsideMainContentArea = (selection: Selection) => {
   return !!result;
 };
 
+export const getParentIdOrCreate = async (currentUrl: string) => {
+  const noteContainer = await fetchNoteHighlightContainer();
+  let parentId = "";
+  if (noteContainer) {
+    parentId = noteContainer.id;
+  } else {
+    parentId = crypto.randomUUID();
+
+    const newNote: SerializedBlockNoteNode = {
+      type: BLOCK_NOTE_TYPE,
+      id: parentId,
+      indexWithinParent: 0,
+      version: 1,
+      childBlocks: [],
+      properties: null,
+      children: [],
+      direction: null,
+      indent: 0,
+      format: "",
+      parentId: null,
+      open: null,
+      webUrl: currentUrl,
+    };
+
+    const newNoteUpdate = [
+      {
+        updateType: "created" as const,
+        updatedBlockId: newNote.id,
+        updatedBlock: newNote,
+      },
+    ];
+
+    void postNote(newNoteUpdate);
+  }
+
+  return parentId;
+};
+
+export const getIndexWithinParent = async (highlightY: number) => {
+  const highlights = await fetchHighlights();
+  highlights.sort((a, b) => a.indexWithinParent - b.indexWithinParent);
+  const indexOfNextSibling =
+    highlights.find((h) => {
+      return h.properties?.highlightRect?.y >= highlightY;
+    })?.indexWithinParent ?? 0;
+  const indexWithinParent = indexOfNextSibling + 0.001; // TODO: Find a better way to sort
+  return indexWithinParent;
+};
+
 const Highlight = () => {
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [showTooltip, setShowTooltip] = useState(false);
 
   useEffect(() => {
-    fetchHighlightsFromServer()
+    fetchNoteHighlightContainer().then(console.log).catch(console.error);
+    fetchHighlights()
       .then((hls) => {
+        console.log("fetchHighlights hls", hls);
         hls.forEach((hl) => {
-          if (!hl.highlightRangePath) return;
-          const range = deserializeSelectionPath(hl.highlightRangePath);
-          if (!range) return;
-          highlight(range, hl.id);
+          if (!hl.properties) return;
+          // const range = deserializeSelectionPath(hl.highlightRangePath);
+          // if (!range) return;
+          // highlight(range, hl.id);
         });
       })
       .catch(console.error);
@@ -247,7 +300,7 @@ const Highlight = () => {
       const highlightId = targetEl.getAttribute(DATA_HIGHLIGHT_ID);
       if (!highlightId) return;
       void (async function showHighlightDeleteBtn() {
-        const highlights = await fetchHighlightsFromServer();
+        const highlights = await fetchHighlights();
 
         const clickedHighlight = highlights.find(
           (highlight) => highlight.id === highlightId,
@@ -298,7 +351,7 @@ const Highlight = () => {
         };
         console.log("update", update);
 
-        void sendHighlightToServer([update]);
+        void postHighlight([update]);
 
         const highlightElems = document.querySelectorAll(
           `projectx-highlight[${DATA_HIGHLIGHT_ID}="${highlightId}"]`,
@@ -335,36 +388,16 @@ const Highlight = () => {
   }, [tooltipRef.current]);
 
   const handleTooltipClick = async () => {
-    debugger;
     console.log("click tooltip");
     const selection = window.getSelection();
     if (!selection) return;
     const range = selection.getRangeAt(0);
 
-    const noteContainer = await fetchHighlightNoteContainer();
-    let parentId = "";
-    if (noteContainer) {
-      parentId = noteContainer.id;
-    } else {
-      parentId = crypto.randomUUID();
-      const newNote: SerializedBlockNoteNode = {
-        type: BLOCK_NOTE_TYPE,
-        id: parentId,
-        indexWithinParent: 0,
-        version: 1,
-        childBlocks: [],
-      };
+    const currentUrl = await getCurrentUrl();
+    if (!currentUrl) return;
 
-      const update: RouterInputs["note"]["saveChanges"] = [
-        {
-          updateType: "created",
-          updatedBlockId: newNote.id,
-          updatedBlock: newNote,
-        },
-      ];
-
-      void saveNewNote(update);
-    }
+    const parentId = await getParentIdOrCreate(currentUrl);
+    if (!parentId) return;
 
     const turndownService = new TurndownService();
     const html = range.cloneContents();
@@ -384,17 +417,11 @@ const Highlight = () => {
       highlightContextRect = selectionContextRange.getBoundingClientRect();
     }
 
-    const currentUrl = await getCurrentUrl();
-
-    const highlights = await fetchHighlightsFromServer();
-    highlights.sort((a, b) => a.indexWithinParent - b.indexWithinParent);
-    const indexOfNextSibling =
-      highlights.find((h) => h.highlightRect.y >= highlightRect.y)
-        ?.indexWithinParent ?? 0;
-    const indexWithinParent = indexOfNextSibling + 0.001; // TODO: Find a better way to sort
+    const indexWithinParent = await getIndexWithinParent(highlightRect.y);
+    console.log("currentUrl", currentUrl);
 
     // TODO: need to figure out ways to sync this data and BlockHighlightParagraph or easier way to create data
-    const data = {
+    const data: SerializedBlockHighlightNode = {
       type: BLOCK_HIGHLIGHT_TYPE,
       id: crypto.randomUUID(),
       parentId: parentId,
@@ -402,26 +429,32 @@ const Highlight = () => {
       open: true,
       version: 1,
       childBlocks: [],
-      highlightUrl: currentUrl!,
-      highlightText: highlightText,
-      highlightPath: highlightPath,
-      highlightRect: highlightRect,
-      highlightContextText: highlightContextText,
-      highlightContextPath: highlightContextPath,
-      highlightContextRect: highlightContextRect,
+      children: [],
+      format: "",
+      indent: 0,
+      direction: null,
+      webUrl: currentUrl,
+      properties: {
+        highlightText: highlightText,
+        highlightPath: highlightPath,
+        highlightRect: highlightRect,
+        highlightContextText: highlightContextText,
+        highlightContextPath: highlightContextPath,
+        highlightContextRect: highlightContextRect,
+      },
     };
 
     console.log("data", data);
 
-    // const update: RouterInputs["note"]["saveChanges"] = [
-    //   {
-    //     updateType: "created",
-    //     updatedBlockId: data.id,
-    //     updatedBlock: data,
-    //   },
-    // ];
+    const update = [
+      {
+        updateType: "created" as const,
+        updatedBlockId: data.id,
+        updatedBlock: data,
+      },
+    ];
 
-    // void sendHighlightToServer(update);
+    void postHighlight(update);
 
     highlight(range, data.id);
   };

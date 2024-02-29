@@ -25,6 +25,7 @@ export function crop(
       const context = canvas?.getContext("2d");
       context?.drawImage(img, left, top, width, height, 0, 0, width, height);
       // const cropped = canvas?.toDataURL(`image/jpeg`);
+      // resolve(cropped ?? null);
       canvas?.toBlob(
         (cropped) => {
           if (!cropped) reject(null);

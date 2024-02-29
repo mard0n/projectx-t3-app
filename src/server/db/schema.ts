@@ -7,25 +7,43 @@ import {
   mysqlTable,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { type z } from "zod";
+import { z } from "zod";
+import {
+  BLOCK_HIGHLIGHT_TYPE,
+  SerializedBlockHighlightNodeSchema,
+} from "~/nodes/BlockHighlight";
+import {
+  BLOCK_NOTE_TYPE,
+  SerializedBlockNoteNodeSchema,
+} from "~/nodes/BlockNote";
 import {
   BLOCK_TEXT_TYPE,
   SerializedBlockTextNodeSchema,
 } from "~/nodes/BlockText";
 
-const propertySchemas = SerializedBlockTextNodeSchema.shape.properties;
+const propertySchemas = z.union([
+  SerializedBlockTextNodeSchema.shape.properties,
+  SerializedBlockHighlightNodeSchema.shape.properties,
+  SerializedBlockNoteNodeSchema.shape.properties,
+]);
 type PropertiesType = z.infer<typeof propertySchemas>;
 
+/* TODO: I would create different table for highlights and notes but recursively fetching and joining might be bit problematic */
 export const notes = mysqlTable("notes", {
   id: varchar("id", { length: 36 })
     .primaryKey()
     .default(sql`(UUID())`),
-  type: mysqlEnum("type", [BLOCK_TEXT_TYPE]).notNull(),
+  type: mysqlEnum("type", [
+    BLOCK_TEXT_TYPE,
+    BLOCK_HIGHLIGHT_TYPE,
+    BLOCK_NOTE_TYPE,
+  ]).notNull(),
   indexWithinParent: int("indexWithinParent").notNull(),
   parentId: varchar("parentId", { length: 36 }),
-  open: boolean("open").notNull().default(true),
+  open: boolean("open").default(true),
   version: int("version").notNull().default(0),
-  properties: json("properties").$type<PropertiesType>().notNull(),
+  properties: json("properties").$type<PropertiesType>(),
+  webUrl: varchar("webUrl", { length: 1024 }),
 });
 
 export type Note = typeof notes.$inferSelect;

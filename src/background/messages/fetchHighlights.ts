@@ -17,9 +17,9 @@ const handler: PlasmoMessaging.MessageHandler<null, Response> = async (
   res.send(response);
 };
 
-export async function fetchHighlightsFromServer() {
+export async function fetchHighlights() {
   const res = await sendToBackground<Request, Response>({
-    name: "fetchHighlightsFromServer",
+    name: "fetchHighlights",
   });
 
   return res;

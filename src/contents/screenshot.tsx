@@ -1,23 +1,24 @@
 /* eslint-disable @typescript-eslint/no-floating-promises */
 import { type PlasmoCSConfig } from "plasmo";
 import { useEffect, useRef, useState } from "react";
-import { captureScreenshot } from "~/background/messages/capture";
+import { captureScreenshot } from "~/background/messages/captureScreenshot";
 import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
 import { getPreSignedUrl } from "~/background/messages/getPresignedUrl";
-import { sendHighlightToServer } from "~/background/messages/sendHighlightToServer";
+import { postHighlight } from "~/background/messages/postHighlight";
 import {
   type SerializedBlockHighlightNode,
   BLOCK_HIGHLIGHT_TYPE,
 } from "~/nodes/BlockHighlight";
 import { type RouterInputs } from "~/utils/api";
 import { crop } from "~/utils/extension/crop";
+import { getIndexWithinParent, getParentIdOrCreate } from "./highlight";
 
 const getTranslateValues = (
-  startPosition: { pageX: number; pageY: number },
-  currentPosition: { pageX: number; pageY: number },
+  startPosition: { clientX: number; clientY: number },
+  currentPosition: { clientX: number; clientY: number },
 ) => {
-  const { pageX: startX, pageY: startY } = startPosition;
-  const { pageX: currentX, pageY: currentY } = currentPosition;
+  const { clientX: startX, clientY: startY } = startPosition;
+  const { clientX: currentX, clientY: currentY } = currentPosition;
 
   let translateX = 0;
   let translateY = 0;
@@ -40,7 +41,12 @@ const getTranslateValues = (
     translateY = currentY;
   }
 
-  return { translateX, translateY, width, height };
+  return {
+    translateX,
+    translateY,
+    width,
+    height,
+  };
 };
 
 export const config: PlasmoCSConfig = {
@@ -56,101 +62,119 @@ const Screenshot = () => {
   const [isMouseDown, setIsMouseDown] = useState(false);
   const [activateScreenshotMode, setActivateScreenshotMode] = useState(false);
   const [mouseDownPosition, setMouseDownPosition] = useState({
-    pageX: 0,
-    pageY: 0,
+    clientX: 0,
+    clientY: 0,
   });
   const [mousePosition, setMousePosition] = useState({
-    pageX: 0,
-    pageY: 0,
+    clientX: 0,
+    clientY: 0,
   });
   const screenshotDimentions = useRef({ x: 0, y: 0, w: 0, h: 0 });
 
   const captureImage = async () => {
-    const area = screenshotArea.current!;
-    console.log("area", area);
+    // TODO prevent scroll while capturing. chrome.tabs.captureVisibleTab only captures visible area
+    const fullImage = await captureScreenshot()
+    if (!fullImage) return;
 
-    area.style.display = "none";
-    // To prevent capturing the screenshot area box;
-    setTimeout(() => {
-      (async () => {
-        // TODO prevent scroll while capturing. chrome.tabs.captureVisibleTab only captures visible area
-        const fullImage = await captureScreenshot();
-        if (!fullImage) return;
+    const image = await crop(
+      fullImage,
+      screenshotDimentions.current,
+      window.devicePixelRatio,
+    );
+    if (!image) return;
 
-        // const image = await crop(fullImage, screenshotDimentions.current);
-        const image = await crop(
-          fullImage,
-          screenshotDimentions.current,
-          window.devicePixelRatio,
-        );
-        if (!image) return;
+    const file = new File([image], crypto.randomUUID(), {
+      lastModified: new Date().getTime(),
+      type: "image/jpeg",
+    });
+    const filename = file.name;
+    const fileType = "jpeg";
+    const fullFileName = `${filename}.${fileType}`;
 
-        const file = new File([image], crypto.randomUUID(), {
-          lastModified: new Date().getTime(),
-          type: "image/jpeg",
-        });
-        const filename = file.name;
-        const fileType = "jpeg";
-        const fullFileName = `${filename}.${fileType}`;
+    const res = await getPreSignedUrl({ fullFileName });
+    if (!res?.url) return;
 
-        const res = await getPreSignedUrl({ fullFileName });
-        if (!res?.url) return;
+    // It doesn't work when I move this fn into messages.
+    // Save the file into AWS
+    await fetch(res.url, {
+      method: "PUT",
+      body: image,
+    });
 
-        // It doesn't work when I move this fn into messages.
-        await fetch(res.url, {
-          method: "PUT",
-          body: image,
-        });
+    const link = `${process.env.PLASMO_PUBLIC_CLOUDFRONT_BASE_URL}/${fullFileName}`;
 
-        const link = `${process.env.PLASMO_PUBLIC_CLOUDFRONT_BASE_URL}/${fullFileName}`;
+    const currentUrl = await getCurrentUrl();
+    if (!currentUrl) return;
 
-        const currentUrl = await getCurrentUrl();
-        if (!currentUrl) return;
+    const parentId = await getParentIdOrCreate(currentUrl);
+    if (!parentId) return;
 
-        const data: SerializedBlockHighlightNode = {
-          type: BLOCK_HIGHLIGHT_TYPE,
-          id: crypto.randomUUID(),
-          content: "",
-          parentId: null,
-          indexWithinParent: 0,
-          // indexWithinParent: this.getIndexWithinParent(),
-          open: true,
-          version: 1,
-          children: [],
-          direction: null,
-          format: "",
-          indent: 0,
-          childBlocks: [],
-          highlightText: `![Screenshot](${link})`,
-          highlightUrl: currentUrl,
-          highlightRangePath: "",
-        };
+    const indexWithinParent = await getIndexWithinParent(
+      screenshotDimentions.current.y,
+    );
 
-        const update: RouterInputs["note"]["saveChanges"] = [
-          {
-            updateType: "created",
-            updatedBlockId: data.id,
-            updatedBlock: data,
-          },
-        ];
+    const { x, y, w, h } = screenshotDimentions.current;
 
-        sendHighlightToServer(update);
-      })();
-    }, 300);
+    const data: SerializedBlockHighlightNode = {
+      type: BLOCK_HIGHLIGHT_TYPE,
+      id: crypto.randomUUID(),
+      parentId: parentId,
+      indexWithinParent: indexWithinParent,
+      open: true,
+      version: 1,
+      childBlocks: [],
+      webUrl: currentUrl,
+      properties: {
+        highlightText: `![Screenshot](${link})`,
+        highlightPath: null,
+        highlightRect: {
+          left: x,
+          top: y,
+          bottom: y + h,
+          right: x + w,
+          width: w,
+          height: h,
+          x: x,
+          y: y,
+        },
+      },
+      children: [],
+      direction: null,
+      format: "",
+      indent: 0,
+    };
+
+    console.log("screenshot data", data);
+
+    const update: RouterInputs["note"]["saveChanges"] = [
+      {
+        updateType: "created",
+        updatedBlockId: data.id,
+        updatedBlock: data,
+      },
+    ];
+
+    await postHighlight(update);
   };
 
   const handleMouseMove = (event: MouseEvent) => {
-    setMousePosition({ pageX: event.pageX, pageY: event.pageY });
+    setMousePosition({ clientX: event.clientX, clientY: event.clientY });
   };
   const handleMouseDown = (event: MouseEvent) => {
-    setMouseDownPosition({ pageX: event.pageX, pageY: event.pageY });
+    setMouseDownPosition({ clientX: event.clientX, clientY: event.clientY });
     setIsMouseDown(true);
   };
   const handleMouseUp = () => {
     setIsMouseDown(false);
     setActivateScreenshotMode((prevValue) => {
       if (prevValue === true) {
-        captureImage();
+        const area = screenshotArea.current!;
+        area.style.display = "none";
+
+        // HACK: to prevent capturing screenshotArea; Fix later.
+        setTimeout(() => {
+          captureImage();
+        }, 100);
       }
       return false;
     });
@@ -234,8 +258,7 @@ const Screenshot = () => {
     <>
       <div
         style={{
-          display: "none",
-          position: "absolute",
+          position: "fixed",
           top: 0,
           left: 0,
           backgroundColor: "#b2d7ff",

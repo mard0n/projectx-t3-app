@@ -11,12 +11,12 @@ const handler: PlasmoMessaging.MessageHandler<Request, Response> = async (
 ) => {
   if (!req.body) return;
   await client.note.saveChanges.mutate(req.body);
-  await clientUtils.note.fetchHighlights.refetch();
+  await clientUtils.note.fetchNoteHighlightContainer.refetch();
 };
 
-export async function sendHighlightToServer(update: Request) {
+export async function postNote(update: Request) {
   const res = await sendToBackground<Request, Response>({
-    name: "sendHighlightToServer",
+    name: "postNote",
     body: update,
   });
   return res;

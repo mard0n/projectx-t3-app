@@ -46,10 +46,7 @@ import {
 } from "~/nodes/Block";
 import { $findParentBlockContainer } from "~/nodes/Block";
 import { $convertSelectionIntoLexicalContent } from "~/utils/lexical/extractSelectedText";
-import {
-  $createBlockTextNode,
-  BlockTextNode,
-} from "~/nodes/BlockText";
+import { $createBlockTextNode, BlockTextNode } from "~/nodes/BlockText";
 
 const HierarchicalBlockPlugin = ({}) => {
   const [editor] = useLexicalComposerContext();
@@ -480,6 +477,7 @@ const HierarchicalBlockPlugin = ({}) => {
       editor.registerCommand(
         PASTE_COMMAND,
         (event) => {
+          // TODO: Revise the copy and paste.
           const selection = $getSelection();
 
           if (!$isRangeSelection(selection)) return false;

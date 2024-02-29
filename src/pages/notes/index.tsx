@@ -8,7 +8,6 @@ import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { useState } from "react";
 import {
   SendingUpdatesPlugin,
-  type UpdatedBlock,
   type Updates,
 } from "~/plugins/SendingUpdatesPlugin";
 import TreeViewPlugin from "~/plugins/TreeViewPlugin";
@@ -28,6 +27,12 @@ import {
 } from "~/nodes/BlockText";
 import { SelectBlocksPlugin } from "~/plugins/SelectBlocksPlugin";
 import { DraggableBlockPlugin } from "~/plugins/DraggableBlockPlugin";
+import {
+  BlockHighlightContentNode,
+  BlockHighlightNode,
+  BlockQuoteDecoratorNode,
+} from "~/nodes/BlockHighlight";
+import Link from "next/link";
 
 function onError(error: Error) {
   console.error(error);
@@ -40,39 +45,42 @@ export default function Notes() {
       setEditorRef(editorRef);
     }
   };
-  // const notes = api.note.getAll.useQuery(undefined, {
-  //   refetchOnWindowFocus: false,
-  // });
 
-  const saveChanges = api.note.saveChanges.useMutation();
+  const notes = api.note.getAll.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
 
-  // if (notes.isLoading) {
-  //   return (
-  //     <div className="flex min-h-screen px-2">
-  //       <aside className="min-w-80 border-r pt-8">
-  //         <Link href="/notes">All notes</Link>
-  //       </aside>
-  //       <main className="flex-grow p-8">Loading...</main>
-  //     </div>
-  //   );
-  // }
+  console.log("notes", notes);
 
-  // if (notes.isError) {
-  //   <div className="flex min-h-screen px-2">
-  //     <aside className="min-w-80 border-r pt-8">
-  //       <Link href="/notes">All notes</Link>
-  //     </aside>
-  //     <main className="flex-grow p-8">Failed. Try again later</main>
-  //   </div>;
-  // }
+  // const saveChanges = api.note.saveChanges.useMutation();
+
+  if (notes.isLoading) {
+    return (
+      <div className="flex min-h-screen px-2">
+        <aside className="min-w-80 border-r pt-8">
+          <Link href="/notes">All notes</Link>
+        </aside>
+        <main className="flex-grow p-8">Loading...</main>
+      </div>
+    );
+  }
+
+  if (notes.isError) {
+    <div className="flex min-h-screen px-2">
+      <aside className="min-w-80 border-r pt-8">
+        <Link href="/notes">All notes</Link>
+      </aside>
+      <main className="flex-grow p-8">Failed. Try again later</main>
+    </div>;
+  }
 
   const handleUpdates = (updates: Updates) => {
-    const updatedBlocks: UpdatedBlock[] = [];
-    for (const value of updates.values()) {
-      updatedBlocks.push(value);
-    }
-    console.log("updates", updates);
-    saveChanges.mutate(updatedBlocks);
+    // const updatedBlocks: UpdatedBlock[] = [];
+    // for (const value of updates.values()) {
+    //   updatedBlocks.push(value);
+    // }
+    // console.log("updates", updates);
+    // saveChanges.mutate(updatedBlocks);
   };
 
   const blockparagraph: SerializedBlockTextNode = {
@@ -81,11 +89,12 @@ export default function Notes() {
     open: true,
     id: crypto.randomUUID(),
     indexWithinParent: 0,
-    parentId: null,
-    direction: "ltr",
+    parentId: "",
+    children: [],
+    direction: null,
     format: "",
     indent: 0,
-    children: [],
+    webUrl: "",
     properties: {
       content: "[]",
       tag: "p",
@@ -103,23 +112,40 @@ export default function Notes() {
       BlockChildContainerNode,
       BlockTextNode,
       BlockTextContentNode,
+      BlockHighlightNode,
+      BlockHighlightContentNode,
+      BlockQuoteDecoratorNode,
       // AutoLinkNode,
       // LinkNode,
     ],
     editorState: JSON.stringify({
       root: {
-        children: [
-          {
-            ...blockparagraph,
-            type: BLOCK_NOTE_TYPE,
-            childBlocks: [
-              { ...blockparagraph, properties: { content: "[]", tag: "h1" } },
-              { ...blockparagraph, properties: { content: "[]", tag: "h2" } },
-              { ...blockparagraph, properties: { content: "[]", tag: "h3" } },
-              { ...blockparagraph, properties: { content: "[]", tag: "p" } },
+        children: notes?.data?.length
+          ? notes.data
+          : [
+              {
+                ...blockparagraph,
+                type: BLOCK_NOTE_TYPE,
+                childBlocks: [
+                  {
+                    ...blockparagraph,
+                    properties: { content: "[]", tag: "h1" },
+                  },
+                  {
+                    ...blockparagraph,
+                    properties: { content: "[]", tag: "h2" },
+                  },
+                  {
+                    ...blockparagraph,
+                    properties: { content: "[]", tag: "h3" },
+                  },
+                  {
+                    ...blockparagraph,
+                    properties: { content: "[]", tag: "p" },
+                  },
+                ],
+              },
             ],
-          },
-        ],
         direction: null,
         type: "root",
         version: 1,

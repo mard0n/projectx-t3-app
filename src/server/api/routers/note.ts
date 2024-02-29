@@ -1,9 +1,15 @@
-import { eq, and } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
+import {
+  BLOCK_HIGHLIGHT_TYPE,
+  type SerializedBlockHighlightNodeSchema,
+} from "~/nodes/BlockHighlight";
+import { BLOCK_NOTE_TYPE } from "~/nodes/BlockNote";
 import { updatedBlocksSchema } from "~/plugins/SendingUpdatesPlugin";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { notes } from "~/server/db/schema";
 import { buildHierarchy } from "~/utils";
+import { type Prettify, type UnwrapArray } from "~/utils/types";
 
 export const noteRouter = createTRPCRouter({
   getAll: publicProcedure.query(async ({ ctx }) => {
@@ -31,6 +37,7 @@ export const noteRouter = createTRPCRouter({
                 open,
                 version,
                 properties,
+                webUrl,
               } = note.updatedBlock; // TODO: find a better way of detecting unnecessary values
 
               await ctx.db
@@ -43,6 +50,7 @@ export const noteRouter = createTRPCRouter({
                   open,
                   version,
                   properties,
+                  webUrl,
                 })
                 .onDuplicateKeyUpdate({
                   set: {
@@ -52,6 +60,7 @@ export const noteRouter = createTRPCRouter({
                     open,
                     version,
                     properties,
+                    webUrl,
                   },
                 });
             }
@@ -66,6 +75,7 @@ export const noteRouter = createTRPCRouter({
                 open,
                 version,
                 properties,
+                webUrl,
               } = note.updatedBlock;
 
               const isDataExist = await ctx.db.query.notes.findFirst({
@@ -82,6 +92,7 @@ export const noteRouter = createTRPCRouter({
                     open,
                     version,
                     properties,
+                    webUrl,
                   })
                   .where(eq(notes.id, note.updatedBlockId));
               } else {
@@ -93,6 +104,7 @@ export const noteRouter = createTRPCRouter({
                   open,
                   version,
                   properties,
+                  webUrl,
                 });
               }
             }
@@ -106,40 +118,34 @@ export const noteRouter = createTRPCRouter({
         }
       }
     }),
-  // fetchHighlights: publicProcedure
-  //   .input(z.object({ url: z.string().url() }))
-  //   // .output(
-  //   //   SerializedBlockHighlightNodeSchema.omit({
-  //   //     children: true,
-  //   //     direction: true,
-  //   //     format: true,
-  //   //     indent: true,
-  //   //   }).array(),
-  //   // )
-  //   .query(async ({ ctx, input }) => {
-  //     const result = await ctx.db.query.notes.findMany({
-  //       where: and(
-  //         eq(notes.type, BLOCK_HIGHLIGHT_TYPE),
-  //         eq(notes.highlightUrl, input.url),
-  //       ),
-  //     });
+  fetchHighlights: publicProcedure
+    .input(z.object({ url: z.string().url() }))
+    .query(async ({ ctx, input }) => {
+      const result = await ctx.db.query.notes.findMany({
+        where: and(
+          eq(notes.type, BLOCK_HIGHLIGHT_TYPE),
+          eq(notes.webUrl, input.url),
+        ),
+      });
 
-  //   // Just to match output() type
-  //   type HighlightBlockObj = UnwrapArray<typeof result>;
-  //   type HighlightBlockObjWithType = Prettify<
-  //     (Omit<HighlightBlockObj, "type"> & {
-  //       type: typeof BLOCK_HIGHLIGHT_TYPE;
-  //     })[]
-  //   >;
-  //   return result as HighlightBlockObjWithType;
-  // }),
-  fetchHighlightNoteContainer: publicProcedure
+      type HighlightBlockObj = UnwrapArray<typeof result>;
+      type HighlightBlockObjWithType = Prettify<
+        Omit<HighlightBlockObj, "type" | "properties"> & {
+          type: typeof BLOCK_HIGHLIGHT_TYPE;
+          properties: z.infer<
+            typeof SerializedBlockHighlightNodeSchema.shape.properties
+          >;
+        }
+      >;
+      return result as HighlightBlockObjWithType[];
+    }),
+  fetchNoteHighlightContainer: publicProcedure
     .input(z.object({ url: z.string().url() }))
     .query(async ({ ctx, input }) => {
       const result = await ctx.db.query.notes.findFirst({
         where: and(
-          // eq(notes.type, BLOCK_NOTE_TYPE),
-          // eq(notes.highlightUrl, input.url),
+          eq(notes.type, BLOCK_NOTE_TYPE),
+          eq(notes.webUrl, input.url),
         ),
       });
 

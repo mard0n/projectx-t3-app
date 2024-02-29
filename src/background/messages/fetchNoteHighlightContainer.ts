@@ -2,8 +2,8 @@ import { sendToBackground, type PlasmoMessaging } from "@plasmohq/messaging";
 import { clientUtils } from "..";
 import type { RouterInputs, RouterOutputs } from "~/utils/api";
 
-export type Request = RouterInputs["note"]["fetchHighlightNoteContainer"];
-export type Response = RouterOutputs["note"]["fetchHighlightNoteContainer"];
+export type Request = RouterInputs["note"]["fetchNoteHighlightContainer"];
+export type Response = RouterOutputs["note"]["fetchNoteHighlightContainer"];
 
 const handler: PlasmoMessaging.MessageHandler<null, Response> = async (
   req,
@@ -11,15 +11,16 @@ const handler: PlasmoMessaging.MessageHandler<null, Response> = async (
 ) => {
   const [tab] = await chrome.tabs.query({ active: true });
   const currentUrl = tab?.url;
-  const response = await clientUtils.note.fetchHighlightNoteContainer.ensureData({
-    url: currentUrl ?? "",
-  });
+  const response =
+    await clientUtils.note.fetchNoteHighlightContainer.ensureData({
+      url: currentUrl ?? "",
+    });
   res.send(response);
 };
 
-export async function fetchHighlightNoteContainer() {
+export async function fetchNoteHighlightContainer() {
   const res = await sendToBackground<Request, Response>({
-    name: "fetchHighlightNoteContainer",
+    name: "fetchNoteHighlightContainer",
   });
 
   return res;

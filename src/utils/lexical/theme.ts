@@ -14,6 +14,10 @@ export const customTheme = {
     h3: "block-h3",
     p: "block-p",
   },
+  blockHighlight: {
+    container: "block-highlight-container",
+    content: "block-highlight-content",
+  },
   text: {
     bold: "textBold",
     italic: "textItalic",

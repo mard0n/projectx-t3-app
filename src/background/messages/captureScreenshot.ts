@@ -21,7 +21,7 @@ const handler: PlasmoMessaging.MessageHandler<Request, Response> = async (
 
 export async function captureScreenshot() {
   const res = await sendToBackground<Request, Response>({
-    name: "capture",
+    name: "captureScreenshot",
   });
   return res;
 }

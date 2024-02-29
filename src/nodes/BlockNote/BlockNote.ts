@@ -17,9 +17,13 @@ import { addClassNamesToElement } from "@lexical/utils";
 export const BLOCK_NOTE_TYPE = "block-note" as const;
 
 const BaseNoteNodeSchema = SerializedElementNodeSchema.extend({
-  type: z.string(),
+  type: z.literal(BLOCK_NOTE_TYPE),
   id: z.string(),
   indexWithinParent: z.number(),
+  webUrl: z.string().url(),
+  properties: z.null(),
+  open: z.null(),
+  parentId: z.null(),
 });
 
 export type SerializedBlockNoteNode = Prettify<
@@ -28,10 +32,14 @@ export type SerializedBlockNoteNode = Prettify<
   }
 >;
 
-export const SerializedBlockNoteNodeSchema: z.ZodType<SerializedBlockNoteNode> =
+const _SerializedBlockNoteNodeSchema: z.ZodType<SerializedBlockNoteNode> =
   BaseNoteNodeSchema.extend({
     childBlocks: z.lazy(() => SerializedBlockNoteNodeSchema.array().optional()),
   });
+
+export const SerializedBlockNoteNodeSchema = BaseNoteNodeSchema.extend({
+  childBlocks: z.lazy(() => _SerializedBlockNoteNodeSchema.array().optional()),
+});
 
 export class BlockNoteNode extends ElementNode {
   __id: string;

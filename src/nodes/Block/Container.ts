@@ -24,6 +24,7 @@ import {
   type BlockContentNode,
 } from ".";
 import type { Prettify } from "~/utils/types";
+import { type BlockNoteNode } from "../BlockNote";
 
 export const BLOCK_CONTAINER_TYPE = "block-container" as const;
 
@@ -31,9 +32,10 @@ const BaseContainerNodeSchema = SerializedElementNodeSchema.extend({
   type: z.string(),
   id: z.string(),
   open: z.boolean(),
-  parentId: z.string().nullable(),
+  parentId: z.string(),
   indexWithinParent: z.number(),
   properties: z.unknown(),
+  webUrl: z.string().url().nullable(),
 });
 
 export type SerializedBlockContainerNode = Prettify<
@@ -61,17 +63,26 @@ export class BlockContainerNode extends ElementNode {
   __open: boolean;
   __id: string;
   __selected: boolean;
+  __webUrl: string;
 
   constructor({
     open,
     key,
     id,
     selected,
-  }: { open?: boolean; selected?: boolean; key?: NodeKey; id?: string } = {}) {
+    webUrl,
+  }: {
+    open?: boolean;
+    selected?: boolean;
+    key?: NodeKey;
+    id?: string;
+    webUrl?: string;
+  } = {}) {
     super(key);
     this.__open = open ?? true;
     this.__id = id ?? crypto.randomUUID();
     this.__selected = selected ?? false;
+    this.__webUrl = webUrl ?? "";
   }
 
   static clone(node: BlockContainerNode): BlockContainerNode {
@@ -80,6 +91,7 @@ export class BlockContainerNode extends ElementNode {
       open: node.__open,
       id: node.__id,
       selected: node.__selected,
+      webUrl: node.__webUrl,
     });
   }
 
@@ -156,6 +168,7 @@ export class BlockContainerNode extends ElementNode {
     containerNode.append(contentNode, childContainerNode);
     containerNode.setId(serializedNode.id);
     containerNode.setOpen(serializedNode.open);
+    serializedNode.webUrl && containerNode.setWebUrl(serializedNode.webUrl);
     return containerNode;
   }
 
@@ -164,11 +177,12 @@ export class BlockContainerNode extends ElementNode {
 
     return {
       ...super.exportJSON(),
-      parentId: parentBlockContainerNodeId ?? null,
+      parentId: parentBlockContainerNodeId ?? "",
       indexWithinParent: this.getIndexWithinParent(),
       open: this.getOpen(),
       type: BLOCK_CONTAINER_TYPE,
       id: this.getId(),
+      webUrl: this.getWebUrl(),
       version: 1,
     };
   }
@@ -193,7 +207,7 @@ export class BlockContainerNode extends ElementNode {
     return super.getParent();
   }
 
-  getParentCPContainer(): BlockContainerNode | undefined {
+  getParentCPContainer(): BlockContainerNode | BlockNoteNode | undefined {
     const parent = this.getLatest().getParent<
       BlockChildContainerNode | RootNode
     >();
@@ -231,6 +245,14 @@ export class BlockContainerNode extends ElementNode {
 
   setSelected(selected: boolean) {
     this.getWritable().__selected = selected;
+  }
+
+  getWebUrl(): string {
+    return this.getLatest().__webUrl;
+  }
+
+  setWebUrl(webUrl: string) {
+    this.getWritable().__webUrl = webUrl;
   }
 }
 

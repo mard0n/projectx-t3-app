@@ -18,17 +18,29 @@ import {
   SerializedBlockTextNodeSchema,
 } from "~/nodes/BlockText";
 import { type Prettify } from "~/utils/types";
+import {
+  BlockHighlightNode,
+  SerializedBlockHighlightNodeSchema,
+} from "~/nodes/BlockHighlight";
+import {
+  BlockNoteNode,
+  SerializedBlockNoteNodeSchema,
+} from "~/nodes/BlockNote";
 
 export const updatedBlocksSchema = z.union([
+  z.object({
+    updateType: z.union([z.literal("created"), z.literal("updated")]),
+    updatedBlockId: z.string().uuid(),
+    updatedBlock: z.union([
+      SerializedBlockTextNodeSchema,
+      SerializedBlockHighlightNodeSchema,
+      SerializedBlockNoteNodeSchema,
+    ]),
+  }),
   z.object({
     updateType: z.literal("destroyed"),
     updatedBlockId: z.string().uuid(),
     updatedBlock: z.null(),
-  }),
-  z.object({
-    updateType: z.union([z.literal("created"), z.literal("updated")]),
-    updatedBlockId: z.string().uuid(),
-    updatedBlock: SerializedBlockTextNodeSchema,
   }),
 ]);
 
@@ -133,7 +145,7 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
           },
         ),
       ),
-      ...[BlockTextNode].map((Node) => {
+      ...[BlockTextNode, BlockHighlightNode, BlockNoteNode].map((Node) => {
         return editor.registerMutationListener(
           Node,
           (mutations, { prevEditorState }) => {
