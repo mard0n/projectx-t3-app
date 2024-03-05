@@ -2,6 +2,9 @@
   "name": "projectx-t3-app",
   "version": "0.1.0",
   "private": true,
+  "@parcel/resolver-default": {
+    "packageExports": true
+  },
   "scripts": {
     "dev": "run-p dev:*",
     "dev:next": "next dev",

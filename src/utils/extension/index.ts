@@ -1,4 +1,6 @@
+import { Readability } from "@mozilla/readability";
 import { generateFragment } from "./generateFragment";
+import TurndownService from "turndown";
 
 export function getSelectionPath(el: Node) {
   const stack = [];
@@ -232,73 +234,93 @@ const HIGHLIGHT_CONTEXT_TAGS = [
   "BLOCKQUOTE",
   "UL",
   "OL",
+  "PRE",
 ];
 
-const getValidContextParentNode = (node: Node) => {
+const getMatchingParent = (
+  startingNode: Node,
+  findFn: (node: Element) => boolean,
+) => {
   let contextNode = null;
-  while (node) {
-    const parentNode = node.parentNode;
 
-    if (!parentNode) break;
-    if (!(parentNode instanceof Element)) {
-      node = parentNode;
-      continue;
-    }
+  let currentNode =
+    startingNode instanceof Element ? startingNode : startingNode.parentElement;
 
-    if (HIGHLIGHT_CONTEXT_TAGS.includes(parentNode.tagName)) {
-      contextNode = parentNode;
-      break;
-    } else if (
-      parentNode.tagName === "ARTICLE" ||
-      parentNode.tagName === "BODY" ||
-      parentNode.tagName === "HTML"
-    ) {
-      contextNode = null;
+  while (
+    currentNode &&
+    currentNode.tagName !== "ARTICLE" &&
+    currentNode.tagName !== "BODY" &&
+    currentNode.tagName !== "HTML"
+  ) {
+    if (findFn(currentNode)) {
+      contextNode = currentNode;
       break;
     } else {
-      node = parentNode;
+      currentNode = currentNode.parentNode as HTMLElement;
     }
   }
   return contextNode;
 };
 
-export function getSelectionContextRange(selection: Selection): Range | null {
-  if (!selection) return null;
-  const range = selection.getRangeAt(0);
-  if (!range) return null;
-
-  const commonAncestorContainer = range.commonAncestorContainer;
+export function getSelectionContextRange(range: Range): Range | null {
   const startContainer = range.startContainer;
   const endContainer = range.endContainer;
-  const newRange = range.cloneRange();
 
-  // First case: both start and end are in the same container
-  if (
-    commonAncestorContainer === startContainer ||
-    commonAncestorContainer === endContainer
-  ) {
-    const contextNode = getValidContextParentNode(commonAncestorContainer);
-
-    if (contextNode) {
-      newRange.selectNodeContents(contextNode);
-    }
-  } else if (
-    commonAncestorContainer instanceof Element &&
-    HIGHLIGHT_CONTEXT_TAGS.includes(commonAncestorContainer.tagName)
-  ) {
-    // Second case: start and end points are in different nodes but the commonAncestorContainer is a valid context node.
-    newRange.selectNodeContents(commonAncestorContainer);
-  } else {
-    // Third case: start and end points are in different nodes
-    const startContextNode = getValidContextParentNode(startContainer);
-    const endContextNode = getValidContextParentNode(endContainer);
-
-    if (startContextNode && endContextNode) {
-      newRange.setStartBefore(startContextNode);
-      newRange.setEndAfter(endContextNode); // TODO: Figure out why sometimes this doesn't work
-      // newRange.setEnd(endContextNode, 0);
-    }
+  const predicate = (node: Element) => {
+    return HIGHLIGHT_CONTEXT_TAGS.includes(node.tagName);
+  };
+  const startContextNode = getMatchingParent(startContainer, predicate);
+  const endContextNode = getMatchingParent(endContainer, predicate);
+  debugger
+  if (startContextNode && endContextNode) {
+    const newRange = document.createRange();
+    newRange.setStartBefore(startContextNode);
+    newRange.setEndAfter(endContextNode); // TODO: Figure out why sometimes this doesn't work
+    return newRange;
   }
 
-  return newRange;
+  return null;
+}
+
+const MAIN_CONTENT_CHAR_THRESHOLD = 200;
+export const checkIfSelectionInsideMainContentArea = (range: Range) => {
+  const documentClone = document.cloneNode(true);
+  const article = new Readability(documentClone as Document, {
+    charThreshold: MAIN_CONTENT_CHAR_THRESHOLD,
+  }).parse();
+
+  if (!article) return false;
+
+  const mainArticleText = article.title
+    .concat(article.textContent)
+    ?.replaceAll(/\s/g, "");
+
+  const selectedText = range?.toString()?.replaceAll(/\s/g, "");
+
+  if (!selectedText) return false;
+  const result = mainArticleText?.includes(selectedText);
+
+  return !!result;
+};
+
+export function getSelectionParams(range: Range): {
+  text: string;
+  path: string;
+  rect: DOMRect;
+} {
+  const turndownService = new TurndownService();
+  turndownService.addRule('highlight', {
+    filter: ['mark'],
+    replacement: function (content) {
+      return '==' + content + '=='
+    }
+  })
+
+  const html = range.cloneContents();
+  debugger
+  const text = turndownService.turndown(html);
+  const path = getUrlFragment(range);
+  const rect = range.getBoundingClientRect();
+
+  return { text, path, rect };
 }

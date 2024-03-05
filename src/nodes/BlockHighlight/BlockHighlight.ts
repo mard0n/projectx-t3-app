@@ -41,6 +41,9 @@ export const SerializedBlockHighlightNodeSchema =
       highlightContextText: z.string().optional(),
       highlightContextPath: z.string().url().optional(),
       highlightContextRect: HighlightRectSchema.optional(),
+      highlightContextHeaderText: z.string().optional(),
+      highlightContextHeaderPath: z.string().url().optional(),
+      highlightContextHeaderRect: HighlightRectSchema.optional(),
     }),
   });
 
@@ -59,6 +62,9 @@ export class BlockHighlightNode extends BlockContainerNode {
   __highlightContextText: string | undefined;
   __highlightContextPath: string | undefined;
   __highlightContextRect: HighlightRect | undefined;
+  __highlightContextHeaderText: string | undefined;
+  __highlightContextHeaderPath: string | undefined;
+  __highlightContextHeaderRect: HighlightRect | undefined;
 
   constructor({
     open,
@@ -71,6 +77,9 @@ export class BlockHighlightNode extends BlockContainerNode {
     highlightContextText,
     highlightContextPath,
     highlightContextRect,
+    highlightContextHeaderText,
+    highlightContextHeaderPath,
+    highlightContextHeaderRect,
   }: {
     highlightText: string;
     highlightPath: string | null;
@@ -78,6 +87,9 @@ export class BlockHighlightNode extends BlockContainerNode {
     highlightContextText?: string;
     highlightContextPath?: string;
     highlightContextRect?: HighlightRect;
+    highlightContextHeaderText?: string;
+    highlightContextHeaderPath?: string;
+    highlightContextHeaderRect?: HighlightRect;
     open?: boolean;
     selected?: boolean;
     key?: NodeKey;
@@ -90,6 +102,9 @@ export class BlockHighlightNode extends BlockContainerNode {
     this.__highlightContextText = highlightContextText;
     this.__highlightContextPath = highlightContextPath;
     this.__highlightContextRect = highlightContextRect;
+    this.__highlightContextHeaderText = highlightContextHeaderText;
+    this.__highlightContextHeaderPath = highlightContextHeaderPath;
+    this.__highlightContextHeaderRect = highlightContextHeaderRect;
   }
 
   static clone(node: BlockHighlightNode): BlockHighlightNode {
@@ -104,6 +119,9 @@ export class BlockHighlightNode extends BlockContainerNode {
       highlightContextText: node.__highlightContextText,
       highlightContextPath: node.__highlightContextPath,
       highlightContextRect: node.__highlightContextRect,
+      highlightContextHeaderText: node.__highlightContextHeaderText,
+      highlightContextHeaderPath: node.__highlightContextHeaderPath,
+      highlightContextHeaderRect: node.__highlightContextHeaderRect,
     });
   }
 
@@ -160,6 +178,9 @@ export class BlockHighlightNode extends BlockContainerNode {
         highlightContextText: this.getHighlightContextText(),
         highlightContextPath: this.getHighlightContextPath(),
         highlightContextRect: this.getHighlightContextRect(),
+        highlightContextHeaderText: this.getHighlightContextHeaderText(),
+        highlightContextHeaderPath: this.getHighlightContextHeaderPath(),
+        highlightContextHeaderRect: this.getHighlightContextHeaderRect(),
       },
     };
   }
@@ -185,6 +206,15 @@ export class BlockHighlightNode extends BlockContainerNode {
   }
   getHighlightContextRect(): HighlightRect | undefined {
     return this.getLatest().__highlightContextRect;
+  }
+  getHighlightContextHeaderText(): string | undefined {
+    return this.getLatest().__highlightContextHeaderText;
+  }
+  getHighlightContextHeaderPath(): string | undefined {
+    return this.getLatest().__highlightContextHeaderPath;
+  }
+  getHighlightContextHeaderRect(): HighlightRect | undefined {
+    return this.getLatest().__highlightContextHeaderRect;
   }
 }
 

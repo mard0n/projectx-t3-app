@@ -17,9 +17,10 @@ import {
 } from "~/nodes/BlockNote";
 import { type UpdatedBlock } from "~/plugins/SendingUpdatesPlugin";
 import {
+  checkIfSelectionInsideMainContentArea,
   getOffsetRectRelativeToBody,
   getSelectionContextRange,
-  getUrlFragment,
+  getSelectionParams,
   isAnchorBeforeFocus,
 } from "~/utils/extension";
 
@@ -35,7 +36,6 @@ const HIGHLIGHT_DELETE_TAGNAME = "PROJECTX-HIGHLIGHT-DELETE";
 const DATA_HIGHLIGHT_ID = "data-highlight-id";
 const TOOLTIP_WIDTH = 24;
 const TOOLTIP_HEIGHT = 24;
-const MAIN_CONTENT_CHAR_THRESHOLD = 200;
 
 const highlight = (range: Range, highlightId: string) => {
   const {
@@ -44,7 +44,7 @@ const highlight = (range: Range, highlightId: string) => {
     startOffset,
     endContainer,
     endOffset,
-  } = range;
+  } = range.cloneRange();
   function surroundTextWithWrapper(
     startContainer: Node,
     startOffset: number,
@@ -150,26 +150,6 @@ const highlight = (range: Range, highlightId: string) => {
     );
     currentNode = nextNodeBeforeWrapperApplied;
   }
-};
-
-const checkIfSelectionInsideMainContentArea = (selection: Selection) => {
-  const documentClone = document.cloneNode(true);
-  const article = new Readability(documentClone as Document, {
-    charThreshold: MAIN_CONTENT_CHAR_THRESHOLD,
-  }).parse();
-
-  if (!article) return false;
-
-  const mainArticleText = article.title
-    .concat(article.textContent)
-    ?.replaceAll(/\s/g, "");
-
-  const selectionText = selection?.toString()?.replaceAll(/\s/g, "");
-
-  if (!selectionText) return false;
-  const result = mainArticleText?.includes(selectionText);
-
-  return !!result;
 };
 
 export const getParentIdOrCreate = async (currentUrl: string) => {
@@ -282,8 +262,9 @@ const Highlight = () => {
 
     let isSelectionInsideMainContentArea = false;
     try {
+      const range = selection.getRangeAt(0);
       isSelectionInsideMainContentArea =
-        checkIfSelectionInsideMainContentArea(selection);
+        checkIfSelectionInsideMainContentArea(range);
     } catch (error) {
       console.log("error", error);
     }
@@ -292,7 +273,7 @@ const Highlight = () => {
       setShowTooltip(true);
     }
   };
-  const handleClick = (event: MouseEvent) => {
+  const handleHighlightClick = (event: MouseEvent) => {
     const targetEl = event.target;
     if (!targetEl) return;
 
@@ -378,12 +359,12 @@ const Highlight = () => {
     document.addEventListener("mousedown", handleMouseDown);
     document.addEventListener("selectionchange", handleSelectionChange);
     document.addEventListener("mouseup", handleMouseUp);
-    document.addEventListener("click", handleClick);
+    document.addEventListener("click", handleHighlightClick);
     return () => {
       document.removeEventListener("mousedown", handleMouseDown);
       document.removeEventListener("selectionchange", handleSelectionChange);
       document.removeEventListener("mouseup", handleMouseUp);
-      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("click", handleHighlightClick);
     };
   }, [tooltipRef.current]);
 
@@ -391,39 +372,39 @@ const Highlight = () => {
     console.log("click tooltip");
     const selection = window.getSelection();
     if (!selection) return;
-    const range = selection.getRangeAt(0);
 
     const currentUrl = await getCurrentUrl();
     if (!currentUrl) return;
 
+    const highlightId = crypto.randomUUID();
+    const range = selection.getRangeAt(0);
+
+    const {
+      text: highlightText,
+      path: highlightPath,
+      rect: highlightRect,
+    } = getSelectionParams(range);
+
+    if (!highlightPath || !highlightText) return;
+
+    const contextRange = getSelectionContextRange(range);
+    const {
+      text: contextText,
+      path: contextPath,
+      rect: contextRect,
+    } = contextRange
+      ? getSelectionParams(contextRange)
+      : { text: undefined, path: undefined, rect: undefined };
+
     const parentId = await getParentIdOrCreate(currentUrl);
     if (!parentId) return;
 
-    const turndownService = new TurndownService();
-    const html = range.cloneContents();
-    const highlightText = turndownService.turndown(html);
-    const highlightPath = getUrlFragment(range);
-    const highlightRect = range.getBoundingClientRect();
-    if (!highlightPath || !highlightText) return;
-
-    const selectionContextRange = getSelectionContextRange(selection);
-    let highlightContextText, highlightContextPath, highlightContextRect;
-    if (selectionContextRange) {
-      highlightContextText = turndownService.turndown(
-        selectionContextRange.cloneContents(),
-      );
-      // TODO: Add guard to the length of a context
-      highlightContextPath = getUrlFragment(selectionContextRange);
-      highlightContextRect = selectionContextRange.getBoundingClientRect();
-    }
-
     const indexWithinParent = await getIndexWithinParent(highlightRect.y);
-    console.log("currentUrl", currentUrl);
 
     // TODO: need to figure out ways to sync this data and BlockHighlightParagraph or easier way to create data
     const data: SerializedBlockHighlightNode = {
       type: BLOCK_HIGHLIGHT_TYPE,
-      id: crypto.randomUUID(),
+      id: highlightId,
       parentId: parentId,
       indexWithinParent: indexWithinParent,
       open: true,
@@ -438,9 +419,9 @@ const Highlight = () => {
         highlightText: highlightText,
         highlightPath: highlightPath,
         highlightRect: highlightRect,
-        highlightContextText: highlightContextText,
-        highlightContextPath: highlightContextPath,
-        highlightContextRect: highlightContextRect,
+        highlightContextText: contextText,
+        highlightContextPath: contextPath,
+        highlightContextRect: contextRect,
       },
     };
 
