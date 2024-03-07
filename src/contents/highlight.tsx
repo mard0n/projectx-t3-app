@@ -1,7 +1,5 @@
-import { Readability } from "@mozilla/readability";
 import { type PlasmoCSConfig } from "plasmo";
 import { useEffect, useRef, useState } from "react";
-import TurndownService from "turndown";
 import { fetchNoteHighlightContainer } from "~/background/messages/fetchNoteHighlightContainer";
 import { fetchHighlights } from "~/background/messages/fetchHighlights";
 import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
@@ -18,8 +16,8 @@ import {
 import { type UpdatedBlock } from "~/plugins/SendingUpdatesPlugin";
 import {
   checkIfSelectionInsideMainContentArea,
+  deserializeSelectionPath,
   getOffsetRectRelativeToBody,
-  getSelectionContextRange,
   getSelectionParams,
   isAnchorBeforeFocus,
 } from "~/utils/extension";
@@ -212,10 +210,10 @@ const Highlight = () => {
       .then((hls) => {
         console.log("fetchHighlights hls", hls);
         hls.forEach((hl) => {
-          if (!hl.properties) return;
-          // const range = deserializeSelectionPath(hl.highlightRangePath);
-          // if (!range) return;
-          // highlight(range, hl.id);
+          if (!hl.properties?.highlightPath) return;
+          const range = deserializeSelectionPath(hl.properties.highlightPath);
+          if (!range) return;
+          highlight(range, hl.id);
         });
       })
       .catch(console.error);
@@ -227,7 +225,6 @@ const Highlight = () => {
     setShowTooltip(false);
   };
   const handleSelectionChange = () => {
-    console.log("selectionchange");
     const selection = window.getSelection();
     if (!selection) return;
 
@@ -387,15 +384,6 @@ const Highlight = () => {
 
     if (!highlightPath || !highlightText) return;
 
-    const contextRange = getSelectionContextRange(range);
-    const {
-      text: contextText,
-      path: contextPath,
-      rect: contextRect,
-    } = contextRange
-      ? getSelectionParams(contextRange)
-      : { text: undefined, path: undefined, rect: undefined };
-
     const parentId = await getParentIdOrCreate(currentUrl);
     if (!parentId) return;
 
@@ -419,9 +407,6 @@ const Highlight = () => {
         highlightText: highlightText,
         highlightPath: highlightPath,
         highlightRect: highlightRect,
-        highlightContextText: contextText,
-        highlightContextPath: contextPath,
-        highlightContextRect: contextRect,
       },
     };
 

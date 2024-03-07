@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
 // Object.defineProperty(exports, "__esModule", {
 //   value: true
 // });
@@ -45,7 +47,8 @@ const NON_BOUNDARY_CHARS = /[^\t-\r -#%-\*,-\/:;\?@\[-\]_\{\}\x85\xA0\xA1\xA7\xA
  *     document).
  */
 
-const processTextFragmentDirective = (textFragment, documentToProcess = document) => {
+export const processTextFragmentDirective = (textFragment) => {
+  const documentToProcess = document;
   const results = [];
   const searchRange = documentToProcess.createRange();
   searchRange.selectNodeContents(documentToProcess.body);
@@ -786,11 +789,11 @@ const GenerateFragmentStatus = {
   EXECUTION_FAILED: 4 // An exception was raised during generation.
 };
 
-/**
- * @typedef {Object} GenerateFragmentResult
- * @property {GenerateFragmentStatus} status
- * @property {TextFragment} [fragment]
- */
+// /**
+//  * @typedef {Object} GenerateFragmentResult
+//  * @property {GenerateFragmentStatus} status
+//  * @property {TextFragment} [fragment]
+//  */
 
 /**
  * Attempts to generate a fragment, suitable for formatting and including in a
@@ -836,7 +839,7 @@ const isValidRangeForFragmentGeneration = range => {
   // that start with (e.g.) thousands of periods should be rare.
   // This also implicitly ensures the selection isn't in an input or textarea
   // field, as document.selection contains an empty range in these cases.
-  if (!range.toString().substring(0, TRUNCATE_RANGE_CHECK_CHARS).match(internal.NON_BOUNDARY_CHARS)) {
+  if (!range.toString().substring(0, TRUNCATE_RANGE_CHECK_CHARS).match(NON_BOUNDARY_CHARS)) {
     return false;
   }
 
@@ -886,18 +889,7 @@ const isValidRangeForFragmentGeneration = range => {
  */
 // exports.isValidRangeForFragmentGeneration = isValidRangeForFragmentGeneration;
 // const doGenerateFragment = (selection, startTime): {
-const doGenerateFragment = (range, startTime): {
-  status: number;
-  fragment?: undefined;
-} | {
-  status: number;
-  fragment: {
-      textStart: string;
-      textEnd: string;
-      prefix?: string;
-      suffix?: string;
-  };
-} => {
+const doGenerateFragment = (range, startTime) => {
   // recordStartTime(startTime);
   // let range;
   // try {
@@ -927,7 +919,7 @@ const doGenerateFragment = (range, startTime): {
   }
   let factory;
   if (canUseExactMatch(range)) {
-    const exactText = internal.normalizeString(range.toString());
+    const exactText = normalizeString(range.toString());
     const fragment = {
       textStart: exactText
     };
@@ -968,7 +960,7 @@ const doGenerateFragment = (range, startTime): {
   if (prefixSearchSpace || suffixSearchSpace) {
     factory.setPrefixAndSuffixSearchSpace(prefixSearchSpace, suffixSearchSpace);
   }
-  factory.useSegmenter(internal.makeNewSegmenter());
+  factory.useSegmenter(makeNewSegmenter());
   let didEmbiggen = false;
   do {
     checkTimeout();
@@ -1056,7 +1048,7 @@ const getSearchSpaceForStart = range => {
     if (textAccumulator.textInBlock !== null) {
       return textAccumulator.textInBlock;
     }
-    node = internal.forwardTraverse(walker, finishedSubtrees);
+    node = forwardTraverse(walker, finishedSubtrees);
   }
   return undefined;
 };
@@ -1107,7 +1099,7 @@ const getSearchSpaceForEnd = range => {
     if (textAccumulator.textInBlock !== null) {
       return textAccumulator.textInBlock;
     }
-    node = internal.backwardTraverse(walker, finishedSubtrees);
+    node = backwardTraverse(walker, finishedSubtrees);
   }
   return undefined;
 };
@@ -1144,17 +1136,7 @@ const FragmentFactory = class {
    * @return {TextFragment|Undefined} - a text fragment if the current state is
    *     uniquely identifying, or undefined if the current state is ambiguous.
    */
-  tryToMakeUniqueFragment(): {
-    textStart: string;
-    textEnd?: undefined;
-    prefix?: string;
-    suffix?: string;
-} | {
-    textStart: string;
-    textEnd: string;
-    prefix?: string;
-    suffix?: string;
-} | undefined {
+  tryToMakeUniqueFragment() {
     let fragment;
     if (this.mode === this.Mode.CONTEXT_ONLY) {
       fragment = {
@@ -1221,14 +1203,14 @@ const FragmentFactory = class {
           let oldStartOffset = this.startOffset;
           do {
             checkTimeout();
-            const newStartOffset = this.getStartSearchSpace().substring(this.startOffset + 1).search(internal.BOUNDARY_CHARS);
+            const newStartOffset = this.getStartSearchSpace().substring(this.startOffset + 1).search(BOUNDARY_CHARS);
             if (newStartOffset === -1) {
               this.startOffset = this.getStartSearchSpace().length;
             } else {
               this.startOffset = this.startOffset + 1 + newStartOffset;
             }
             // Only count as an iteration if a word character was added.
-            if (this.getStartSearchSpace().substring(oldStartOffset, this.startOffset).search(internal.NON_BOUNDARY_CHARS) !== -1) {
+            if (this.getStartSearchSpace().substring(oldStartOffset, this.startOffset).search(NON_BOUNDARY_CHARS) !== -1) {
               oldStartOffset = this.startOffset;
               i++;
             }
@@ -1253,14 +1235,14 @@ const FragmentFactory = class {
           let oldBackwardsEndOffset = this.backwardsEndOffset();
           do {
             checkTimeout();
-            const newBackwardsOffset = this.getBackwardsEndSearchSpace().substring(this.backwardsEndOffset() + 1).search(internal.BOUNDARY_CHARS);
+            const newBackwardsOffset = this.getBackwardsEndSearchSpace().substring(this.backwardsEndOffset() + 1).search(BOUNDARY_CHARS);
             if (newBackwardsOffset === -1) {
               this.setBackwardsEndOffset(this.getEndSearchSpace().length);
             } else {
               this.setBackwardsEndOffset(this.backwardsEndOffset() + 1 + newBackwardsOffset);
             }
             // Only count as an iteration if a word character was added.
-            if (this.getBackwardsEndSearchSpace().substring(oldBackwardsEndOffset, this.backwardsEndOffset()).search(internal.NON_BOUNDARY_CHARS) !== -1) {
+            if (this.getBackwardsEndSearchSpace().substring(oldBackwardsEndOffset, this.backwardsEndOffset()).search(NON_BOUNDARY_CHARS) !== -1) {
               oldBackwardsEndOffset = this.backwardsEndOffset();
               i++;
             }
@@ -1294,14 +1276,14 @@ const FragmentFactory = class {
           let oldBackwardsPrefixOffset = this.backwardsPrefixOffset();
           do {
             checkTimeout();
-            const newBackwardsPrefixOffset = this.getBackwardsPrefixSearchSpace().substring(this.backwardsPrefixOffset() + 1).search(internal.BOUNDARY_CHARS);
+            const newBackwardsPrefixOffset = this.getBackwardsPrefixSearchSpace().substring(this.backwardsPrefixOffset() + 1).search(BOUNDARY_CHARS);
             if (newBackwardsPrefixOffset === -1) {
               this.setBackwardsPrefixOffset(this.getBackwardsPrefixSearchSpace().length);
             } else {
               this.setBackwardsPrefixOffset(this.backwardsPrefixOffset() + 1 + newBackwardsPrefixOffset);
             }
             // Only count as an iteration if a word character was added.
-            if (this.getBackwardsPrefixSearchSpace().substring(oldBackwardsPrefixOffset, this.backwardsPrefixOffset()).search(internal.NON_BOUNDARY_CHARS) !== -1) {
+            if (this.getBackwardsPrefixSearchSpace().substring(oldBackwardsPrefixOffset, this.backwardsPrefixOffset()).search(NON_BOUNDARY_CHARS) !== -1) {
               oldBackwardsPrefixOffset = this.backwardsPrefixOffset();
               i++;
             }
@@ -1319,14 +1301,14 @@ const FragmentFactory = class {
           let oldSuffixOffset = this.suffixOffset;
           do {
             checkTimeout();
-            const newSuffixOffset = this.getSuffixSearchSpace().substring(this.suffixOffset + 1).search(internal.BOUNDARY_CHARS);
+            const newSuffixOffset = this.getSuffixSearchSpace().substring(this.suffixOffset + 1).search(BOUNDARY_CHARS);
             if (newSuffixOffset === -1) {
               this.suffixOffset = this.getSuffixSearchSpace().length;
             } else {
               this.suffixOffset = this.suffixOffset + 1 + newSuffixOffset;
             }
             // Only count as an iteration if a word character was added.
-            if (this.getSuffixSearchSpace().substring(oldSuffixOffset, this.suffixOffset).search(internal.NON_BOUNDARY_CHARS) !== -1) {
+            if (this.getSuffixSearchSpace().substring(oldSuffixOffset, this.suffixOffset).search(NON_BOUNDARY_CHARS) !== -1) {
               oldSuffixOffset = this.suffixOffset;
               i++;
             }
@@ -1820,13 +1802,13 @@ const getLastNodeForBlockSearch = range => {
 const getFirstTextNode = range => {
   // Check if first node in the range is a visible text node.
   const firstNode = getFirstNodeForBlockSearch(range);
-  if (isText(firstNode) && internal.isNodeVisible(firstNode)) {
+  if (isText(firstNode) && isNodeVisible(firstNode)) {
     return firstNode;
   }
 
   // First node is not visible text, use a tree walker to find the first visible
   // text node.
-  const walker = internal.makeTextNodeWalker(range);
+  const walker = makeTextNodeWalker(range);
   walker.currentNode = firstNode;
   return walker.nextNode();
 };
@@ -1840,15 +1822,15 @@ const getFirstTextNode = range => {
 const getLastTextNode = range => {
   // Check if last node in the range is a visible text node.
   const lastNode = getLastNodeForBlockSearch(range);
-  if (isText(lastNode) && internal.isNodeVisible(lastNode)) {
+  if (isText(lastNode) && isNodeVisible(lastNode)) {
     return lastNode;
   }
 
   // Last node is not visible text, traverse the range backwards to find the
   // last visible text node.
-  const walker = internal.makeTextNodeWalker(range);
+  const walker = makeTextNodeWalker(range);
   walker.currentNode = lastNode;
-  return internal.backwardTraverse(walker, new Set());
+  return backwardTraverse(walker, new Set());
 };
 
 /**
@@ -1868,7 +1850,7 @@ const containsBlockBoundary = range => {
   while (!tempRange.collapsed && node != null) {
     if (isBlock(node)) return true;
     if (node != null) tempRange.setStartAfter(node);
-    node = internal.forwardTraverse(walker, finishedSubtrees);
+    node = forwardTraverse(walker, finishedSubtrees);
     checkTimeout();
   }
   return false;
@@ -1892,9 +1874,9 @@ const findWordStartBoundInTextNode = (node, startOffset) => {
 
   // If the first character in the range is a boundary character, we don't
   // need to do anything.
-  if (offset < node.data.length && internal.BOUNDARY_CHARS.test(node.data[offset])) return offset;
+  if (offset < node.data.length && BOUNDARY_CHARS.test(node.data[offset])) return offset;
   const precedingText = node.data.substring(0, offset);
-  const boundaryIndex = reverseString(precedingText).search(internal.BOUNDARY_CHARS);
+  const boundaryIndex = reverseString(precedingText).search(BOUNDARY_CHARS);
   if (boundaryIndex !== -1) {
     // Because we did a backwards search, the found index counts backwards
     // from offset, so we subtract to find the start of the word.
@@ -1920,11 +1902,11 @@ const findWordEndBoundInTextNode = (node, endOffset) => {
 
   // If the last character in the range is a boundary character, we don't
   // need to do anything.
-  if (offset < node.data.length && offset > 0 && internal.BOUNDARY_CHARS.test(node.data[offset - 1])) {
+  if (offset < node.data.length && offset > 0 && BOUNDARY_CHARS.test(node.data[offset - 1])) {
     return offset;
   }
   const followingText = node.data.substring(offset);
-  const boundaryIndex = followingText.search(internal.BOUNDARY_CHARS);
+  const boundaryIndex = followingText.search(BOUNDARY_CHARS);
   if (boundaryIndex !== -1) {
     return offset + boundaryIndex;
   }
@@ -1957,7 +1939,7 @@ const makeWalkerForNode = (node, endNode) => {
     }
   }
   const walker = document.createTreeWalker(blockAncestor, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, node => {
-    return internal.acceptNodeIfVisibleInRange(node);
+    return acceptNodeIfVisibleInRange(node);
   });
   walker.currentNode = node;
   return walker;
@@ -1970,7 +1952,7 @@ const makeWalkerForNode = (node, endNode) => {
  * @param {Range} range - the range to be modified
  */
 const expandRangeStartToWordBound = range => {
-  const segmenter = internal.makeNewSegmenter();
+  const segmenter = makeNewSegmenter();
   if (segmenter) {
     // Find the starting text node and offset (since the range may start with a
     // non-text node).
@@ -1999,7 +1981,7 @@ const expandRangeStartToWordBound = range => {
       return;
     }
     const finishedSubtrees = new Set();
-    let node = internal.backwardTraverse(walker, finishedSubtrees);
+    let node = backwardTraverse(walker, finishedSubtrees);
     while (node != null) {
       const newOffset = findWordStartBoundInTextNode(node);
       if (newOffset !== -1) {
@@ -2021,7 +2003,7 @@ const expandRangeStartToWordBound = range => {
         }
         return;
       }
-      node = internal.backwardTraverse(walker, finishedSubtrees);
+      node = backwardTraverse(walker, finishedSubtrees);
       // We should never get here; the walker should eventually hit a block node
       // or the root of the document. Collapse range so the caller can handle
       // this as an error.
@@ -2182,21 +2164,26 @@ const expandToNearestWordBoundaryPointUsingSegments = (segmenter, isRangeEnd, ra
  * @param {TextNode} node
  * @returns {TextNodeLists}
  */
-const getTextNodesInSameBlock = node => {
+export const getTextNodesInSameBlock = node => {
+  console.log('node', node);
   const preNodes = [];
   // First, backtraverse to get to a block boundary
   const backWalker = makeWalkerForNode(node);
   if (!backWalker) {
     return;
   }
+  console.log('backWalker', backWalker);
   const finishedSubtrees = new Set();
-  let backNode = internal.backwardTraverse(backWalker, finishedSubtrees);
+  let backNode = backwardTraverse(backWalker, finishedSubtrees);
+  console.log('backNode before while', backNode);
+  console.log('isBlock(backNode)', isBlock(backNode));
   while (backNode != null && !isBlock(backNode)) {
+    console.log('backNode', backNode);
     checkTimeout();
     if (backNode.nodeType === Node.TEXT_NODE) {
       preNodes.push(backNode);
     }
-    backNode = internal.backwardTraverse(backWalker, finishedSubtrees);
+    backNode = backwardTraverse(backWalker, finishedSubtrees);
   }
   preNodes.reverse();
   const innerNodes = [];
@@ -2204,7 +2191,7 @@ const getTextNodesInSameBlock = node => {
     innerNodes.push(node);
   } else {
     const walker = document.createTreeWalker(node, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, node => {
-      return internal.acceptNodeIfVisibleInRange(node);
+      return acceptNodeIfVisibleInRange(node);
     });
     walker.currentNode = node;
     let child = walker.nextNode();
@@ -2224,13 +2211,13 @@ const getTextNodesInSameBlock = node => {
   // Forward traverse from node after having finished its subtree
   // to get text nodes after it until we find a block boundary.
   const finishedSubtreesForward = new Set([node]);
-  let forwardNode = internal.forwardTraverse(forwardWalker, finishedSubtreesForward);
+  let forwardNode = forwardTraverse(forwardWalker, finishedSubtreesForward);
   while (forwardNode != null && !isBlock(forwardNode)) {
     checkTimeout();
     if (forwardNode.nodeType === Node.TEXT_NODE) {
       postNodes.push(forwardNode);
     }
-    forwardNode = internal.forwardTraverse(forwardWalker, finishedSubtreesForward);
+    forwardNode = forwardTraverse(forwardWalker, finishedSubtreesForward);
   }
   return {
     preNodes: preNodes,
@@ -2245,8 +2232,8 @@ const getTextNodesInSameBlock = node => {
  * expand the range, not shrink it.
  * @param {Range} range - the range to be modified
  */
-const expandRangeEndToWordBound = range => {
-  const segmenter = internal.makeNewSegmenter();
+export const expandRangeEndToWordBound = range => {
+  const segmenter = makeNewSegmenter();
   if (segmenter) {
     // Find the ending text node and offset (since the range may end with a
     // non-text node).
@@ -2295,7 +2282,7 @@ const expandRangeEndToWordBound = range => {
         }
         return;
       }
-      node = internal.forwardTraverse(walker, finishedSubtrees);
+      node = forwardTraverse(walker, finishedSubtrees);
     }
     // We should never get here; the walker should eventually hit a block node
     // or the root of the document. Collapse range so the caller can handle this
@@ -2310,7 +2297,7 @@ const expandRangeEndToWordBound = range => {
  * @return {Boolean} - true if the node is an element classified as block-level
  */
 const isBlock = node => {
-  return node.nodeType === Node.ELEMENT_NODE && (internal.BLOCK_ELEMENTS.includes(node.tagName) || node.tagName === 'HTML' || node.tagName === 'BODY');
+  return node.nodeType === Node.ELEMENT_NODE && (BLOCK_ELEMENTS.includes(node.tagName) || node.tagName === 'HTML' || node.tagName === 'BODY');
 };
 
 /**
