@@ -21,6 +21,10 @@ import {
   getSelectionParams,
   isAnchorBeforeFocus,
 } from "~/utils/extension";
+import { fetchWebMetadata } from "~/background/messages/fetchWebMetadata";
+import { BLOCK_TEXT_TYPE, type SerializedBlockTextNode } from "~/nodes/BlockText";
+import { getTabTitle } from "~/background/messages/getTabTitle";
+import { postBlock } from "~/background/messages/postBlock";
 
 export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
@@ -205,7 +209,7 @@ const Highlight = () => {
   const [showTooltip, setShowTooltip] = useState(false);
 
   useEffect(() => {
-    fetchNoteHighlightContainer().then(console.log).catch(console.error);
+    void fetchWebMetadata();
     fetchHighlights()
       .then((hls) => {
         console.log("fetchHighlights hls", hls);
@@ -386,8 +390,7 @@ const Highlight = () => {
 
     if (!highlightPath || !highlightText) return;
 
-    const parentId = await getParentIdOrCreate(currentUrl);
-    if (!parentId) return;
+    const webMetadata = await fetchWebMetadata();
 
     const indexWithinParent = await getIndexWithinParent(highlightRect.y);
 
@@ -395,7 +398,7 @@ const Highlight = () => {
     const data: SerializedBlockHighlightNode = {
       type: BLOCK_HIGHLIGHT_TYPE,
       id: highlightId,
-      parentId: parentId,
+      parentId: webMetadata.defaultNoteId,
       indexWithinParent: indexWithinParent,
       open: true,
       version: 1,
@@ -414,7 +417,7 @@ const Highlight = () => {
 
     console.log("data", data);
 
-    const update = [
+    const highlightUpdate = [
       {
         updateType: "created" as const,
         updatedBlockId: data.id,
@@ -422,10 +425,50 @@ const Highlight = () => {
       },
     ];
 
-    void postHighlight(update);
-
     highlight(range, data.id);
     setShowTooltip(false);
+
+    void postHighlight(highlightUpdate);
+
+    if (!webMetadata.isTitleAdded) {
+      const content = await getTabTitle();
+      const data: SerializedBlockTextNode = {
+        type: BLOCK_TEXT_TYPE,
+        id: crypto.randomUUID(),
+        parentId: webMetadata.defaultNoteId,
+        indexWithinParent: 0,
+        open: true,
+        version: 1,
+        childBlocks: [],
+        children: [],
+        format: "",
+        indent: 0,
+        direction: null,
+        webUrl: null,
+        properties: {
+          tag: "h1",
+          content: JSON.stringify({
+            detail: 0,
+            format: 0,
+            mode: 0,
+            style: "",
+            text: content ?? "",
+            type: "text",
+            version: 1,
+          }),
+        },
+      };
+
+      const blockUpdate = [
+        {
+          updateType: "created" as const,
+          updatedBlockId: data.id,
+          updatedBlock: data,
+        },
+      ];
+
+      void postBlock(blockUpdate);
+    }
   };
 
   return (

@@ -58,3 +58,9 @@ export const parentIdToNotesRelations = relations(notes, ({ one, many }) => ({
     relationName: "notesToNotes",
   }),
 }));
+
+export const webMetadata = mysqlTable("webMetadata", {
+  webUrl: varchar("webUrl", { length: 1024 }).notNull(),
+  defaultNoteId: varchar("defaultNoteId", { length: 36 }).notNull(),
+  isTitleAdded: boolean('isTitleAdded').default(false).notNull(),
+});

@@ -7,7 +7,7 @@ import {
 import { BLOCK_NOTE_TYPE } from "~/nodes/BlockNote";
 import { updatedBlocksSchema } from "~/plugins/SendingUpdatesPlugin";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { notes } from "~/server/db/schema";
+import { notes, webMetadata } from "~/server/db/schema";
 import { buildHierarchy } from "~/utils";
 import { type Prettify, type UnwrapArray } from "~/utils/types";
 
@@ -150,5 +150,71 @@ export const noteRouter = createTRPCRouter({
       });
 
       return result;
+    }),
+  fetchWebmeta: publicProcedure
+    .input(z.object({ url: z.string().url() }))
+    .output(
+      z.object({
+        webUrl: z.string().url(),
+        defaultNoteId: z.string().uuid(),
+        isTitleAdded: z.boolean(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const result = await ctx.db.query.webMetadata.findFirst({
+        where: eq(webMetadata.webUrl, input.url),
+      });
+
+      if (result?.defaultNoteId) {
+        const defaultNote = await ctx.db.query.notes.findFirst({
+          where: eq(notes.id, result.defaultNoteId),
+        });
+
+        if (defaultNote) {
+          return result;
+        } else {
+          const newNoteId = crypto.randomUUID();
+
+          await ctx.db.insert(notes).values({
+            type: BLOCK_NOTE_TYPE,
+            id: newNoteId,
+            indexWithinParent: 0,
+            version: 1,
+            properties: null,
+            parentId: null,
+            open: null,
+            webUrl: input.url,
+          });
+
+          await ctx.db.update(webMetadata).set({ defaultNoteId: newNoteId });
+
+          return { ...result, defaultNoteId: newNoteId };
+        }
+      } else {
+        const newNoteId = crypto.randomUUID();
+
+        await ctx.db.insert(notes).values({
+          type: BLOCK_NOTE_TYPE,
+          id: newNoteId,
+          indexWithinParent: 0,
+          version: 1,
+          properties: null,
+          parentId: null,
+          open: null,
+          webUrl: input.url,
+        });
+
+        await ctx.db.insert(webMetadata).values({
+          webUrl: input.url,
+          defaultNoteId: newNoteId,
+          isTitleAdded: false,
+        });
+
+        return {
+          webUrl: input.url,
+          defaultNoteId: newNoteId,
+          isTitleAdded: false,
+        };
+      }
     }),
 });
