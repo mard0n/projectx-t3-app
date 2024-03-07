@@ -425,6 +425,7 @@ const Highlight = () => {
     void postHighlight(update);
 
     highlight(range, data.id);
+    setShowTooltip(false);
   };
 
   return (
