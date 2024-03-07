@@ -271,6 +271,8 @@ const Highlight = () => {
     }
   };
   const handleHighlightClick = (event: MouseEvent) => {
+    // TODO Handle the cases where highlight block and delete btn doesn't alight.
+    // When highlight start from the middle and spans multiple lines
     const targetEl = event.target;
     if (!targetEl) return;
 
@@ -289,9 +291,9 @@ const Highlight = () => {
         const selectedElem = document.querySelectorAll(
           `projectx-highlight[${DATA_HIGHLIGHT_ID}="${clickedHighlight.id}"]`,
         )[0];
+        if (!selectedElem) return;
 
-        const position = selectedElem?.getBoundingClientRect();
-
+        const position = getOffsetRectRelativeToBody(selectedElem);
         if (!position) return;
 
         // if (!deleteHighlightBtnRef.current) return;
@@ -308,7 +310,7 @@ const Highlight = () => {
         highlightDeleteBtn.style.border = "1px solid white";
         highlightDeleteBtn.style.background = "red";
         highlightDeleteBtn.style.color = "white";
-        highlightDeleteBtn.style.transform = `translate(${position.left - 18}px, ${position.top - 18}px)`;
+        highlightDeleteBtn.style.transform = `translate(${position.left - 9}px, ${position.top - 9}px)`;
         highlightDeleteBtn.setAttribute(DATA_HIGHLIGHT_ID, highlightId);
         document.body.appendChild(highlightDeleteBtn);
       })();
