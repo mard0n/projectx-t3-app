@@ -1,18 +1,21 @@
 import { type PlasmoCSConfig } from "plasmo";
 import { useEffect, useRef, useState } from "react";
-import { fetchNoteHighlightContainer } from "~/background/messages/fetchNoteHighlightContainer";
 import { fetchHighlights } from "~/background/messages/fetchHighlights";
+import { fetchWebMetadata } from "~/background/messages/fetchWebMetadata";
 import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
-import { postNote } from "~/background/messages/postNote";
+import { getTabTitle } from "~/background/messages/getTabTitle";
+import { postBlockText } from "~/background/messages/postBlockText";
 import { postHighlight } from "~/background/messages/postHighlight";
+import { postWebMetadata } from "~/background/messages/postWebMetadata";
+import { updateWebMetadataTitleStatus } from "~/background/messages/updateWebMetadataTitleStatus";
 import {
   BLOCK_HIGHLIGHT_TYPE,
   type SerializedBlockHighlightNode,
 } from "~/nodes/BlockHighlight";
 import {
-  BLOCK_NOTE_TYPE,
-  type SerializedBlockNoteNode,
-} from "~/nodes/BlockNote";
+  BLOCK_TEXT_TYPE,
+  type SerializedBlockTextNode,
+} from "~/nodes/BlockText";
 import { type UpdatedBlock } from "~/plugins/SendingUpdatesPlugin";
 import {
   checkIfSelectionInsideMainContentArea,
@@ -21,14 +24,10 @@ import {
   getSelectionParams,
   isAnchorBeforeFocus,
 } from "~/utils/extension";
-import { fetchWebMetadata } from "~/background/messages/fetchWebMetadata";
-import { BLOCK_TEXT_TYPE, type SerializedBlockTextNode } from "~/nodes/BlockText";
-import { getTabTitle } from "~/background/messages/getTabTitle";
-import { postBlock } from "~/background/messages/postBlock";
 
 export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
-  exclude_matches: ["https://*.youtube.com/*"],
+  exclude_matches: ["https://*.youtube.com/*", "http://localhost:3000/*"],
   all_frames: true,
   run_at: "document_idle",
 };
@@ -152,44 +151,6 @@ const highlight = (range: Range, highlightId: string) => {
     );
     currentNode = nextNodeBeforeWrapperApplied;
   }
-};
-
-export const getParentIdOrCreate = async (currentUrl: string) => {
-  const noteContainer = await fetchNoteHighlightContainer();
-  let parentId = "";
-  if (noteContainer) {
-    parentId = noteContainer.id;
-  } else {
-    parentId = crypto.randomUUID();
-
-    const newNote: SerializedBlockNoteNode = {
-      type: BLOCK_NOTE_TYPE,
-      id: parentId,
-      indexWithinParent: 0,
-      version: 1,
-      childBlocks: [],
-      properties: null,
-      children: [],
-      direction: null,
-      indent: 0,
-      format: "",
-      parentId: null,
-      open: null,
-      webUrl: currentUrl,
-    };
-
-    const newNoteUpdate = [
-      {
-        updateType: "created" as const,
-        updatedBlockId: newNote.id,
-        updatedBlock: newNote,
-      },
-    ];
-
-    void postNote(newNoteUpdate);
-  }
-
-  return parentId;
 };
 
 export const getIndexWithinParent = async (highlightY: number) => {
@@ -390,7 +351,19 @@ const Highlight = () => {
 
     if (!highlightPath || !highlightText) return;
 
-    const webMetadata = await fetchWebMetadata();
+    let webMetadata = await fetchWebMetadata();
+    if (!webMetadata) {
+      const defaultNoteId = crypto.randomUUID();
+
+      const newWebMetadata = {
+        webUrl: currentUrl,
+        defaultNoteId: defaultNoteId,
+        isTitleAdded: false,
+      };
+      void postWebMetadata(newWebMetadata);
+
+      webMetadata = newWebMetadata;
+    }
 
     const indexWithinParent = await getIndexWithinParent(highlightRect.y);
 
@@ -467,7 +440,12 @@ const Highlight = () => {
         },
       ];
 
-      void postBlock(blockUpdate);
+      void postBlockText(blockUpdate);
+
+      void updateWebMetadataTitleStatus({
+        webUrl: webMetadata.webUrl,
+        status: true,
+      });
     }
   };
 

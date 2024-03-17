@@ -13,9 +13,9 @@ const handler: PlasmoMessaging.MessageHandler<Request, Response> = async (
   await client.note.saveChanges.mutate(req.body);
 };
 
-export async function postBlock(update: Request) {
+export async function postBlockText(update: Request) {
   const res = await sendToBackground<Request, Response>({
-    name: "postBlock",
+    name: "postBlockText",
     body: update,
   });
   return res;

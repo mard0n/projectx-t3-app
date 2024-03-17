@@ -2,20 +2,20 @@ import { sendToBackground, type PlasmoMessaging } from "@plasmohq/messaging";
 import { client } from "..";
 import type { RouterInputs, RouterOutputs } from "~/utils/api";
 
-type Request = RouterInputs["note"]["saveChanges"];
-type Response = RouterOutputs["note"]["saveChanges"];
+type Request = RouterInputs["webMetadata"]["updateTitleStatus"];
+type Response = RouterOutputs["webMetadata"]["updateTitleStatus"];
 
 const handler: PlasmoMessaging.MessageHandler<Request, Response> = async (
   req,
   res,
 ) => {
   if (!req.body) return;
-  await client.note.saveChanges.mutate(req.body);
+  await client.webMetadata.updateTitleStatus.mutate(req.body);
 };
 
-export async function postNote(update: Request) {
+export async function updateWebMetadataTitleStatus(update: Request) {
   const res = await sendToBackground<Request, Response>({
-    name: "postNote",
+    name: "updateWebMetadataTitleStatus",
     body: update,
   });
   return res;

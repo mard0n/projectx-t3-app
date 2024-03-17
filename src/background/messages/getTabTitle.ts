@@ -7,7 +7,7 @@ const handler: PlasmoMessaging.MessageHandler<
   ReqGetCurrentUrl,
   ResGetCurrentUrl
 > = async (req, res) => {
-  const queryOptions = { active: true };
+  const queryOptions = { active: true, currentWindow: true };
   const [tab] = await chrome.tabs.query(queryOptions);
 
   res.send(tab?.title);

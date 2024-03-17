@@ -60,7 +60,19 @@ export const parentIdToNotesRelations = relations(notes, ({ one, many }) => ({
 }));
 
 export const webMetadata = mysqlTable("webMetadata", {
-  webUrl: varchar("webUrl", { length: 1024 }).notNull(),
-  defaultNoteId: varchar("defaultNoteId", { length: 36 }).notNull(),
-  isTitleAdded: boolean('isTitleAdded').default(false).notNull(),
+  webUrl: varchar("webUrl", { length: 512 }).primaryKey(),
+  defaultNoteId: varchar("defaultNoteId", { length: 36 }).references(
+    () => notes.id,
+    { onDelete: "set null" },
+  ),
+  isTitleAdded: boolean("isTitleAdded").default(false).notNull(),
 });
+
+export const webMetadataRelations = relations(webMetadata, ({ one }) => ({
+  defaultNote: one(notes, {
+    fields: [webMetadata.defaultNoteId],
+    references: [notes.id],
+  }),
+}));
+
+export type WebMetadata = typeof webMetadata.$inferSelect;

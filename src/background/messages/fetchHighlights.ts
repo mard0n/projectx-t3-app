@@ -1,25 +1,30 @@
 import { sendToBackground, type PlasmoMessaging } from "@plasmohq/messaging";
 import { clientUtils } from "..";
 import type { RouterInputs, RouterOutputs } from "~/utils/api";
+import { getCurrentUrl } from "./getCurrentUrl";
 
 export type Request = RouterInputs["note"]["fetchHighlights"];
 export type Response = RouterOutputs["note"]["fetchHighlights"];
 
-const handler: PlasmoMessaging.MessageHandler<null, Response> = async (
+const handler: PlasmoMessaging.MessageHandler<Request, Response> = async (
   req,
   res,
 ) => {
-  const [tab] = await chrome.tabs.query({ active: true });
-  const currentUrl = tab?.url;
   const response = await clientUtils.note.fetchHighlights.ensureData({
-    url: currentUrl ?? "",
+    url: req.body?.url ?? "",
   });
   res.send(response);
 };
 
 export async function fetchHighlights() {
+  const currentUrl = await getCurrentUrl();
+  if (!currentUrl) return [];
+
   const res = await sendToBackground<Request, Response>({
     name: "fetchHighlights",
+    body: {
+      url: currentUrl,
+    },
   });
 
   return res;
