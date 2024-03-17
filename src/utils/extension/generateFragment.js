@@ -807,7 +807,6 @@ const GenerateFragmentStatus = {
 // exports.GenerateFragmentStatus = GenerateFragmentStatus;
 // export const generateFragment = (selection, startTime = Date.now()) => {
 export const generateFragment = (range, startTime = Date.now()) => {
-  console.log('range', range);
   try {
     return doGenerateFragment(range, startTime);
   } catch (err) {
@@ -894,7 +893,6 @@ const doGenerateFragment = (range, startTime) => {
   // let range;
   // try {
     // range = selection.getRangeAt(0);
-    console.log('range', range);
   // } catch {
   //   return {
   //     status: GenerateFragmentStatus.INVALID_SELECTION
@@ -1957,7 +1955,6 @@ const expandRangeStartToWordBound = range => {
     // Find the starting text node and offset (since the range may start with a
     // non-text node).
     const startNode = getFirstNodeForBlockSearch(range);
-    console.log('startNode', startNode);
     if (startNode !== range.startContainer) {
       range.setStartBefore(startNode);
     }
@@ -2165,20 +2162,15 @@ const expandToNearestWordBoundaryPointUsingSegments = (segmenter, isRangeEnd, ra
  * @returns {TextNodeLists}
  */
 export const getTextNodesInSameBlock = node => {
-  console.log('node', node);
   const preNodes = [];
   // First, backtraverse to get to a block boundary
   const backWalker = makeWalkerForNode(node);
   if (!backWalker) {
     return;
   }
-  console.log('backWalker', backWalker);
   const finishedSubtrees = new Set();
   let backNode = backwardTraverse(backWalker, finishedSubtrees);
-  console.log('backNode before while', backNode);
-  console.log('isBlock(backNode)', isBlock(backNode));
   while (backNode != null && !isBlock(backNode)) {
-    console.log('backNode', backNode);
     checkTimeout();
     if (backNode.nodeType === Node.TEXT_NODE) {
       preNodes.push(backNode);
