@@ -2,13 +2,12 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import {
   BLOCK_HIGHLIGHT_TYPE,
-  type SerializedBlockHighlightNodeSchema,
+  type SerializedBlockHighlightNode,
 } from "~/nodes/BlockHighlight";
 import { updatedBlocksSchema } from "~/plugins/SendingUpdatesPlugin";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { notes } from "~/server/db/schema";
 import { buildHierarchy } from "~/utils";
-import { type Prettify, type UnwrapArray } from "~/utils/types";
 
 export const noteRouter = createTRPCRouter({
   getAll: publicProcedure.query(async ({ ctx }) => {
@@ -116,6 +115,7 @@ export const noteRouter = createTRPCRouter({
             break;
         }
       }
+      return "success";
     }),
   fetchHighlights: publicProcedure
     .input(z.object({ url: z.string().url() }))
@@ -127,15 +127,16 @@ export const noteRouter = createTRPCRouter({
         ),
       });
 
-      type HighlightBlockObj = UnwrapArray<typeof result>;
-      type HighlightBlockObjWithType = Prettify<
-        Omit<HighlightBlockObj, "type" | "properties"> & {
-          type: typeof BLOCK_HIGHLIGHT_TYPE;
-          properties: z.infer<
-            typeof SerializedBlockHighlightNodeSchema.shape.properties
-          >;
-        }
-      >;
-      return result as HighlightBlockObjWithType[];
+      // type HighlightBlockObj = UnwrapArray<typeof result>;
+      // type HighlightBlockObjWithType = Prettify<
+      //   Omit<HighlightBlockObj, "type" | "properties"> & {
+      //     type: typeof BLOCK_HIGHLIGHT_TYPE;
+      //     properties: z.infer<
+      //       typeof SerializedBlockHighlightNodeSchema.shape.properties
+      //     >;
+      //   }
+      // >;
+      // return result as HighlightBlockObjWithType[];
+      return result as SerializedBlockHighlightNode[];
     }),
 });

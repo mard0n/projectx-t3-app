@@ -1,493 +1,426 @@
+import {
+  QueryClient,
+  QueryClientProvider,
+  useMutation,
+  useQuery,
+} from "@tanstack/react-query";
 import { type PlasmoCSConfig } from "plasmo";
-import { useEffect, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  Fragment,
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import { fetchHighlights } from "~/background/messages/fetchHighlights";
-import { fetchWebMetadata } from "~/background/messages/fetchWebMetadata";
-import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
-import { getTabTitle } from "~/background/messages/getTabTitle";
-import { postBlockText } from "~/background/messages/postBlockText";
-import { postHighlight } from "~/background/messages/postHighlight";
-import { postWebMetadata } from "~/background/messages/postWebMetadata";
-import { updateWebMetadataTitleStatus } from "~/background/messages/updateWebMetadataTitleStatus";
 import {
-  BLOCK_HIGHLIGHT_TYPE,
-  type SerializedBlockHighlightNode,
-} from "~/nodes/BlockHighlight";
-import {
-  BLOCK_TEXT_TYPE,
-  type SerializedBlockTextNode,
-} from "~/nodes/BlockText";
-import { type UpdatedBlock } from "~/plugins/SendingUpdatesPlugin";
-import {
-  checkIfSelectionInsideMainContentArea,
   deserializeSelectionPath,
   getOffsetRectRelativeToBody,
-  getSelectionParams,
   isAnchorBeforeFocus,
 } from "~/utils/extension";
+import {
+  HIGHLIGHT_DATA_ATTRIBUTE,
+  HIGHLIGHT_TAGNAME,
+  createHighlightData,
+  highlight,
+} from "~/utils/extension/highlight";
+import {
+  createHighlightPost,
+  deleteHighlightPost,
+  updateHighlightPost,
+} from "~/background/messages/postHighlight";
+import type { SerializedBlockHighlightNode } from "~/nodes/BlockHighlight";
+
+const queryClient = new QueryClient();
 
 export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
-  exclude_matches: ["https://*.youtube.com/*", "http://localhost:3000/*"],
   all_frames: true,
   run_at: "document_idle",
 };
 
-const HIGHLIGHT_TAGNAME = "PROJECTX-HIGHLIGHT";
-const HIGHLIGHT_DELETE_TAGNAME = "PROJECTX-HIGHLIGHT-DELETE";
-const DATA_HIGHLIGHT_ID = "data-highlight-id";
-const TOOLTIP_WIDTH = 24;
-const TOOLTIP_HEIGHT = 24;
-
-const highlight = (range: Range, highlightId: string) => {
-  const {
-    commonAncestorContainer,
-    startContainer,
-    startOffset,
-    endContainer,
-    endOffset,
-  } = range.cloneRange();
-  function surroundTextWithWrapper(
-    startContainer: Node,
-    startOffset: number,
-    endContainer: Node,
-    endOffset: number,
-    highlightId: string,
-  ) {
-    const wrapper = document.createElement(HIGHLIGHT_TAGNAME);
-    // HACK: couldn't figure out how to add global styles
-    wrapper.style.backgroundColor = "#b2dbff";
-    wrapper.style.cursor = "pointer";
-    wrapper.style.userSelect = "none";
-    wrapper.setAttribute(DATA_HIGHLIGHT_ID, highlightId);
-    const customRange = document.createRange();
-    customRange.setStart(startContainer, startOffset);
-    customRange.setEnd(endContainer, endOffset);
-    customRange.surroundContents(wrapper);
-    window.getSelection()?.removeRange(customRange);
-  }
-
-  function getNextNode(node: Node, container: Node) {
-    if (node.firstChild) {
-      return node.firstChild;
-    }
-
-    while (node) {
-      if (node.nextSibling) {
-        return node.nextSibling;
-      }
-
-      if (node.parentNode) {
-        node = node.parentNode;
-      } else {
-        console.error("no parentNode");
-        break;
-      }
-
-      if (node === container) {
-        break;
-      }
-    }
-
-    return null;
-  }
-
-  let currentNode: Node | Text | null = startContainer;
-
-  if (currentNode === startContainer && currentNode === endContainer) {
-    surroundTextWithWrapper(
-      startContainer,
-      startOffset,
-      endContainer,
-      endOffset,
-      highlightId,
-    );
-    return;
-  }
-
-  while (currentNode) {
-    const nextNodeBeforeWrapperApplied = getNextNode(
-      currentNode,
-      commonAncestorContainer,
-    );
-
-    if (currentNode.nodeType !== Node.TEXT_NODE) {
-      currentNode = nextNodeBeforeWrapperApplied;
-      continue;
-    }
-    const textNode = currentNode as Text;
-
-    if (
-      startContainer.nodeType === Node.TEXT_NODE &&
-      textNode === startContainer
-    ) {
-      surroundTextWithWrapper(
-        startContainer,
-        startOffset,
-        startContainer,
-        (startContainer as Text).length,
-        highlightId,
-      );
-      currentNode = nextNodeBeforeWrapperApplied;
-      continue;
-    }
-
-    if (textNode === endContainer) {
-      surroundTextWithWrapper(
-        endContainer,
-        0,
-        endContainer,
-        endOffset,
-        highlightId,
-      );
-      break;
-    }
-
-    surroundTextWithWrapper(
-      textNode,
-      0,
-      textNode,
-      textNode.length,
-      highlightId,
-    );
-    currentNode = nextNodeBeforeWrapperApplied;
-  }
+type HighlightAndCommentsProps = {
+  highlights: SerializedBlockHighlightNode[];
+  handleHighlightDelete: (highlightId: string) => void;
+  handleCommentTextChange: (highlightId: string, text: string) => void;
 };
 
-export const getIndexWithinParent = async (highlightY: number) => {
-  const highlights = await fetchHighlights();
-  highlights.sort((a, b) => a.indexWithinParent - b.indexWithinParent);
-  const indexOfNextSibling =
-    highlights.find((h) => {
-      return h.properties?.highlightRect?.y >= highlightY;
-    })?.indexWithinParent ?? 0;
-  const indexWithinParent = indexOfNextSibling + 0.001; // TODO: Find a better way to sort
-  return indexWithinParent;
+type HighlightAndCommentsHandle = {
+  addNewHighlightElem: (hl: SerializedBlockHighlightNode) => void;
+  deleteHighlight: (highlightId: string) => void;
 };
 
-const Highlight = () => {
-  const tooltipRef = useRef<HTMLDivElement | null>(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-  const [showTooltip, setShowTooltip] = useState(false);
+const HighlightAndComments = forwardRef<
+  HighlightAndCommentsHandle,
+  HighlightAndCommentsProps
+>(({ highlights, handleHighlightDelete, handleCommentTextChange }, ref) => {
+  const [tooltipToDisplay, setTooltipToDisplay] = useState<string | null>(null);
+  const [commentToDisplay, setCommentToDisplay] = useState<string | null>(null);
+  console.log("commentToDisplay", commentToDisplay);
 
   useEffect(() => {
-    void fetchWebMetadata();
-    fetchHighlights()
-      .then((hls) => {
-        console.log("fetchHighlights hls", hls);
-        hls.forEach((hl) => {
-          if (!hl.properties?.highlightPath) return;
-          const range = deserializeSelectionPath(hl.properties.highlightPath);
-          if (!range) return;
-          highlight(range, hl.id);
-        });
-      })
-      .catch(console.error);
-    // return () => {};
+    highlights.forEach((hl) => {
+      if (!hl.properties?.highlightPath) return;
+      const range = deserializeSelectionPath(hl.properties.highlightPath);
+      console.log("range", range);
+      if (!range) return;
+      highlight(range, hl.id);
+    });
+
+    document.addEventListener("mouseover", (e: Event) => {
+      const target = e.target;
+      if (target instanceof Element && target.tagName === HIGHLIGHT_TAGNAME) {
+        const highlightId = target.getAttribute(HIGHLIGHT_DATA_ATTRIBUTE);
+        highlightId && setTooltipToDisplay(highlightId);
+      }
+    });
+    document.addEventListener("mouseout", () => {
+      setTooltipToDisplay(null);
+    });
   }, []);
 
-  const handleMouseDown = () => {
-    console.log("mousedown");
-    setShowTooltip(false);
-  };
-  const handleSelectionChange = () => {
-    const selection = window.getSelection();
-    if (!selection) return;
+  useImperativeHandle(ref, () => ({
+    addNewHighlightElem(hl: SerializedBlockHighlightNode) {
+      if (!hl.properties?.highlightPath) return;
+      const range = deserializeSelectionPath(hl.properties.highlightPath);
+      console.log("range", range);
+      if (!range) return;
+      highlight(range, hl.id);
+    },
+    deleteHighlight(highlightId: string) {
+      const highlightElems = document.querySelectorAll(
+        `${HIGHLIGHT_TAGNAME}[${HIGHLIGHT_DATA_ATTRIBUTE}="${highlightId}"]`,
+      );
 
-    // All of this just to get the end position of the selection.
-    const focusNode = selection.focusNode;
-    const focusOffset = selection.focusOffset;
-    if (!focusNode || !focusOffset) return;
-    const span = document.createElement("span");
-    const newRange = new Range();
-    newRange.setStart(focusNode, focusOffset);
-    newRange.insertNode(span);
-    const selectionEndPosition = getOffsetRectRelativeToBody(span);
-    focusNode.parentNode?.removeChild(span);
-    focusNode.parentNode?.normalize();
-    selection.removeRange(newRange);
-
-    if (isAnchorBeforeFocus(selection)) {
-      setTooltipPosition({
-        x: selectionEndPosition.x - TOOLTIP_WIDTH / 2,
-        y: selectionEndPosition.y + 1 * TOOLTIP_HEIGHT,
+      highlightElems.forEach((element) => {
+        const parent = element.parentNode;
+        while (element.firstChild) {
+          parent?.insertBefore(element.firstChild, element);
+        }
+        parent?.removeChild(element);
       });
-    } else {
-      setTooltipPosition({
-        x: selectionEndPosition.x - TOOLTIP_WIDTH / 2,
-        y: selectionEndPosition.y - 1.5 * TOOLTIP_HEIGHT,
-      });
-    }
-  };
-  const handleMouseUp = () => {
-    const selection = window.getSelection();
-    if (!selection || selection.isCollapsed) return;
+    },
+  }));
 
-    let isSelectionInsideMainContentArea = false;
-    try {
-      const range = selection.getRangeAt(0);
-      isSelectionInsideMainContentArea =
-        checkIfSelectionInsideMainContentArea(range);
-    } catch (error) {
-      console.log("error", error);
-    }
+  return highlights.map((hl) => {
+    const hlCenter =
+      (hl.properties.highlightRect.left + hl.properties.highlightRect.right) /
+      2;
+    const hlTop = hl.properties.highlightRect.top;
 
-    if (isSelectionInsideMainContentArea) {
-      setShowTooltip(true);
-    }
-  };
-  const handleHighlightClick = (event: MouseEvent) => {
-    // TODO Handle the cases where highlight block and delete btn doesn't alight.
-    // When highlight start from the middle and spans multiple lines
-    const targetEl = event.target;
-    if (!targetEl) return;
+    const commentTop = hl.properties.highlightRect.top;
+    const commentLeft = hl.properties.contextRect.right + 40;
+    console.log("hl.id", hl.id);
 
-    if (targetEl instanceof Element && targetEl.tagName === HIGHLIGHT_TAGNAME) {
-      const highlightId = targetEl.getAttribute(DATA_HIGHLIGHT_ID);
-      if (!highlightId) return;
-      void (async function showHighlightDeleteBtn() {
-        const highlights = await fetchHighlights();
+    // TODO Check if comments on top of each other
 
-        const clickedHighlight = highlights.find(
-          (highlight) => highlight.id === highlightId,
-        );
+    return (
+      <Fragment key={hl.id}>
+        <div
+          style={{
+            position: "absolute",
+            left: hlCenter,
+            top: hlTop,
+            transform: `translate(-50%, -100%)`,
+            display: "flex",
+            gap: "16px",
+            padding: "8px 10px",
+            backgroundColor: "#000000ab",
+            visibility:
+              tooltipToDisplay === null || tooltipToDisplay === hl.id
+                ? "visible"
+                : "hidden", // TODO fix visibility when other elements are shown
+            opacity: tooltipToDisplay === hl.id ? 1 : 0,
+            transitionProperty: "opacity",
+            transitionDelay: !!tooltipToDisplay ? "0s" : "2s",
+          }}
+          onMouseEnter={() => {
+            setTooltipToDisplay(hl.id);
+          }}
+          onMouseOut={() => {
+            setTooltipToDisplay(null);
+          }}
+        >
+          <div
+            style={{
+              width: 16,
+              height: 16,
+              color: "white",
+              cursor: "pointer",
+            }}
+            onClick={() => {
+              handleHighlightDelete(hl.id);
+            }}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-6 w-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+              />
+            </svg>
+          </div>
+          <div
+            style={{
+              width: 16,
+              height: 16,
+              color: "white",
+              cursor: "pointer",
+            }}
+            onClick={() => {
+              setTooltipToDisplay(null);
+              setCommentToDisplay(hl.id);
+            }}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-6 w-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"
+              />
+            </svg>
+          </div>
+        </div>
+        {(hl.properties.commentText || commentToDisplay === hl.id) && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              position: "absolute",
+              top: commentTop,
+              left: commentLeft,
+            }}
+          >
+            {/* <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-6 w-6"
+              style={{ height: 16, width: 16, cursor: 'grab' }}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"
+              />
+            </svg> */}
+            <input
+              value={hl.properties.commentText}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                handleCommentTextChange(
+                  hl.id,
+                  (e.target as HTMLInputElement).value,
+                );
+              }}
+              onBlur={() => {
+                setCommentToDisplay(null);
+              }}
+              autoFocus={commentToDisplay === hl.id}
+            />
+          </div>
+        )}
+      </Fragment>
+    );
+  });
+});
 
-        if (!clickedHighlight) return;
+const Tooltip = ({
+  position,
+  handleTooltipClick,
+}: {
+  position: { x: number; y: number };
+  handleTooltipClick: () => void;
+}) => {
+  return (
+    <div
+      style={{
+        width: "24px",
+        height: "24px",
+        border: "1px solid #333",
+        padding: "3px",
+        borderRadius: "4px",
+        backgroundColor: "white",
+        position: "absolute",
+        top: "0px",
+        left: "0px",
+        cursor: "pointer",
+        transform: `translate(${position.x}px, ${position.y}px)`,
+      }}
+      onMouseDown={handleTooltipClick}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1}
+        stroke="currentColor"
+        className="h-6 w-6"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
+        />
+      </svg>
+    </div>
+  );
+};
 
-        const selectedElem = document.querySelectorAll(
-          `projectx-highlight[${DATA_HIGHLIGHT_ID}="${clickedHighlight.id}"]`,
-        )[0];
-        if (!selectedElem) return;
-
-        const position = getOffsetRectRelativeToBody(selectedElem);
-        if (!position) return;
-
-        // if (!deleteHighlightBtnRef.current) return;
-        const highlightDeleteBtn = document.createElement(
-          HIGHLIGHT_DELETE_TAGNAME,
-        );
-        highlightDeleteBtn.style.width = "18px";
-        highlightDeleteBtn.style.height = "18px";
-        highlightDeleteBtn.style.borderRadius = "10px";
-        highlightDeleteBtn.style.position = "absolute";
-        highlightDeleteBtn.style.top = "0px";
-        highlightDeleteBtn.style.left = "0px";
-        highlightDeleteBtn.style.cursor = "pointer";
-        highlightDeleteBtn.style.border = "1px solid white";
-        highlightDeleteBtn.style.background = "red";
-        highlightDeleteBtn.style.color = "white";
-        highlightDeleteBtn.style.transform = `translate(${position.left - 9}px, ${position.top - 9}px)`;
-        highlightDeleteBtn.setAttribute(DATA_HIGHLIGHT_ID, highlightId);
-        document.body.appendChild(highlightDeleteBtn);
-      })();
-    }
-
-    if (
-      targetEl instanceof Element &&
-      targetEl.tagName === HIGHLIGHT_DELETE_TAGNAME
-    ) {
-      const highlightId = targetEl.getAttribute(DATA_HIGHLIGHT_ID);
-      if (!highlightId) return;
-      void (async function handleHighlightDelete() {
-        if (!highlightId) return;
-        const update: UpdatedBlock = {
-          updateType: "destroyed",
-          updatedBlockId: highlightId,
-          updatedBlock: null,
-        };
-        console.log("update", update);
-
-        void postHighlight([update]);
-
-        const highlightElems = document.querySelectorAll(
-          `projectx-highlight[${DATA_HIGHLIGHT_ID}="${highlightId}"]`,
-        );
-
-        highlightElems.forEach((element) => {
-          const parent = element.parentNode;
-          while (element.firstChild) {
-            parent?.insertBefore(element.firstChild, element);
-          }
-          parent?.removeChild(element);
-        });
-      })();
-      targetEl.remove();
-    }
-
-    const highlightDeleteBtn = document.querySelector(HIGHLIGHT_DELETE_TAGNAME);
-    if (highlightDeleteBtn) {
-      highlightDeleteBtn.remove();
-    }
-  };
+const NewHighlight = () => {
+  const { data: highlights } = useQuery({
+    queryKey: ["fetchHighlights"],
+    queryFn: fetchHighlights,
+  });
+  const createHighlightQuery = useMutation({
+    mutationFn: (highlight: SerializedBlockHighlightNode) => {
+      highlightRef.current?.addNewHighlightElem(highlight);
+      return createHighlightPost(highlight);
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["fetchHighlights"] }),
+  });
+  const deleteHighlightQuery = useMutation({
+    mutationFn: (highlightId: string) => {
+      highlightRef.current?.deleteHighlight(highlightId);
+      return deleteHighlightPost(highlightId);
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["fetchHighlights"] }),
+  });
+  const updateHighlightQuery = useMutation({
+    mutationFn: (highlight: SerializedBlockHighlightNode) => {
+      return updateHighlightPost(highlight);
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["fetchHighlights"] }),
+  });
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  type HighlightAndCommentsHandle = React.ElementRef<
+    typeof HighlightAndComments
+  >;
+  const highlightRef = useRef<HighlightAndCommentsHandle>(null);
 
   useEffect(() => {
-    document.addEventListener("mousedown", handleMouseDown);
-    document.addEventListener("selectionchange", handleSelectionChange);
-    document.addEventListener("mouseup", handleMouseUp);
-    document.addEventListener("click", handleHighlightClick);
+    console.log("Hello from New Highlight");
+
+    document.addEventListener("mousedown", () => {
+      console.log("mousedown");
+      setShowTooltip(false);
+    });
+    document.addEventListener("selectionchange", () => {
+      console.log("selectionchange");
+
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed) return;
+
+      // All of this just to get the end position of the selection.
+      const focusNode = selection.focusNode;
+      const focusOffset = selection.focusOffset;
+      if (!focusNode || !focusOffset) return;
+      const span = document.createElement("span");
+      const newRange = new Range();
+      newRange.setStart(focusNode, focusOffset);
+      newRange.insertNode(span);
+      const selectionEndPosition = getOffsetRectRelativeToBody(span);
+      focusNode.parentNode?.removeChild(span);
+      focusNode.parentNode?.normalize();
+      selection.removeRange(newRange);
+
+      if (isAnchorBeforeFocus(selection)) {
+        setTooltipPosition({
+          x: selectionEndPosition.x - 24 / 2,
+          y: selectionEndPosition.y + 1 * 24,
+        });
+      } else {
+        setTooltipPosition({
+          x: selectionEndPosition.x - 24 / 2,
+          y: selectionEndPosition.y - 1.5 * 24,
+        });
+      }
+    });
+    document.addEventListener("mouseup", () => {
+      console.log("mouseup");
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed) return;
+
+      setShowTooltip(true);
+    });
     return () => {
-      document.removeEventListener("mousedown", handleMouseDown);
-      document.removeEventListener("selectionchange", handleSelectionChange);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.removeEventListener("click", handleHighlightClick);
+      // document.removeEventListener("mousedown", handleMouseDown);
+      // document.removeEventListener("selectionchange", handleSelectionChange);
+      // document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [tooltipRef.current]);
+  }, []);
+
+  if (!highlights) return <></>;
 
   const handleTooltipClick = async () => {
-    console.log("click tooltip");
-    const selection = window.getSelection();
-    if (!selection) return;
-
-    const currentUrl = await getCurrentUrl();
-    if (!currentUrl) return;
-
-    const highlightId = crypto.randomUUID();
-    const range = selection.getRangeAt(0);
-
-    const {
-      text: highlightText,
-      path: highlightPath,
-      rect: highlightRect,
-    } = getSelectionParams(range);
-
-    if (!highlightPath || !highlightText) return;
-
-    let webMetadata = await fetchWebMetadata();
-    if (!webMetadata) {
-      const defaultNoteId = crypto.randomUUID();
-
-      const newWebMetadata = {
-        webUrl: currentUrl,
-        defaultNoteId: defaultNoteId,
-        isTitleAdded: false,
-      };
-      void postWebMetadata(newWebMetadata);
-
-      webMetadata = newWebMetadata;
-    }
-
-    const indexWithinParent = await getIndexWithinParent(highlightRect.y);
-
-    // TODO: need to figure out ways to sync this data and BlockHighlightParagraph or easier way to create data
-    const data: SerializedBlockHighlightNode = {
-      type: BLOCK_HIGHLIGHT_TYPE,
-      id: highlightId,
-      parentId: webMetadata.defaultNoteId,
-      indexWithinParent: indexWithinParent,
-      open: true,
-      version: 1,
-      childBlocks: [],
-      children: [],
-      format: "",
-      indent: 0,
-      direction: null,
-      webUrl: currentUrl,
-      properties: {
-        highlightText: highlightText,
-        highlightPath: highlightPath,
-        highlightRect: highlightRect,
-      },
-    };
-
-    console.log("data", data);
-
-    const highlightUpdate = [
-      {
-        updateType: "created" as const,
-        updatedBlockId: data.id,
-        updatedBlock: data,
-      },
-    ];
-
-    highlight(range, data.id);
     setShowTooltip(false);
+    const selection = window.getSelection();
+    const range = selection?.getRangeAt(0);
+    if (!range) return;
+    const newHighlightData = await createHighlightData(range);
+    if (!newHighlightData) return;
+    createHighlightQuery.mutate(newHighlightData);
+  };
 
-    void postHighlight(highlightUpdate);
+  const handleHighlightDelete = (highlightId: string) => {
+    deleteHighlightQuery.mutate(highlightId);
+  };
 
-    if (!webMetadata.isTitleAdded) {
-      const content = await getTabTitle();
-      const data: SerializedBlockTextNode = {
-        type: BLOCK_TEXT_TYPE,
-        id: crypto.randomUUID(),
-        parentId: webMetadata.defaultNoteId,
-        indexWithinParent: 0,
-        open: true,
-        version: 1,
-        childBlocks: [],
-        children: [],
-        format: "",
-        indent: 0,
-        direction: null,
-        webUrl: null,
-        properties: {
-          tag: "h1",
-          content: JSON.stringify({
-            detail: 0,
-            format: 0,
-            mode: 0,
-            style: "",
-            text: content ?? "",
-            type: "text",
-            version: 1,
-          }),
-        },
-      };
+  const handleCommentTextChange = (highlightId: string, text: string) => {
+    const currentHighlight = highlights.find((hl) => hl.id === highlightId);
+    if (!currentHighlight) return;
+    currentHighlight.properties.commentText = text;
+    console.log("currentHighlight", currentHighlight);
 
-      const blockUpdate = [
-        {
-          updateType: "created" as const,
-          updatedBlockId: data.id,
-          updatedBlock: data,
-        },
-      ];
-
-      void postBlockText(blockUpdate);
-
-      void updateWebMetadataTitleStatus({
-        webUrl: webMetadata.webUrl,
-        status: true,
-      });
-    }
+    updateHighlightQuery.mutate(currentHighlight);
   };
 
   return (
     <>
+      <HighlightAndComments
+        ref={highlightRef}
+        highlights={highlights}
+        handleHighlightDelete={handleHighlightDelete}
+        handleCommentTextChange={handleCommentTextChange}
+      />
       {showTooltip && (
-        <div
-          style={{
-            width: "24px",
-            height: "24px",
-            border: "1px solid #333",
-            padding: "3px",
-            borderRadius: "4px",
-            backgroundColor: "white",
-            position: "absolute",
-            top: "0px",
-            left: "0px",
-            cursor: "pointer",
-            transform: `translate(${tooltipPosition.x}px, ${tooltipPosition.y}px)`,
-          }}
-          onMouseDown={handleTooltipClick}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1}
-            stroke="currentColor"
-            className="h-6 w-6"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
-            />
-          </svg>
-        </div>
+        <Tooltip
+          position={tooltipPosition}
+          handleTooltipClick={handleTooltipClick}
+        />
       )}
-      {/* <button onClick={() => console.log("lastSelection", lastSelection)}>
-        Test selection
-      </button> */}
     </>
   );
 };
-export default Highlight;
+
+const Wrapper = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <NewHighlight />
+    </QueryClientProvider>
+  );
+};
+
+export default Wrapper;

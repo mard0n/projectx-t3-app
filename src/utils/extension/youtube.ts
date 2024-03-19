@@ -52,3 +52,9 @@ export const placeMarkers = (
 
   ytProgressBar?.append(markerElem);
 };
+
+export const isLinkYoutube = (link: string) => {
+  const youtubeRegExp =
+    /^(?:https?:\/\/)?(?:m\.|www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/|watch\?.+&v=))((\w|-){11})(?:\S+)?$/;
+  return !!link.match(youtubeRegExp);
+};

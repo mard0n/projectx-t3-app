@@ -10,7 +10,7 @@ const handler: PlasmoMessaging.MessageHandler<Request, Response> = async (
   req,
   res,
 ) => {
-  const response = await clientUtils.note.fetchHighlights.ensureData({
+  const response = await clientUtils.note.fetchHighlights.fetch({
     url: req.body?.url ?? "",
   });
   res.send(response);

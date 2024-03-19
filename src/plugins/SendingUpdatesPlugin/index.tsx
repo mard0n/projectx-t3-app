@@ -32,9 +32,9 @@ export const updatedBlocksSchema = z.union([
     updateType: z.union([z.literal("created"), z.literal("updated")]),
     updatedBlockId: z.string().uuid(),
     updatedBlock: z.union([
-      SerializedBlockTextNodeSchema,
-      SerializedBlockHighlightNodeSchema,
-      SerializedBlockNoteNodeSchema,
+      SerializedBlockTextNodeSchema.omit({children: true, indent: true, direction: true, format: true}),
+      SerializedBlockHighlightNodeSchema.omit({children: true, indent: true, direction: true, format: true}),
+      SerializedBlockNoteNodeSchema.omit({children: true, indent: true, direction: true, format: true}),
     ]),
   }),
   z.object({

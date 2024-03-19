@@ -14,11 +14,14 @@ import {
 import { $createBlockHighlightContentNode } from "./BlockHighlightContent";
 import { type CustomTheme } from "~/utils/lexical/theme";
 import { addClassNamesToElement } from "@lexical/utils";
-import { $createBlockQuoteDecoratorNode, type BlockQuoteDecoratorNode } from ".";
+import {
+  $createBlockQuoteDecoratorNode,
+  type BlockQuoteDecoratorNode,
+} from ".";
 
 export const BLOCK_HIGHLIGHT_TYPE = "block-highlight" as const;
 
-const HighlightRectSchema = z.object({
+const RectSchema = z.object({
   bottom: z.number(),
   height: z.number(),
   left: z.number(),
@@ -29,7 +32,7 @@ const HighlightRectSchema = z.object({
   y: z.number(),
 });
 
-type HighlightRect = z.infer<typeof HighlightRectSchema>;
+type RectType = z.infer<typeof RectSchema>;
 
 export const SerializedBlockHighlightNodeSchema =
   SerializedBlockContainerNodeSchema.extend({
@@ -37,7 +40,9 @@ export const SerializedBlockHighlightNodeSchema =
     properties: z.object({
       highlightText: z.string(),
       highlightPath: z.string().url().nullable(),
-      highlightRect: HighlightRectSchema,
+      highlightRect: RectSchema,
+      commentText: z.string(),
+      contextRect: RectSchema,
     }),
   });
 
@@ -52,7 +57,9 @@ type HighlightProps = z.infer<
 export class BlockHighlightNode extends BlockContainerNode {
   __highlightText: string;
   __highlightPath: string | null;
-  __highlightRect: HighlightRect;
+  __highlightRect: RectType;
+  __commentText: string;
+  __contextRect: RectType;
 
   constructor({
     open,
@@ -62,10 +69,14 @@ export class BlockHighlightNode extends BlockContainerNode {
     highlightText,
     highlightPath,
     highlightRect,
+    commentText,
+    contextRect,
   }: {
     highlightText: string;
     highlightPath: string | null;
-    highlightRect: HighlightRect;
+    highlightRect: RectType;
+    commentText: string;
+    contextRect: RectType;
     open?: boolean;
     selected?: boolean;
     key?: NodeKey;
@@ -75,6 +86,8 @@ export class BlockHighlightNode extends BlockContainerNode {
     this.__highlightText = highlightText;
     this.__highlightPath = highlightPath;
     this.__highlightRect = highlightRect;
+    this.__commentText = commentText;
+    this.__contextRect = contextRect;
   }
 
   static clone(node: BlockHighlightNode): BlockHighlightNode {
@@ -86,6 +99,8 @@ export class BlockHighlightNode extends BlockContainerNode {
       highlightText: node.__highlightText,
       highlightPath: node.__highlightPath,
       highlightRect: node.__highlightRect,
+      commentText: node.__commentText,
+      contextRect: node.__contextRect,
     });
   }
 
@@ -138,7 +153,9 @@ export class BlockHighlightNode extends BlockContainerNode {
       properties: {
         highlightText: this.getHighlightText(),
         highlightPath: this.getHighlightPath(),
-        highlightRect: this.getHighlightRect(),
+        highlightRect: this.RectType(),
+        commentText: this.getCommentText(),
+        contextRect: this.getContextRect(),
       },
     };
   }
@@ -153,8 +170,14 @@ export class BlockHighlightNode extends BlockContainerNode {
   getHighlightPath(): string | null {
     return this.getLatest().__highlightPath;
   }
-  getHighlightRect(): HighlightRect {
+  RectType(): RectType {
     return this.getLatest().__highlightRect;
+  }
+  getCommentText(): string {
+    return this.getLatest().__commentText;
+  }
+  getContextRect(): RectType {
+    return this.getLatest().__contextRect;
   }
 }
 

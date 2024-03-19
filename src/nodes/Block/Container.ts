@@ -32,7 +32,7 @@ const BaseContainerNodeSchema = SerializedElementNodeSchema.extend({
   type: z.string(),
   id: z.string(),
   open: z.boolean(),
-  parentId: z.string(),
+  parentId: z.string().nullable(),
   indexWithinParent: z.number(),
   properties: z.unknown(),
   webUrl: z.string().url().nullable(),
@@ -63,7 +63,7 @@ export class BlockContainerNode extends ElementNode {
   __open: boolean;
   __id: string;
   __selected: boolean;
-  __webUrl: string;
+  __webUrl: string | null;
 
   constructor({
     open,
@@ -72,17 +72,17 @@ export class BlockContainerNode extends ElementNode {
     selected,
     webUrl,
   }: {
+    webUrl?: string | null;
     open?: boolean;
     selected?: boolean;
     key?: NodeKey;
     id?: string;
-    webUrl?: string;
   } = {}) {
     super(key);
     this.__open = open ?? true;
     this.__id = id ?? crypto.randomUUID();
     this.__selected = selected ?? false;
-    this.__webUrl = webUrl ?? "";
+    this.__webUrl = webUrl ?? null;
   }
 
   static clone(node: BlockContainerNode): BlockContainerNode {
@@ -168,7 +168,7 @@ export class BlockContainerNode extends ElementNode {
     containerNode.append(contentNode, childContainerNode);
     containerNode.setId(serializedNode.id);
     containerNode.setOpen(serializedNode.open);
-    serializedNode.webUrl && containerNode.setWebUrl(serializedNode.webUrl);
+    containerNode.setWebUrl(serializedNode.webUrl);
     return containerNode;
   }
 
@@ -247,11 +247,11 @@ export class BlockContainerNode extends ElementNode {
     this.getWritable().__selected = selected;
   }
 
-  getWebUrl(): string {
+  getWebUrl(): string | null {
     return this.getLatest().__webUrl;
   }
 
-  setWebUrl(webUrl: string) {
+  setWebUrl(webUrl: string | null) {
     this.getWritable().__webUrl = webUrl;
   }
 }
