@@ -26,6 +26,7 @@ import {
   BlockNoteNode,
   SerializedBlockNoteNodeSchema,
 } from "~/nodes/BlockNote";
+import { SerializedBlockRemarkNodeSchema } from "~/nodes/BlockRemark";
 
 export const updatedBlocksSchema = z.union([
   z.object({
@@ -45,6 +46,12 @@ export const updatedBlocksSchema = z.union([
         format: true,
       }),
       SerializedBlockNoteNodeSchema.omit({
+        children: true,
+        indent: true,
+        direction: true,
+        format: true,
+      }),
+      SerializedBlockRemarkNodeSchema.omit({
         children: true,
         indent: true,
         direction: true,

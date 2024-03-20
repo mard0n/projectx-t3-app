@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { fetchWebMetadata } from "~/background/messages/fetchWebMetadata";
 import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
 import { postWebMetadata } from "~/background/messages/postWebMetadata";
@@ -9,6 +10,19 @@ import { getSelectionParams, getIndexWithinParent } from "~/utils/extension";
 
 export const HIGHLIGHT_TAGNAME = "PROJECTX-HIGHLIGHT";
 export const HIGHLIGHT_DATA_ATTRIBUTE = "data-highlight-id";
+
+export const RectSchema = z.object({
+  bottom: z.number(),
+  height: z.number(),
+  left: z.number(),
+  right: z.number(),
+  top: z.number(),
+  width: z.number(),
+  x: z.number(),
+  y: z.number(),
+});
+
+export type RectType = z.infer<typeof RectSchema>;
 
 const surroundTextWithWrapper = (
   startContainer: Node,
@@ -140,20 +154,8 @@ export const createHighlightData = async (range: Range) => {
 
   if (!highlightPath || !highlightText) return;
 
-  let webMetadata = await fetchWebMetadata();
-
-  if (!webMetadata) {
-    const defaultNoteId = crypto.randomUUID();
-
-    const newWebMetadata = {
-      webUrl: currentUrl,
-      defaultNoteId: defaultNoteId,
-      isTitleAdded: false,
-    };
-    void postWebMetadata(newWebMetadata);
-
-    webMetadata = newWebMetadata;
-  }
+  const webMetadata = await fetchWebMetadata();
+  if (!webMetadata) return;
 
   const indexWithinParent = await getIndexWithinParent(highlightRect.y);
 

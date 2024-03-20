@@ -50,7 +50,7 @@ export type SerializedBlockHighlightNode = z.infer<
   typeof SerializedBlockHighlightNodeSchema
 >;
 
-type HighlightProps = z.infer<
+type BlockHighlightProps = z.infer<
   typeof SerializedBlockHighlightNodeSchema.shape.properties
 >;
 
@@ -153,7 +153,7 @@ export class BlockHighlightNode extends BlockContainerNode {
       properties: {
         highlightText: this.getHighlightText(),
         highlightPath: this.getHighlightPath(),
-        highlightRect: this.RectType(),
+        highlightRect: this.getHighlightRect(),
         commentText: this.getCommentText(),
         contextRect: this.getContextRect(),
       },
@@ -170,7 +170,7 @@ export class BlockHighlightNode extends BlockContainerNode {
   getHighlightPath(): string | null {
     return this.getLatest().__highlightPath;
   }
-  RectType(): RectType {
+  getHighlightRect(): RectType {
     return this.getLatest().__highlightRect;
   }
   getCommentText(): string {
@@ -182,7 +182,7 @@ export class BlockHighlightNode extends BlockContainerNode {
 }
 
 export function $createBlockHighlightNode(
-  highlightProps: HighlightProps,
+  highlightProps: BlockHighlightProps,
   contentChildNode?: BlockQuoteDecoratorNode,
   childBlocks?: BlockContainerNode[],
 ): BlockHighlightNode {

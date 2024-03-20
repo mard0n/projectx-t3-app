@@ -2,6 +2,7 @@ import { sendToBackground, type PlasmoMessaging } from "@plasmohq/messaging";
 import { clientUtils } from "..";
 import type { RouterInputs, RouterOutputs } from "~/utils/api";
 import { getCurrentUrl } from "./getCurrentUrl";
+import { postWebMetadata } from "./postWebMetadata";
 
 export type Request = RouterInputs["webMetadata"]["fetchWebMetadata"];
 export type Response = RouterOutputs["webMetadata"]["fetchWebMetadata"];
@@ -27,8 +28,21 @@ export async function fetchWebMetadata() {
       url: currentUrl,
     },
   });
+  let webMetadata = res;
+  if (!webMetadata) {
+    const defaultNoteId = crypto.randomUUID();
 
-  return res;
+    const newWebMetadata = {
+      webUrl: currentUrl,
+      defaultNoteId: defaultNoteId,
+      isTitleAdded: false,
+    };
+    void postWebMetadata(newWebMetadata);
+
+    webMetadata = newWebMetadata;
+  }
+
+  return webMetadata;
 }
 
 export default handler;

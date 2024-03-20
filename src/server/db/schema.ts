@@ -12,10 +12,11 @@ import {
   BLOCK_HIGHLIGHT_TYPE,
   SerializedBlockHighlightNodeSchema,
 } from "~/nodes/BlockHighlight";
+import { BLOCK_NOTE_TYPE } from "~/nodes/BlockNote";
 import {
-  BLOCK_NOTE_TYPE,
-  SerializedBlockNoteNodeSchema,
-} from "~/nodes/BlockNote";
+  BLOCK_REMARK_TYPE,
+  SerializedBlockRemarkNodeSchema,
+} from "~/nodes/BlockRemark";
 import {
   BLOCK_TEXT_TYPE,
   SerializedBlockTextNodeSchema,
@@ -24,7 +25,7 @@ import {
 const propertySchemas = z.union([
   SerializedBlockTextNodeSchema.shape.properties,
   SerializedBlockHighlightNodeSchema.shape.properties,
-  SerializedBlockNoteNodeSchema.shape.properties,
+  SerializedBlockRemarkNodeSchema.shape.properties,
 ]);
 type PropertiesType = z.infer<typeof propertySchemas>;
 
@@ -37,6 +38,7 @@ export const notes = mysqlTable("notes", {
     BLOCK_TEXT_TYPE,
     BLOCK_HIGHLIGHT_TYPE,
     BLOCK_NOTE_TYPE,
+    BLOCK_REMARK_TYPE,
   ]).notNull(),
   indexWithinParent: int("indexWithinParent").notNull(),
   parentId: varchar("parentId", { length: 36 }),

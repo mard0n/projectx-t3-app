@@ -4,6 +4,10 @@ import {
   BLOCK_HIGHLIGHT_TYPE,
   type SerializedBlockHighlightNode,
 } from "~/nodes/BlockHighlight";
+import {
+  BLOCK_REMARK_TYPE,
+  type SerializedBlockRemarkNode,
+} from "~/nodes/BlockRemark";
 import { updatedBlocksSchema } from "~/plugins/SendingUpdatesPlugin";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { notes } from "~/server/db/schema";
@@ -26,7 +30,8 @@ export const noteRouter = createTRPCRouter({
       for (const note of orderedUpdates) {
         const block = note.updatedBlock;
         switch (note.updateType) {
-          case "created" || "updates":
+          case "created":
+          case "updated":
             if (block) {
               await ctx.db
                 .insert(notes)
@@ -84,5 +89,17 @@ export const noteRouter = createTRPCRouter({
       // >;
       // return result as HighlightBlockObjWithType[];
       return result as SerializedBlockHighlightNode[];
+    }),
+  fetchRemarks: publicProcedure
+    .input(z.object({ url: z.string().url() }))
+    .query(async ({ ctx, input }) => {
+      const result = await ctx.db.query.notes.findMany({
+        where: and(
+          eq(notes.type, BLOCK_REMARK_TYPE),
+          eq(notes.webUrl, input.url),
+        ),
+      });
+
+      return result as SerializedBlockRemarkNode[];
     }),
 });

@@ -18,6 +18,10 @@ export const customTheme = {
     container: "block-highlight-container",
     content: "block-highlight-content",
   },
+  blockRemark: {
+    container: "block-remark-container",
+    content: "block-remark-content",
+  },
   text: {
     bold: "textBold",
     italic: "textItalic",
