@@ -20,10 +20,7 @@ const BaseNoteNodeSchema = SerializedElementNodeSchema.extend({
   type: z.literal(BLOCK_NOTE_TYPE),
   id: z.string(),
   indexWithinParent: z.number(),
-  webUrl: z.null(),
-  properties: z.null(),
-  open: z.null(),
-  parentId: z.null(),
+  version: z.number()
 });
 
 export type SerializedBlockNoteNode = Prettify<

@@ -8,6 +8,7 @@ import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { useState } from "react";
 import {
   SendingUpdatesPlugin,
+  type UpdatedBlock,
   type Updates,
 } from "~/plugins/SendingUpdatesPlugin";
 import TreeViewPlugin from "~/plugins/TreeViewPlugin";
@@ -18,7 +19,11 @@ import {
   BlockContentNode,
 } from "~/nodes/Block";
 import { HierarchicalBlockPlugin } from "~/plugins/HierarchicalBlocksPlugin";
-import { BLOCK_NOTE_TYPE, BlockNoteNode } from "~/nodes/BlockNote";
+import {
+  BLOCK_NOTE_TYPE,
+  BlockNoteNode,
+  type SerializedBlockNoteNode,
+} from "~/nodes/BlockNote";
 import {
   BlockTextContentNode,
   BLOCK_TEXT_TYPE,
@@ -50,9 +55,7 @@ export default function Notes() {
     refetchOnWindowFocus: false,
   });
 
-  console.log("notes", notes);
-
-  // const saveChanges = api.note.saveChanges.useMutation();
+  const saveChanges = api.note.saveChanges.useMutation();
 
   if (notes.isLoading) {
     return (
@@ -75,12 +78,22 @@ export default function Notes() {
   }
 
   const handleUpdates = (updates: Updates) => {
-    // const updatedBlocks: UpdatedBlock[] = [];
-    // for (const value of updates.values()) {
-    //   updatedBlocks.push(value);
-    // }
-    // console.log("updates", updates);
-    // saveChanges.mutate(updatedBlocks);
+    const updatedBlocks: UpdatedBlock[] = [];
+    for (const value of updates.values()) {
+      updatedBlocks.push(value);
+    }
+    saveChanges.mutate(updatedBlocks);
+  };
+
+  const note: SerializedBlockNoteNode = {
+    type: BLOCK_NOTE_TYPE,
+    version: 1,
+    id: crypto.randomUUID(),
+    indexWithinParent: 0,
+    children: [],
+    direction: null,
+    format: "",
+    indent: 0,
   };
 
   const blockparagraph: SerializedBlockTextNode = {
@@ -94,7 +107,7 @@ export default function Notes() {
     direction: null,
     format: "",
     indent: 0,
-    webUrl: "",
+    webUrl: null,
     properties: {
       content: "[]",
       tag: "p",
@@ -124,26 +137,8 @@ export default function Notes() {
           ? notes.data
           : [
               {
-                ...blockparagraph,
-                type: BLOCK_NOTE_TYPE,
-                childBlocks: [
-                  {
-                    ...blockparagraph,
-                    properties: { content: "[]", tag: "h1" },
-                  },
-                  {
-                    ...blockparagraph,
-                    properties: { content: "[]", tag: "h2" },
-                  },
-                  {
-                    ...blockparagraph,
-                    properties: { content: "[]", tag: "h3" },
-                  },
-                  {
-                    ...blockparagraph,
-                    properties: { content: "[]", tag: "p" },
-                  },
-                ],
+                ...note,
+                childBlocks: [blockparagraph],
               },
             ],
         direction: null,

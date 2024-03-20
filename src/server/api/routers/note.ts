@@ -24,87 +24,33 @@ export const noteRouter = createTRPCRouter({
       );
 
       for (const note of orderedUpdates) {
+        const block = note.updatedBlock;
         switch (note.updateType) {
-          case "created":
-            if (note.updatedBlock) {
-              const {
-                id,
-                type,
-                indexWithinParent,
-                parentId,
-                open,
-                version,
-                properties,
-                webUrl,
-              } = note.updatedBlock; // TODO: find a better way of detecting unnecessary values
-
+          case "created" || "updates":
+            if (block) {
               await ctx.db
                 .insert(notes)
                 .values({
-                  id,
-                  type,
-                  indexWithinParent,
-                  parentId,
-                  open,
-                  version,
-                  properties,
-                  webUrl,
+                  id: block.id,
+                  type: block.type,
+                  indexWithinParent: block.indexWithinParent,
+                  version: block.version,
+                  parentId: "parentId" in block ? block.parentId : null,
+                  open: "open" in block ? block.open : null,
+                  properties: "properties" in block ? block.properties : null,
+                  webUrl: "webUrl" in block ? block.webUrl : null,
                 })
                 .onDuplicateKeyUpdate({
                   set: {
-                    type,
-                    indexWithinParent,
-                    parentId,
-                    open,
-                    version,
-                    properties,
-                    webUrl,
+                    type: block.type,
+                    indexWithinParent: block.indexWithinParent,
+                    version: block.version,
+                    parentId: "parentId" in block ? block.parentId : null,
+                    open: "open" in block ? block.open : null,
+                    properties: "properties" in block ? block.properties : null,
+                    webUrl: "webUrl" in block ? block.webUrl : null,
                   },
                 });
-            }
-            break;
-          case "updated":
-            if (note.updatedBlock) {
-              const {
-                id,
-                type,
-                indexWithinParent,
-                parentId,
-                open,
-                version,
-                properties,
-                webUrl,
-              } = note.updatedBlock;
-
-              const isDataExist = await ctx.db.query.notes.findFirst({
-                where: eq(notes.id, note.updatedBlockId),
-              });
-
-              if (isDataExist) {
-                await ctx.db
-                  .update(notes)
-                  .set({
-                    type,
-                    indexWithinParent,
-                    parentId,
-                    open,
-                    version,
-                    properties,
-                    webUrl,
-                  })
-                  .where(eq(notes.id, note.updatedBlockId));
-              } else {
-                await ctx.db.insert(notes).values({
-                  id,
-                  type,
-                  indexWithinParent,
-                  parentId,
-                  open,
-                  version,
-                  properties,
-                  webUrl,
-                });
-              }
             }
             break;
           case "destroyed":

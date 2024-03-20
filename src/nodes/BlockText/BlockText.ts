@@ -106,6 +106,9 @@ export class BlockTextNode extends BlockContainerNode {
       contentChildren,
       containerNodes,
     );
+    container.setId(serializedNode.id);
+    container.setOpen(serializedNode.open);
+    container.setWebUrl(serializedNode.webUrl);
     return container;
   }
 
