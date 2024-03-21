@@ -38,6 +38,11 @@ import {
   BlockQuoteDecoratorNode,
 } from "~/nodes/BlockHighlight";
 import Link from "next/link";
+import {
+  BlockLinkContentNode,
+  BlockLinkDecoratorNode,
+  BlockLinkNode,
+} from "~/nodes/BlockLink";
 
 function onError(error: Error) {
   console.error(error);
@@ -54,6 +59,7 @@ export default function Notes() {
   const notes = api.note.getAll.useQuery(undefined, {
     refetchOnWindowFocus: false,
   });
+  console.log("notes", notes.data);
 
   const saveChanges = api.note.saveChanges.useMutation();
 
@@ -128,6 +134,9 @@ export default function Notes() {
       BlockHighlightNode,
       BlockHighlightContentNode,
       BlockQuoteDecoratorNode,
+      BlockLinkNode,
+      BlockLinkContentNode,
+      BlockLinkDecoratorNode,
       // AutoLinkNode,
       // LinkNode,
     ],

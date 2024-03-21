@@ -18,6 +18,10 @@ export const customTheme = {
     container: "block-highlight-container",
     content: "block-highlight-content",
   },
+  blockLink: {
+    container: "block-link-container",
+    content: "block-link-content",
+  },
   blockRemark: {
     container: "block-remark-container",
     content: "block-remark-content",

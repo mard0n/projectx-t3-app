@@ -1,9 +1,13 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
   BLOCK_HIGHLIGHT_TYPE,
   type SerializedBlockHighlightNode,
 } from "~/nodes/BlockHighlight";
+import {
+  BLOCK_LINK_TYPE,
+  type SerializedBlockLinkNode,
+} from "~/nodes/BlockLink";
 import {
   BLOCK_REMARK_TYPE,
   type SerializedBlockRemarkNode,
@@ -101,5 +105,21 @@ export const noteRouter = createTRPCRouter({
       });
 
       return result as SerializedBlockRemarkNode[];
+    }),
+  fetchBookmarks: publicProcedure
+    .input(z.object({ url: z.string().url() }))
+    .query(async ({ ctx, input }) => {
+      const result = await ctx.db
+        .select()
+        .from(notes)
+        .where(
+          and(
+            eq(notes.type, BLOCK_LINK_TYPE),
+            eq(notes.webUrl, input.url),
+            sql`JSON_EXTRACT(properties, '$.linkType') = 'block-link-bookmark'`,
+          ),
+        );
+
+      return result as SerializedBlockLinkNode[];
     }),
 });
