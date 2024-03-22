@@ -4,9 +4,10 @@ import {
   processTextFragmentDirective,
 } from "./generateFragment.js";
 import TurndownService from "turndown";
+import { fetchHighlights } from "~/background/messages/fetchHighlights";
 
 export function serializeSelectionPath(range: Range) {
-  const result: {
+  const result = generateFragment(range) as {
     status: number;
     fragment: {
       textStart: string;
@@ -14,7 +15,7 @@ export function serializeSelectionPath(range: Range) {
       suffix?: string;
       prefix?: string;
     };
-  } = generateFragment(range);
+  };
   console.log("result", result);
   let url = `${location.origin}${location.pathname}${location.search}`;
   if (result?.status === 0) {
@@ -192,3 +193,14 @@ export function getSelectionParams(range: Range): {
 
   return { text, path, rect };
 }
+
+export const getIndexWithinParent = async (highlightY: number) => {
+  const highlights = await fetchHighlights();
+  highlights.sort((a, b) => a.indexWithinParent - b.indexWithinParent);
+  const indexOfNextSibling =
+    highlights.find((h) => {
+      return h.properties?.highlightRect?.y >= highlightY;
+    })?.indexWithinParent ?? 0;
+  const indexWithinParent = indexOfNextSibling + 0.001; // TODO: Find a better way to sort
+  return indexWithinParent;
+};

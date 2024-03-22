@@ -122,4 +122,20 @@ export const noteRouter = createTRPCRouter({
 
       return result as SerializedBlockLinkNode[];
     }),
+  fetchYoutube: publicProcedure
+    .input(z.object({ url: z.string().url() }))
+    .query(async ({ ctx, input }) => {
+      const result = await ctx.db
+        .select()
+        .from(notes)
+        .where(
+          and(
+            eq(notes.type, BLOCK_LINK_TYPE),
+            eq(notes.webUrl, input.url),
+            sql`JSON_EXTRACT(properties, '$.linkType') = 'block-link-youtube'`,
+          ),
+        );
+
+      return result as SerializedBlockLinkNode[];
+    }),
 });

@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { fetchWebMetadata } from "~/background/messages/fetchWebMetadata";
 import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
-import { postWebMetadata } from "~/background/messages/postWebMetadata";
 import {
   BLOCK_HIGHLIGHT_TYPE,
   type SerializedBlockHighlightNode,
