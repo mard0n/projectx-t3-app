@@ -44,8 +44,9 @@ import {
   IconButton,
   Textarea,
   CssVarsProvider,
+  Box,
 } from "@mui/joy";
-import { Highlighter, MessageSquare, Trash } from "lucide-react";
+import { GripVertical, Highlighter, MessageSquare, Trash } from "lucide-react";
 
 const queryClient = new QueryClient();
 const storage = new Storage();
@@ -191,7 +192,7 @@ const NewHighlight = () => {
     setActiveHighlight(null);
   };
 
-  const handleCommentTextChange = (
+  const handleCommentChange = (
     highlightId: string,
     text: string,
     rect: RectType,
@@ -216,7 +217,7 @@ const NewHighlight = () => {
         highlights={highlights}
         commentBeingEdited={commentBeingEdited}
         setCommentBeingEdited={setCommentBeingEdited}
-        handleCommentTextChange={handleCommentTextChange}
+        handleCommentChange={handleCommentChange}
       />
       {activeHighlight && (
         <HighlightTooltip
@@ -301,12 +302,12 @@ const Highlights = forwardRef<HighlightsHandle, HighlightsProps>(
 const Comments = ({
   highlights,
   commentBeingEdited,
-  handleCommentTextChange,
+  handleCommentChange,
   setCommentBeingEdited,
 }: {
   highlights: HighlightType[];
   commentBeingEdited: string | null;
-  handleCommentTextChange: (
+  handleCommentChange: (
     highlightId: string,
     text: string,
     rect: RectType,
@@ -319,7 +320,7 @@ const Comments = ({
         key={highlight.id}
         isEditing
         highlight={highlight}
-        handleCommentTextChange={handleCommentTextChange}
+        handleCommentChange={handleCommentChange}
         setCommentBeingEdited={setCommentBeingEdited}
       />
     ) : highlight.properties.commentText ? (
@@ -327,7 +328,7 @@ const Comments = ({
         key={highlight.id}
         isEditing={false}
         highlight={highlight}
-        handleCommentTextChange={() => null}
+        handleCommentChange={handleCommentChange}
         setCommentBeingEdited={setCommentBeingEdited}
       />
     ) : null;
@@ -337,12 +338,12 @@ const Comments = ({
 const Comment = ({
   isEditing,
   highlight,
-  handleCommentTextChange,
+  handleCommentChange,
   setCommentBeingEdited,
 }: {
   isEditing: boolean;
   highlight: HighlightType;
-  handleCommentTextChange: (
+  handleCommentChange: (
     highlightId: string,
     text: string,
     rect: RectType,
@@ -350,6 +351,14 @@ const Comment = ({
   setCommentBeingEdited: Dispatch<SetStateAction<string | null>>;
 }) => {
   const textarea = useRef<ElementRef<typeof Textarea>>(null);
+  const formRef = useRef<ElementRef<typeof FormControl>>(null);
+  const isDragging = useRef(false);
+  const commentPositionLeft = useRef(highlight.properties.commentRect.left);
+  const commentPositionTop = useRef(highlight.properties.commentRect.top);
+
+  const [commentText, setCommentText] = useState(
+    highlight.properties.commentText,
+  );
 
   useEffect(() => {
     isEditing &&
@@ -357,24 +366,58 @@ const Comment = ({
       textarea.current.querySelector("textarea")?.focus();
   }, [isEditing, textarea.current]);
 
-  const [commentText, setCommentText] = useState(
-    highlight.properties.commentText,
-  );
-  const left = highlight.properties.commentRect.left;
-  const top = highlight.properties.commentRect.top;
+  useEffect(() => {
+    document.addEventListener("mousemove", (e) => {
+      if (isDragging.current && formRef.current) {
+        commentPositionLeft.current = commentPositionLeft.current + e.movementX;
+        commentPositionTop.current = commentPositionTop.current + e.movementY;
+        formRef.current.style.left = commentPositionLeft.current + "px";
+        formRef.current.style.top = commentPositionTop.current + "px";
+      }
+    });
+    document.addEventListener("mouseup", () => {
+      isDragging.current = false;
+      if (formRef.current) {
+        handleCommentChange(
+          highlight.id,
+          commentText,
+          formRef.current.getBoundingClientRect(),
+        );
+      }
+    });
+
+    return () => {};
+  }, []);
 
   return (
     <FormControl
+      ref={formRef}
       key={highlight.id}
+      orientation="horizontal"
       sx={{
         position: "absolute",
-        top,
-        left,
+        top: commentPositionTop.current,
+        left: commentPositionLeft.current,
         zIndex: isEditing ? 1000 : 100,
+        alignItems: "flex-start",
+        "&:hover #comment-drag": {
+          visibility: "visible",
+        },
       }}
     >
-      {/* <FormControl sx={{ position: "absolute", top, left }}> */}
-      {/* <FormLabel>Your comment</FormLabel> */}
+      <Box
+        id="comment-drag"
+        sx={{
+          visibility: "hidden",
+          cursor: "grab",
+          "&:active": { cursor: "grabbing" },
+        }}
+        onMouseDown={() => {
+          isDragging.current = true;
+        }}
+      >
+        <GripVertical />
+      </Box>
       <Textarea
         ref={textarea}
         placeholder="Add a comment..."
@@ -382,18 +425,21 @@ const Comment = ({
         minRows={1}
         maxRows={5}
         value={commentText}
-        sx={{ width: 300 }}
+        sx={{
+          width: 300,
+          marginTop: "calc(var(--Textarea-paddingBlock) * -1)",
+        }}
         onChange={(e) => {
           if (isEditing) {
             setCommentText(e.target.value);
           }
         }}
         onBlur={() => {
-          if (textarea.current) {
-            handleCommentTextChange(
+          if (formRef.current) {
+            handleCommentChange(
               highlight.id,
               commentText,
-              textarea.current.getBoundingClientRect(),
+              formRef.current.getBoundingClientRect(),
             );
             setCommentBeingEdited(null);
           }
