@@ -141,8 +141,9 @@ const NewHighlight = () => {
       newRange.setStart(focusNode, focusOffset);
       newRange.insertNode(span);
       const selectionEndPosition = getOffsetRectRelativeToBody(span);
-      focusNode.parentNode?.removeChild(span);
-      focusNode.parentNode?.normalize();
+      const parentNode = span.parentNode;
+      parentNode?.removeChild(span);
+      parentNode?.normalize();
       selection.removeRange(newRange);
 
       if (isAnchorBeforeFocus(selection)) {
