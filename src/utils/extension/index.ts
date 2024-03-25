@@ -5,6 +5,7 @@ import {
 } from "./generateFragment.js";
 import TurndownService from "turndown";
 import { fetchHighlights } from "~/background/messages/fetchHighlights";
+import { type RectType } from "./highlight.js";
 
 export function serializeSelectionPath(range: Range) {
   const result = generateFragment(range) as {
@@ -83,8 +84,13 @@ export function deserializeSelectionPath(path: string): Range | null {
   return foundFragments?.length ? foundFragments[0]! : null;
 }
 
-export function getOffsetRectRelativeToBody(el: Element): DOMRect {
-  const rect = el.getBoundingClientRect();
+export function getOffsetRectRelativeToBody(
+  target: Element | DOMRect,
+): RectType {
+  console.log("target", target);
+
+  const rect =
+    target instanceof Element ? target.getBoundingClientRect() : target;
 
   // add window scroll position to get the offset position
   const left = rect.left + window.scrollX;
@@ -110,7 +116,6 @@ export function getOffsetRectRelativeToBody(el: Element): DOMRect {
     y,
     width,
     height,
-    toJSON: () => Object,
   };
 }
 
@@ -181,13 +186,14 @@ export const checkIfSelectionInsideMainContentArea = (range: Range) => {
 export function getSelectionParams(range: Range): {
   text: string;
   path: string;
-  rect: DOMRect;
+  rect: RectType;
 } {
   const turndownService = new TurndownService();
   const html = range.cloneContents();
   const text = turndownService.turndown(html);
   const path = serializeSelectionPath(range);
-  const rect = range.getBoundingClientRect();
+
+  const rect = getOffsetRectRelativeToBody(range.getBoundingClientRect());
 
   return { text, path, rect };
 }

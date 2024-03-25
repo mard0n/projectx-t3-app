@@ -439,7 +439,9 @@ const Comment = ({
             handleCommentChange(
               highlight.id,
               commentText,
-              formRef.current.getBoundingClientRect(),
+              getOffsetRectRelativeToBody(
+                formRef.current.getBoundingClientRect(),
+              ),
             );
             setCommentBeingEdited(null);
           }

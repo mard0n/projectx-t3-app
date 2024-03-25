@@ -5,7 +5,11 @@ import {
   BLOCK_HIGHLIGHT_TYPE,
   type SerializedBlockHighlightNode,
 } from "~/nodes/BlockHighlight";
-import { getSelectionParams, getIndexWithinParent } from "~/utils/extension";
+import {
+  getSelectionParams,
+  getIndexWithinParent,
+  getOffsetRectRelativeToBody,
+} from "~/utils/extension";
 
 export const HIGHLIGHT_TAGNAME = "PROJECTX-HIGHLIGHT";
 export const HIGHLIGHT_DATA_ATTRIBUTE = "data-highlight-id";
@@ -164,7 +168,9 @@ export const createHighlightData = async (
   const contextRange = getSelectionContextRange(range);
   let contextRect;
   if (contextRange) {
-    contextRect = contextRange.getBoundingClientRect();
+    contextRect = getOffsetRectRelativeToBody(
+      contextRange.getBoundingClientRect(),
+    );
   }
 
   let commentRect: RectType = {
