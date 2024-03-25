@@ -139,7 +139,10 @@ export const applyHighlightText = (range: Range, highlightId: string) => {
   }
 };
 
-export const createHighlightData = async (range: Range) => {
+export const createHighlightData = async (
+  range: Range,
+  highlights?: SerializedBlockHighlightNode[],
+) => {
   const currentUrl = await getCurrentUrl();
   if (!currentUrl) return;
 
@@ -164,6 +167,46 @@ export const createHighlightData = async (range: Range) => {
     contextRect = contextRange.getBoundingClientRect();
   }
 
+  let commentRect: RectType = {
+    top: highlightRect.top,
+    left: highlightRect.right + 20,
+    bottom: highlightRect.top,
+    height: 0,
+    right: highlightRect.right + 20 + 300,
+    width: 300,
+    x: highlightRect.right + 20,
+    y: highlightRect.top,
+  };
+  if (contextRect && highlightRect) {
+    commentRect = {
+      top: highlightRect.top,
+      left: contextRect.right + 20,
+      bottom: highlightRect.top,
+      height: 0,
+      right: contextRect.right + 20 + 300,
+      width: 300,
+      x: contextRect.right + 20,
+      y: highlightRect.top,
+    };
+  }
+
+  const isOverlapOtherComments = highlights?.some((hl) => {
+    const hlTop = hl.properties.commentRect.top;
+    const hlBottom = hl.properties.commentRect.bottom;
+
+    if (!hl.properties.commentText) return false;
+    if (hl.id === highlightId) return false;
+
+    if (hlTop <= commentRect.top && commentRect.top <= hlBottom) {
+      return true;
+    }
+  });
+
+  if (isOverlapOtherComments) {
+    commentRect.left = commentRect.left + 20;
+    commentRect.top = commentRect.top + 20;
+  }
+
   // TODO: need to figure out ways to sync this data and BlockHighlightParagraph or easier way to create data
   const newHighlight: SerializedBlockHighlightNode = {
     type: BLOCK_HIGHLIGHT_TYPE,
@@ -183,6 +226,7 @@ export const createHighlightData = async (range: Range) => {
       highlightPath: highlightPath,
       highlightRect: highlightRect,
       commentText: "",
+      commentRect: commentRect,
       contextRect: contextRect ?? highlightRect,
     },
   };

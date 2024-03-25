@@ -25,6 +25,7 @@ import {
 import {
   HIGHLIGHT_DATA_ATTRIBUTE,
   HIGHLIGHT_TAGNAME,
+  type RectType,
   activateHighlight,
   applyHighlightText,
   createHighlightData,
@@ -100,7 +101,7 @@ const NewHighlight = () => {
     const selection = window.getSelection();
     const range = selection?.getRangeAt(0);
     if (!range) return;
-    const newHighlightData = await createHighlightData(range);
+    const newHighlightData = await createHighlightData(range, highlights);
     if (!newHighlightData) return;
     createHighlightQuery.mutate(newHighlightData);
   };
@@ -190,10 +191,15 @@ const NewHighlight = () => {
     setActiveHighlight(null);
   };
 
-  const handleCommentTextChange = (highlightId: string, text: string) => {
+  const handleCommentTextChange = (
+    highlightId: string,
+    text: string,
+    rect: RectType,
+  ) => {
     const currentHighlight = highlights.find((hl) => hl.id === highlightId);
     if (!currentHighlight) return;
     currentHighlight.properties.commentText = text;
+    currentHighlight.properties.commentRect = rect;
     console.log("currentHighlight", currentHighlight);
 
     updateHighlightQuery.mutate(currentHighlight);
@@ -300,7 +306,11 @@ const Comments = ({
 }: {
   highlights: HighlightType[];
   commentBeingEdited: string | null;
-  handleCommentTextChange: (highlightId: string, text: string) => void;
+  handleCommentTextChange: (
+    highlightId: string,
+    text: string,
+    rect: RectType,
+  ) => void;
   setCommentBeingEdited: Dispatch<SetStateAction<string | null>>;
 }) => {
   return highlights.map((highlight) => {
@@ -332,7 +342,11 @@ const Comment = ({
 }: {
   isEditing: boolean;
   highlight: HighlightType;
-  handleCommentTextChange: (highlightId: string, text: string) => void;
+  handleCommentTextChange: (
+    highlightId: string,
+    text: string,
+    rect: RectType,
+  ) => void;
   setCommentBeingEdited: Dispatch<SetStateAction<string | null>>;
 }) => {
   const textarea = useRef<ElementRef<typeof Textarea>>(null);
@@ -346,30 +360,43 @@ const Comment = ({
   const [commentText, setCommentText] = useState(
     highlight.properties.commentText,
   );
-  const left = highlight.properties.contextRect.right + 20;
-  const top = highlight.properties.highlightRect.top;
+  const left = highlight.properties.commentRect.left;
+  const top = highlight.properties.commentRect.top;
 
   return (
-    <FormControl key={highlight.id} sx={{ position: "absolute", top, left }}>
+    <FormControl
+      key={highlight.id}
+      sx={{
+        position: "absolute",
+        top,
+        left,
+        zIndex: isEditing ? 1000 : 100,
+      }}
+    >
       {/* <FormControl sx={{ position: "absolute", top, left }}> */}
       {/* <FormLabel>Your comment</FormLabel> */}
       <Textarea
         ref={textarea}
         placeholder="Add a comment..."
         variant={isEditing ? "soft" : "plain"}
-        minRows={3}
-        sx={{
-          minWidth: 300,
-        }}
+        minRows={1}
+        maxRows={5}
         value={commentText}
+        sx={{ width: 300 }}
         onChange={(e) => {
           if (isEditing) {
             setCommentText(e.target.value);
           }
         }}
         onBlur={() => {
-          handleCommentTextChange(highlight.id, commentText);
-          setCommentBeingEdited(null);
+          if (textarea.current) {
+            handleCommentTextChange(
+              highlight.id,
+              commentText,
+              textarea.current.getBoundingClientRect(),
+            );
+            setCommentBeingEdited(null);
+          }
         }}
         onFocus={() => setCommentBeingEdited(highlight.id)}
       />
