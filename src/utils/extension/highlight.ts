@@ -32,7 +32,7 @@ const surroundTextWithWrapper = (
 ) => {
   const wrapper = document.createElement(HIGHLIGHT_TAGNAME);
   // HACK: couldn't figure out how to add global styles
-  wrapper.style.backgroundColor = "#b2dbff";
+  wrapper.style.backgroundColor = "hsl(208.05deg 100% 84.9%)";
   wrapper.style.cursor = "pointer";
   wrapper.style.userSelect = "none";
   wrapper.setAttribute(HIGHLIGHT_DATA_ATTRIBUTE, highlightId);
@@ -43,7 +43,7 @@ const surroundTextWithWrapper = (
   window.getSelection()?.removeRange(customRange);
 };
 
-export const highlight = (range: Range, highlightId: string) => {
+export const applyHighlightText = (range: Range, highlightId: string) => {
   const {
     commonAncestorContainer,
     startContainer,
@@ -268,3 +268,16 @@ export function getSelectionContextRange(range: Range): Range | null {
 
   return newRange;
 }
+
+export const activateHighlight = (highlightId: string, isActive: boolean) => {
+  const highlightElems = document.querySelectorAll<HTMLElement>(
+    `${HIGHLIGHT_TAGNAME}[${HIGHLIGHT_DATA_ATTRIBUTE}="${highlightId}"]`,
+  );
+  console.log("highlightElems", highlightElems);
+
+  highlightElems.forEach((hlElem) => {
+    hlElem.style.backgroundColor = isActive
+      ? "hsl(208.05deg 100% 75%)"
+      : "hsl(208.05deg 100% 84.9%)";
+  });
+};
