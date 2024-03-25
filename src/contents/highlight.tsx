@@ -321,8 +321,12 @@ const NewHighlight = () => {
   const highlightRef = useRef<HighlightAndCommentsHandle>(null);
 
   useEffect(() => {
-    console.log("Hello from New Highlight");
-
+    listenContentScriptTriggers((type) => {
+      if (type === "highlight") {
+        void handleHighlight();
+      } else if (type === "highlight-comment") {
+      }
+    });
     document.addEventListener("mousedown", () => {
       console.log("mousedown");
       setShowTooltip(false);
@@ -331,7 +335,15 @@ const NewHighlight = () => {
       console.log("selectionchange");
 
       const selection = window.getSelection();
-      if (!selection || selection.isCollapsed) return;
+      if (!selection || selection.isCollapsed) {
+        void (async () => {
+          await storage.set("isTextSelected", false);
+        })();
+        return;
+      }
+      void (async () => {
+        await storage.set("isTextSelected", true);
+      })();
 
       // All of this just to get the end position of the selection.
       const focusNode = selection.focusNode;

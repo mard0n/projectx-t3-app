@@ -119,10 +119,8 @@ export function isAnchorBeforeFocus(selection: Selection) {
   let isAnchorBeforeFocus = true;
   if (selection.anchorNode === selection.focusNode) {
     if (selection.anchorOffset < selection.focusOffset) {
-      console.log("Selection started from left to right");
       isAnchorBeforeFocus = true;
     } else if (selection.anchorOffset > selection.focusOffset) {
-      console.log("Selection started from right to left");
       isAnchorBeforeFocus = false;
     } else {
     }
@@ -203,4 +201,40 @@ export const getIndexWithinParent = async (highlightY: number) => {
     })?.indexWithinParent ?? 0;
   const indexWithinParent = indexOfNextSibling + 0.001; // TODO: Find a better way to sort
   return indexWithinParent;
+};
+
+type CONTENT_SCRIPT_TYPES =
+  | "highlight"
+  | "highlight-comment"
+  | "bookmark"
+  | "remark"
+  | "screenshot"
+  | "youtube-mark"
+  | "youtube-mark-comment";
+
+export const callContentScript = async (type: CONTENT_SCRIPT_TYPES) => {
+  const [tab] = await chrome.tabs.query({
+    active: true,
+    currentWindow: true,
+  });
+  console.log("tab", tab);
+  if (tab?.id) {
+    await chrome.tabs.sendMessage(tab.id, {
+      type,
+    });
+  }
+};
+
+export const listenContentScriptTriggers = (
+  callback: (type: CONTENT_SCRIPT_TYPES) => void,
+) => {
+  chrome.runtime.onMessage.addListener(
+    (msg: { type: CONTENT_SCRIPT_TYPES }) => {
+      console.log("highlight msg", msg);
+      if (msg.type === "highlight") {
+        callback(msg.type);
+      }
+      return true;
+    },
+  );
 };
