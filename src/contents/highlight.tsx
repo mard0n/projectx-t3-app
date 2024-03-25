@@ -405,9 +405,11 @@ const Comment = ({
         }}
         onMouseDown={() => {
           isDragging.current = true;
+          document.body.style.userSelect = "none";
         }}
         onMouseUp={() => {
           isDragging.current = false;
+          document.body.style.removeProperty("user-select");
           if (formRef.current) {
             handleCommentChange(
               highlight.id,
@@ -424,7 +426,7 @@ const Comment = ({
       <Textarea
         ref={textarea}
         placeholder="Add a comment..."
-        variant={isEditing ? "soft" : "plain"}
+        variant={isEditing ? "soft" : "outlined"}
         minRows={1}
         maxRows={5}
         value={commentText}
