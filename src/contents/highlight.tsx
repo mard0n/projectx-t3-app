@@ -376,16 +376,6 @@ const Comment = ({
         formRef.current.style.top = commentPositionTop.current + "px";
       }
     });
-    document.addEventListener("mouseup", () => {
-      isDragging.current = false;
-      if (formRef.current) {
-        handleCommentChange(
-          highlight.id,
-          commentText,
-          formRef.current.getBoundingClientRect(),
-        );
-      }
-    });
 
     return () => {};
   }, []);
@@ -415,6 +405,18 @@ const Comment = ({
         }}
         onMouseDown={() => {
           isDragging.current = true;
+        }}
+        onMouseUp={() => {
+          isDragging.current = false;
+          if (formRef.current) {
+            handleCommentChange(
+              highlight.id,
+              commentText,
+              getOffsetRectRelativeToBody(
+                formRef.current.getBoundingClientRect(),
+              ),
+            );
+          }
         }}
       >
         <GripVertical />
