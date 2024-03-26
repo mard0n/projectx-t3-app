@@ -26,7 +26,7 @@ import {
 const queryClient = new QueryClient();
 
 export const config: PlasmoCSConfig = {
-  matches: ["https://*.youtube.com/*"],
+  matches: ["https://*.youtube.com/watch*"],
   exclude_matches: ["http://localhost:3000/*"],
   all_frames: true,
   run_at: "document_idle",
@@ -119,9 +119,10 @@ const MarkerControl = ({
   deleteMarker: (markerId: string) => void;
 }) => {
   const [isMarkerActive, setIsMarkerActive] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    intervalRef.current = setInterval(() => {
       void (async () => {
         const activeMarker = await getActiveMarker(markers);
 
@@ -131,11 +132,11 @@ const MarkerControl = ({
           setIsMarkerActive(false);
         }
       })();
-    }, 1000);
+    }, 500);
     return () => {
-      clearInterval(interval);
+      intervalRef.current && clearInterval(intervalRef.current);
     };
-  }, [isMarkerActive]);
+  }, [markers]);
 
   const handleMarkerClick = async () => {
     console.log("handleMarkerClick");
