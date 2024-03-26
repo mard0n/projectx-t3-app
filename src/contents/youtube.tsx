@@ -1,3 +1,4 @@
+import { Stack, Tooltip, Typography } from "@mui/joy";
 import {
   QueryClient,
   QueryClientProvider,
@@ -5,11 +6,11 @@ import {
   useQuery,
 } from "@tanstack/react-query";
 import type { PlasmoCSConfig } from "plasmo";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { fetchYoutube } from "~/background/messages/fetchYoutube";
 import { postYoutube } from "~/background/messages/postYoutube";
-import type { SerializedBlockLinkNode } from "~/nodes/BlockLink";
+import type { SerializedBlockLinkNode as MarkerType } from "~/nodes/BlockLink";
 import { getOffsetRectRelativeToBody } from "~/utils/extension";
 import {
   YT_PROGRESS_BAR,
@@ -37,7 +38,7 @@ const Youtube = () => {
     queryFn: fetchYoutube,
   });
   const createYoutubeMarkerQuery = useMutation({
-    mutationFn: (youtubeMarker: SerializedBlockLinkNode) => {
+    mutationFn: (youtubeMarker: MarkerType) => {
       const update = [
         {
           updateType: "created" as const,
@@ -66,7 +67,7 @@ const Youtube = () => {
   });
 
   const [markerBeingCommented, setMarkerBeingCommented] =
-    useState<SerializedBlockLinkNode | null>(null);
+    useState<MarkerType | null>(null);
 
   useEffect(() => {
     // TODO Find a better way to add styles to a page. getStyles not working
@@ -78,7 +79,7 @@ const Youtube = () => {
 
   if (!markers) return;
 
-  const createMarker = (marker: SerializedBlockLinkNode) => {
+  const createMarker = (marker: MarkerType) => {
     createYoutubeMarkerQuery.mutate(marker);
     setMarkerBeingCommented(marker);
   };
@@ -96,14 +97,14 @@ const Youtube = () => {
       {markers?.map((marker) => {
         return <Marker key={marker.id} marker={marker} />;
       })}
-      {markerBeingCommented ? (
+      {/* {markerBeingCommented ? (
         <CommentField
           marker={markerBeingCommented}
           closeTheCommentField={() => {
             setMarkerBeingCommented(null);
           }}
         />
-      ) : null}
+      ) : null} */}
     </>
   );
 };
@@ -113,8 +114,8 @@ const MarkerControl = ({
   createMarker,
   deleteMarker,
 }: {
-  markers: SerializedBlockLinkNode[];
-  createMarker: (marker: SerializedBlockLinkNode) => void;
+  markers: MarkerType[];
+  createMarker: (marker: MarkerType) => void;
   deleteMarker: (markerId: string) => void;
 }) => {
   const [isMarkerActive, setIsMarkerActive] = useState(false);
@@ -157,68 +158,144 @@ const MarkerControl = ({
   if (!targetElem) return;
 
   return createPortal(
-    <div>
+    <>
       {!isMarkerActive ? (
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            alignItems: "center",
-            marginLeft: 12,
-            cursor: "pointer",
-          }}
-          onClick={handleMarkerClick}
-        >
-          <svg
-            width="16"
-            height="12"
-            viewBox="0 0 16 12"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
+        <Stack direction="row" spacing={1}>
+          <Tooltip
+            placement="top"
+            sx={{
+              padding: "5px 8px",
+              marginBottom: "4px !important",
+              borderRadius: 3,
+              backgroundColor: "rgba(45, 45, 45, 0.9)",
+            }}
+            title={
+              <Typography
+                level="title-sm"
+                sx={{
+                  color: "white",
+                  fontSize: 12,
+                  lineHeight: "16px",
+                }}
+              >
+                Mark (⌥ + m)
+              </Typography>
+            }
           >
-            <path
-              d="M0 0.352538L16 0.352539L8 11.6467L0 0.352538Z"
-              fill="#E6E6E6"
-            />
-          </svg>
-          Mark
-        </div>
+            <div
+              style={{
+                cursor: "pointer",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+              onClick={handleMarkerClick}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="36"
+                height="36"
+                viewBox="0 0 36 36"
+                fill="none"
+              >
+                <path d="M8 11L27 11L17.5 26L8 11Z" fill="white" />
+              </svg>
+              Mark
+            </div>
+          </Tooltip>
+          <Tooltip
+            placement="top"
+            sx={{
+              padding: "5px 8px",
+              marginBottom: "4px !important",
+              borderRadius: 3,
+              backgroundColor: "rgba(45, 45, 45, 0.9)",
+            }}
+            title={
+              <Typography
+                level="title-sm"
+                sx={{
+                  color: "white",
+                  fontSize: 12,
+                  lineHeight: "16px",
+                }}
+              >
+                Mark and Comment (⌥ + c)
+              </Typography>
+            }
+          >
+            <div
+              style={{
+                cursor: "pointer",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+              onClick={handleMarkerClick}
+            >
+              <svg
+                width="36"
+                height="36"
+                viewBox="0 0 36 36"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M10 11H25L17.5 18.5L25 26H10V11Z" fill="white" />
+              </svg>
+              Comment
+            </div>
+          </Tooltip>
+        </Stack>
       ) : (
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            alignItems: "center",
-            marginLeft: 12,
-            cursor: "pointer",
+        <Tooltip
+          placement="top"
+          sx={{
+            padding: "5px 8px",
+            marginBottom: "4px !important",
+            borderRadius: 3,
+            backgroundColor: "rgba(45, 45, 45, 0.9)",
           }}
-          onClick={handleMarkerRemove}
+          title={
+            <Typography
+              level="title-sm"
+              sx={{
+                color: "white",
+                fontSize: 12,
+                lineHeight: "16px",
+              }}
+            >
+              Remove
+            </Typography>
+          }
         >
-          <svg
-            width="16"
-            height="12"
-            viewBox="0 0 16 12"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
+          <div
+            style={{
+              cursor: "pointer",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+            onClick={handleMarkerRemove}
           >
-            <path
-              d="M0 0.352538L16 0.352539L8 11.6467L0 0.352538Z"
-              fill="#E6E6E6"
-            />
-          </svg>
-          Remove
-        </div>
+            <svg
+              width="36"
+              height="36"
+              viewBox="0 0 36 36"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M26 11L10 26V11H26Z" fill="white" />
+            </svg>
+            Remove
+          </div>
+        </Tooltip>
       )}
-    </div>,
+    </>,
     targetElem,
   );
 };
 
-const Marker = ({
-  marker,
-}: {
-  marker: SerializedBlockLinkNode;
-}) => {
+const Marker = ({ marker }: { marker: MarkerType }) => {
   const markerTime = extractTimeFromYoutubeLink(marker.properties.linkUrl);
   if (!markerTime) return <></>;
   const markerPosition = getMarkerPosition(markerTime);
@@ -247,14 +324,11 @@ const Marker = ({
   );
 };
 
-
-
-
 const CommentField = ({
   marker,
   closeTheCommentField,
 }: {
-  marker: SerializedBlockLinkNode;
+  marker: MarkerType;
   closeTheCommentField: () => void;
 }) => {
   const progressBarElem = document.querySelector(YT_PROGRESS_BAR);
