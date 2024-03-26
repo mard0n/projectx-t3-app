@@ -13,11 +13,19 @@ const handler: PlasmoMessaging.MessageHandler<
   res.send(tab?.title);
 };
 
-export async function getTabTitle() {
+export async function getTabData() {
+  const title = document.title;
+  const description = document
+    .querySelector('meta[name="description"]')
+    ?.getAttribute("content");
+
+  if (title) {
+    return { title, description: description ?? undefined };
+  }
   const res = await sendToBackground<ReqGetCurrentUrl, ResGetCurrentUrl>({
     name: "getTabTitle",
   });
-  return res;
+  return { title: res };
 }
 
 export default handler;

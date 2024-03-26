@@ -1,5 +1,6 @@
 import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
-import { getTabTitle } from "~/background/messages/getTabTitle";
+import { getTabData } from "~/background/messages/getTabTitle";
+import { uploadImageToAWS } from "~/utils/extension/uploadImageToAWS";
 import {
   BLOCK_LINK_TYPE,
   type SerializedBlockLinkNode,
@@ -17,6 +18,8 @@ export const YT_FULL_LENGTH_TIME =
   "#movie_player .ytp-chrome-bottom .ytp-chrome-controls .ytp-time-duration";
 export const YT_CURRENT_TIME =
   "#movie_player .ytp-chrome-bottom .ytp-chrome-controls .ytp-time-current";
+export const YT_CHAPTER_TITLE =
+  "#movie_player .ytp-chrome-bottom .ytp-chrome-controls .ytp-chapter-title-content";
 
 export const getTimelineInSeconds = (timeline: string) => {
   const parts = timeline?.split(":");
@@ -108,12 +111,50 @@ export const getActiveMarker = async (markers: SerializedBlockLinkNode[]) => {
   return activeMarker;
 };
 
+export const captureCurrentYoutubeFrame = () => {
+  return new Promise<Blob | undefined>((resolve, reject) => {
+    const canvas = document.createElement("canvas");
+    const video = document.querySelector("video");
+    if (!video || !canvas) return;
+    const context = canvas.getContext("2d");
+    canvas.width = video.offsetWidth;
+    canvas.height = video.offsetHeight;
+    context?.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // const cropped = canvas.toDataURL(`image/jpeg`);
+    canvas.toBlob((image) => {
+      if (image) {
+        resolve(image);
+      }
+    });
+  });
+};
+
+export function convertSecondstoTime(sec: number) {
+  if (!sec) return;
+
+  const dateObj = new Date(sec * 1000);
+  const hours = dateObj.getUTCHours();
+  const minutes = dateObj.getUTCMinutes();
+  const seconds = dateObj.getSeconds();
+  const hourStr = hours ? hours.toString().padStart(2, "0") + ":" : "";
+  const minStr = minutes ? minutes.toString().padStart(2, "0") + ":" : "";
+  const secStr = seconds ? seconds.toString().padStart(2, "0") : "";
+
+  const timeString = hourStr + minStr + secStr;
+  return timeString;
+}
 export const createYoutubeMarkData = async () => {
   const currentTime = getCurrentProgressInSec();
   const currentUrl = await getCurrentUrl();
-  const tabTitle = await getTabTitle();
+  const tabData = await getTabData();
+  if (!currentUrl || !tabData.title || !currentTime) return;
+  const chapterText = document.querySelector(YT_CHAPTER_TITLE)?.textContent;
 
-  if (!currentUrl || !tabTitle || !currentTime) return;
+  const linkUrl = `${currentUrl}&t=${currentTime}s`;
+  const linkAlt =
+    chapterText && currentTime
+      ? `${convertSecondstoTime(currentTime)} - ${chapterText}`
+      : linkUrl;
 
   const newYoutubeHighlight: SerializedBlockLinkNode = {
     type: BLOCK_LINK_TYPE,
@@ -125,10 +166,10 @@ export const createYoutubeMarkData = async () => {
     webUrl: currentUrl, // TO get the time/position
     properties: {
       linkType: "block-link-youtube",
-      title: tabTitle,
-      linkUrl: `${currentUrl}&t=${currentTime}s`,
-      linkAlt: currentTime + " - chapter name",
-      // thumbnail: "",
+      title: tabData.title,
+      desc: tabData.description,
+      linkUrl,
+      linkAlt,
     },
     childBlocks: [],
     children: [],

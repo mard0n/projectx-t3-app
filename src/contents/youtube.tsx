@@ -12,6 +12,7 @@ import { fetchYoutube } from "~/background/messages/fetchYoutube";
 import { postYoutube } from "~/background/messages/postYoutube";
 import type { SerializedBlockLinkNode as MarkerType } from "~/nodes/BlockLink";
 import { getOffsetRectRelativeToBody } from "~/utils/extension";
+import { uploadImageToAWS } from "~/utils/extension/uploadImageToAWS";
 import {
   YT_PROGRESS_BAR,
   YT_CHAPTER_CONTAINER,
@@ -19,8 +20,8 @@ import {
   getActiveMarker,
   getMarkerPosition,
   createYoutubeMarkData,
-  getCurrentProgressInSec,
   YT_CONTROLS,
+  captureCurrentYoutubeFrame,
 } from "~/utils/extension/youtube";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,20 @@ const Youtube = () => {
       const update = [
         {
           updateType: "created" as const,
+          updatedBlockId: youtubeMarker.id,
+          updatedBlock: youtubeMarker,
+        },
+      ];
+      return postYoutube(update);
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["fetchYoutubeMarkers"] }),
+  });
+  const updateYoutubeMarkerQuery = useMutation({
+    mutationFn: (youtubeMarker: MarkerType) => {
+      const update = [
+        {
+          updateType: "updated" as const,
           updatedBlockId: youtubeMarker.id,
           updatedBlock: youtubeMarker,
         },
@@ -79,20 +94,36 @@ const Youtube = () => {
 
   if (!markers) return;
 
-  const createMarker = (marker: MarkerType) => {
-    createYoutubeMarkerQuery.mutate(marker);
-    setMarkerBeingCommented(marker);
+  const handleMarkerClick = () => {
+    void (async () => {
+      console.log("handleMarkerClick");
+      const newYoutubeMark = await createYoutubeMarkData();
+      if (!newYoutubeMark) return;
+      createYoutubeMarkerQuery.mutate(newYoutubeMark);
+      const thumbnailImage = await captureCurrentYoutubeFrame();
+      let thumbnailLink;
+      if (thumbnailImage) {
+        thumbnailLink = await uploadImageToAWS(thumbnailImage);
+      }
+      newYoutubeMark.properties.thumbnail = thumbnailLink;
+      updateYoutubeMarkerQuery.mutate(newYoutubeMark);
+    })();
   };
-  const deleteMarker = (markerId: string) => {
-    deleteYoutubeMarkerQuery.mutate(markerId);
+  const handleMarkerRemove = () => {
+    void (async () => {
+      const activeMarker = await getActiveMarker(markers);
+      if (activeMarker) {
+        deleteYoutubeMarkerQuery.mutate(activeMarker.id);
+      }
+    })();
   };
 
   return (
     <>
       <MarkerControl
         markers={markers}
-        createMarker={createMarker}
-        deleteMarker={deleteMarker}
+        handleMarkerClick={handleMarkerClick}
+        handleMarkerRemove={handleMarkerRemove}
       />
       {markers?.map((marker) => {
         return <Marker key={marker.id} marker={marker} />;
@@ -111,12 +142,12 @@ const Youtube = () => {
 
 const MarkerControl = ({
   markers,
-  createMarker,
-  deleteMarker,
+  handleMarkerClick,
+  handleMarkerRemove,
 }: {
   markers: MarkerType[];
-  createMarker: (marker: MarkerType) => void;
-  deleteMarker: (markerId: string) => void;
+  handleMarkerClick: () => void;
+  handleMarkerRemove: () => void;
 }) => {
   const [isMarkerActive, setIsMarkerActive] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -138,21 +169,9 @@ const MarkerControl = ({
     };
   }, [markers]);
 
-  const handleMarkerClick = async () => {
-    console.log("handleMarkerClick");
-    const newYoutubeMark = await createYoutubeMarkData();
-    const currentTime = getCurrentProgressInSec();
-    if (!newYoutubeMark || !currentTime) return;
-    createMarker(newYoutubeMark);
-  };
-
-  const handleMarkerRemove = async () => {
-    console.log("handleMarkerRemove");
-    const activeMarker = await getActiveMarker(markers);
-    console.log("activeMarker", activeMarker);
-    if (activeMarker) {
-      deleteMarker(activeMarker.id);
-    }
+  const handleCommentClick = async () => {
+    console.log("handleCommentClick");
+    void handleMarkerClick();
   };
 
   const targetElem = document.querySelector(YT_CONTROLS);
@@ -221,7 +240,7 @@ const MarkerControl = ({
                   lineHeight: "16px",
                 }}
               >
-                Mark and Comment (⌥ + c)
+                Mark and add a comment (⌥ + c)
               </Typography>
             }
           >
@@ -232,7 +251,7 @@ const MarkerControl = ({
                 justifyContent: "center",
                 alignItems: "center",
               }}
-              onClick={handleMarkerClick}
+              onClick={handleCommentClick}
             >
               <svg
                 width="36"
