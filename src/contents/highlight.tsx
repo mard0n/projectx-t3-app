@@ -114,11 +114,12 @@ const NewHighlight = () => {
       } else if (type === "highlight-comment") {
       }
     });
-    document.addEventListener("mousedown", () => {
+
+    const handleMouseDown = () => {
       // console.log("mousedown");
       setShowTooltip(false);
-    });
-    document.addEventListener("selectionchange", () => {
+    };
+    const handleSelectionChange = () => {
       // console.log("selectionchange");
 
       const selection = window.getSelection();
@@ -157,18 +158,21 @@ const NewHighlight = () => {
           y: selectionEndPosition.y - 1.5 * 24,
         });
       }
-    });
-    document.addEventListener("mouseup", () => {
+    };
+    const handleMouseUp = () => {
       // console.log("mouseup");
       const selection = window.getSelection();
       if (!selection || selection.isCollapsed) return;
 
       setShowTooltip(true);
-    });
+    };
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("selectionchange", handleSelectionChange);
+    document.addEventListener("mouseup", handleMouseUp);
     return () => {
-      // document.removeEventListener("mousedown", handleMouseDown);
-      // document.removeEventListener("selectionchange", handleSelectionChange);
-      // document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("selectionchange", handleSelectionChange);
+      document.removeEventListener("mouseup", handleMouseUp);
     };
   }, []);
 
@@ -258,20 +262,28 @@ const Highlights = forwardRef<HighlightsHandle, HighlightsProps>(
     }, []);
 
     useEffect(() => {
-      document.addEventListener("mouseover", (e) => {
+      const handleMouseover = (e: MouseEvent) => {
         const target = e.target;
         if (target instanceof Element && target.tagName === HIGHLIGHT_TAGNAME) {
           const highlightId = target.getAttribute(HIGHLIGHT_DATA_ATTRIBUTE);
           highlightId && activateHighlight(highlightId, true);
         }
-      });
-      document.addEventListener("mouseout", (e) => {
+      };
+
+      const handleMouseout = (e: MouseEvent) => {
         const target = e.target;
         if (target instanceof Element && target.tagName === HIGHLIGHT_TAGNAME) {
           const highlightId = target.getAttribute(HIGHLIGHT_DATA_ATTRIBUTE);
           highlightId && activateHighlight(highlightId, false);
         }
-      });
+      };
+
+      document.addEventListener("mouseover", handleMouseover);
+      document.addEventListener("mouseout", handleMouseout);
+      return () => {
+        document.removeEventListener("mouseover", handleMouseover);
+        document.removeEventListener("mouseout", handleMouseout);
+      };
     }, []);
 
     useImperativeHandle(ref, () => ({
@@ -368,16 +380,19 @@ const Comment = ({
   }, [isEditing, textarea.current]);
 
   useEffect(() => {
-    document.addEventListener("mousemove", (e) => {
+    const handleMousemove = (e: MouseEvent) => {
       if (isDragging.current && formRef.current) {
         commentPositionLeft.current = commentPositionLeft.current + e.movementX;
         commentPositionTop.current = commentPositionTop.current + e.movementY;
         formRef.current.style.left = commentPositionLeft.current + "px";
         formRef.current.style.top = commentPositionTop.current + "px";
       }
-    });
+    };
+    document.addEventListener("mousemove", handleMousemove);
 
-    return () => {};
+    return () => {
+      document.removeEventListener("mousemove", handleMousemove);
+    };
   }, []);
 
   return (
