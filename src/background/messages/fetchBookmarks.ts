@@ -18,7 +18,7 @@ const handler: PlasmoMessaging.MessageHandler<Request, Response> = async (
 
 export async function fetchBookmarks() {
   const currentUrl = await getCurrentUrl();
-  if (!currentUrl) return [];
+  if (!currentUrl) return;
 
   const res = await sendToBackground<Request, Response>({
     name: "fetchBookmarks",
@@ -26,6 +26,8 @@ export async function fetchBookmarks() {
       url: currentUrl,
     },
   });
+
+  console.log("fetchBookmarks res", res);
 
   return res;
 }

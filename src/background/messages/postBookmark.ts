@@ -10,14 +10,19 @@ const handler: PlasmoMessaging.MessageHandler<Request, Response> = async (
   res,
 ) => {
   if (!req.body) return;
-  await client.note.saveChanges.mutate(req.body);
+  const response = await client.note.saveChanges.mutate(req.body);
+  res.send(response);
 };
 
 export async function postBookmark(update: Request) {
+  console.log("update", update);
+
   const res = await sendToBackground<Request, Response>({
     name: "postBookmark",
     body: update,
   });
+  console.log("res", res);
+
   return res;
 }
 

@@ -120,7 +120,7 @@ export const noteRouter = createTRPCRouter({
           ),
         );
 
-      return result as SerializedBlockLinkNode[];
+      return result[0] as SerializedBlockLinkNode; // TODO find a better solution
     }),
   fetchYoutube: publicProcedure
     .input(z.object({ url: z.string().url() }))
