@@ -103,9 +103,16 @@ export const getActiveMarker = async (markers: SerializedBlockLinkNode[]) => {
     const markerTime = extractTimeFromYoutubeLink(marker.properties.linkUrl);
     if (!markerTime) return false;
 
+    const timelineLength = document.querySelector(YT_PROGRESS_BAR)?.clientWidth;
+    const fullVideoDuration = getVideoDurationInSec();
+    let gracePeriodSec = 5;
+    if (timelineLength && fullVideoDuration) {
+      gracePeriodSec = (fullVideoDuration * 8) / timelineLength;
+    }
+
     return (
-      markerTime - 5 <= currentProgressInSec &&
-      currentProgressInSec <= markerTime + 5
+      markerTime - gracePeriodSec <= currentProgressInSec &&
+      currentProgressInSec <= markerTime + gracePeriodSec
     );
   });
   return activeMarker;
