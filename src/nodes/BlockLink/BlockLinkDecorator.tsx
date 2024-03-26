@@ -17,6 +17,7 @@ export type SerializedBlockLinkDecoratorNode = Spread<
     linkUrl: string;
     linkAlt: string;
     thumbnail?: string;
+    commentText: string;
   },
   SerializedLexicalNode
 >;
@@ -60,6 +61,7 @@ export class BlockLinkDecoratorNode extends DecoratorNode<ReactNode> {
   __linkUrl: string;
   __linkAlt: string;
   __thumbnail?: string;
+  __commentText: string;
 
   constructor({
     title,
@@ -67,6 +69,7 @@ export class BlockLinkDecoratorNode extends DecoratorNode<ReactNode> {
     linkUrl,
     linkAlt,
     thumbnail,
+    commentText,
     key,
   }: {
     title: string;
@@ -74,6 +77,7 @@ export class BlockLinkDecoratorNode extends DecoratorNode<ReactNode> {
     linkUrl: string;
     linkAlt: string;
     thumbnail?: string;
+    commentText: string;
     key?: NodeKey;
   }) {
     super(key);
@@ -82,6 +86,7 @@ export class BlockLinkDecoratorNode extends DecoratorNode<ReactNode> {
     this.__linkUrl = linkUrl;
     this.__linkAlt = linkAlt;
     this.__thumbnail = thumbnail;
+    this.__commentText = commentText;
   }
 
   static getType(): string {
@@ -95,6 +100,7 @@ export class BlockLinkDecoratorNode extends DecoratorNode<ReactNode> {
       linkUrl: node.__linkUrl,
       linkAlt: node.__linkAlt,
       thumbnail: node.__thumbnail,
+      commentText: node.__commentText,
     });
   }
 
@@ -107,6 +113,7 @@ export class BlockLinkDecoratorNode extends DecoratorNode<ReactNode> {
       linkUrl: serializedNode.linkUrl,
       linkAlt: serializedNode.linkAlt,
       thumbnail: serializedNode.thumbnail,
+      commentText: serializedNode.commentText,
     });
     return node;
   }
@@ -119,6 +126,7 @@ export class BlockLinkDecoratorNode extends DecoratorNode<ReactNode> {
       linkUrl: this.getLinkUrl(),
       linkAlt: this.getLinkAlt(),
       thumbnail: this.getThumbnail(),
+      commentText: this.getCommentText(),
       version: 1,
     };
   }
@@ -157,6 +165,9 @@ export class BlockLinkDecoratorNode extends DecoratorNode<ReactNode> {
   getThumbnail(): string | undefined {
     return this.getLatest().__thumbnail;
   }
+  getCommentText(): string {
+    return this.getLatest().__commentText;
+  }
 
   decorate(): ReactNode {
     return (
@@ -180,12 +191,14 @@ export function $createBlockLinkDecoratorNode({
   linkUrl,
   linkAlt,
   thumbnail,
+  commentText,
 }: {
   title: string;
   desc?: string;
   linkUrl: string;
   linkAlt: string;
   thumbnail?: string;
+  commentText: string;
 }): BlockLinkDecoratorNode {
   return new BlockLinkDecoratorNode({
     title,
@@ -193,6 +206,7 @@ export function $createBlockLinkDecoratorNode({
     linkUrl,
     linkAlt,
     thumbnail,
+    commentText,
   });
 }
 

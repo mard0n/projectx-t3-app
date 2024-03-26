@@ -31,6 +31,7 @@ export const SerializedBlockLinkNodeSchema =
       linkUrl: z.string().url(),
       linkAlt: z.string(),
       thumbnail: z.string().url().optional(),
+      commentText: z.string(),
     }),
   });
 
@@ -51,6 +52,7 @@ export class BlockLinkNode extends BlockContainerNode {
   __linkUrl: string;
   __linkAlt: string;
   __thumbnail?: string;
+  __commentText: string;
 
   constructor({
     linkType,
@@ -59,6 +61,7 @@ export class BlockLinkNode extends BlockContainerNode {
     linkUrl,
     linkAlt,
     thumbnail,
+    commentText,
     key,
     id,
     open,
@@ -70,6 +73,7 @@ export class BlockLinkNode extends BlockContainerNode {
     linkUrl: string;
     linkAlt: string;
     thumbnail?: string;
+    commentText: string;
     key?: NodeKey;
     id?: string;
     open?: boolean;
@@ -82,6 +86,7 @@ export class BlockLinkNode extends BlockContainerNode {
     this.__linkUrl = linkUrl;
     this.__linkAlt = linkAlt;
     this.__thumbnail = thumbnail;
+    this.__commentText = commentText;
   }
 
   static clone(node: BlockLinkNode): BlockLinkNode {
@@ -96,6 +101,7 @@ export class BlockLinkNode extends BlockContainerNode {
       linkUrl: node.__linkUrl,
       linkAlt: node.__linkAlt,
       thumbnail: node.__thumbnail,
+      commentText: node.__commentText,
     });
   }
 
@@ -126,6 +132,7 @@ export class BlockLinkNode extends BlockContainerNode {
       linkUrl: serializedNode.properties.linkUrl,
       linkAlt: serializedNode.properties.linkAlt,
       thumbnail: serializedNode.properties.thumbnail,
+      commentText: serializedNode.properties.commentText,
     });
 
     const content = $createBlockContentNode().append(contentDecorator);
@@ -146,6 +153,7 @@ export class BlockLinkNode extends BlockContainerNode {
       linkUrl: serializedNode.properties.linkUrl,
       linkAlt: serializedNode.properties.linkAlt,
       thumbnail: serializedNode.properties.thumbnail,
+      commentText: serializedNode.properties.commentText,
     });
 
     container.append(content, childContainer);
@@ -164,6 +172,7 @@ export class BlockLinkNode extends BlockContainerNode {
         linkUrl: this.getLinkUrl(),
         linkAlt: this.getLinkAlt(),
         thumbnail: this.getThumbnail(),
+        commentText: this.getCommentText(),
       },
     };
   }
@@ -189,6 +198,9 @@ export class BlockLinkNode extends BlockContainerNode {
   }
   getThumbnail(): string | undefined {
     return this.getLatest().__thumbnail;
+  }
+  getCommentText(): string {
+    return this.getLatest().__commentText;
   }
 }
 

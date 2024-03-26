@@ -1,4 +1,14 @@
-import { Stack, Tooltip, Typography } from "@mui/joy";
+import {
+  CssVarsProvider,
+  FormControl,
+  GlobalStyles,
+  Stack,
+  Textarea,
+  Tooltip,
+  Typography,
+  Box,
+  extendTheme,
+} from "@mui/joy";
 import {
   QueryClient,
   QueryClientProvider,
@@ -11,7 +21,6 @@ import { createPortal } from "react-dom";
 import { fetchYoutube } from "~/background/messages/fetchYoutube";
 import { postYoutube } from "~/background/messages/postYoutube";
 import type { SerializedBlockLinkNode as MarkerType } from "~/nodes/BlockLink";
-import { getOffsetRectRelativeToBody } from "~/utils/extension";
 import { uploadImageToAWS } from "~/utils/extension/uploadImageToAWS";
 import {
   YT_PROGRESS_BAR,
@@ -90,13 +99,11 @@ const Youtube = () => {
       .querySelectorAll(YT_CHAPTER_CONTAINER)
       .forEach((node) => ((node as HTMLElement).style.flex = "none"));
   }, []);
-  console.log("markers", markers);
 
   if (!markers) return;
 
   const handleMarkerClick = () => {
     void (async () => {
-      console.log("handleMarkerClick");
       const newYoutubeMark = await createYoutubeMarkData();
       if (!newYoutubeMark) return;
       createYoutubeMarkerQuery.mutate(newYoutubeMark);
@@ -118,24 +125,50 @@ const Youtube = () => {
     })();
   };
 
+  const handleCommentClick = () => {
+    void (async () => {
+      const newYoutubeMark = await createYoutubeMarkData();
+      if (!newYoutubeMark) return;
+      createYoutubeMarkerQuery.mutate(newYoutubeMark);
+
+      setMarkerBeingCommented(newYoutubeMark);
+
+      const thumbnailImage = await captureCurrentYoutubeFrame();
+      let thumbnailLink;
+      if (thumbnailImage) {
+        thumbnailLink = await uploadImageToAWS(thumbnailImage);
+      }
+      newYoutubeMark.properties.thumbnail = thumbnailLink;
+      updateYoutubeMarkerQuery.mutate(newYoutubeMark);
+    })();
+  };
+
+  const handleCommentSave = (markerId: string, text: string) => {
+    setMarkerBeingCommented(null);
+    const marker = markers.find((mrkr) => mrkr.id === markerId);
+
+    if (!marker) return;
+    marker.properties.commentText = text;
+    updateYoutubeMarkerQuery.mutate(marker);
+  };
+
   return (
     <>
       <MarkerControl
         markers={markers}
         handleMarkerClick={handleMarkerClick}
+        handleCommentClick={handleCommentClick}
         handleMarkerRemove={handleMarkerRemove}
       />
       {markers?.map((marker) => {
         return <Marker key={marker.id} marker={marker} />;
       })}
-      {/* {markerBeingCommented ? (
+      {markerBeingCommented ? (
         <CommentField
           marker={markerBeingCommented}
-          closeTheCommentField={() => {
-            setMarkerBeingCommented(null);
-          }}
+          handleCommentSave={handleCommentSave}
         />
-      ) : null} */}
+      ) : null}
     </>
   );
 };
@@ -143,10 +176,12 @@ const Youtube = () => {
 const MarkerControl = ({
   markers,
   handleMarkerClick,
+  handleCommentClick,
   handleMarkerRemove,
 }: {
   markers: MarkerType[];
   handleMarkerClick: () => void;
+  handleCommentClick: () => void;
   handleMarkerRemove: () => void;
 }) => {
   const [isMarkerActive, setIsMarkerActive] = useState(false);
@@ -168,11 +203,6 @@ const MarkerControl = ({
       intervalRef.current && clearInterval(intervalRef.current);
     };
   }, [markers]);
-
-  const handleCommentClick = async () => {
-    console.log("handleCommentClick");
-    void handleMarkerClick();
-  };
 
   const targetElem = document.querySelector(YT_CONTROLS);
   if (!targetElem) return;
@@ -322,79 +352,174 @@ const Marker = ({ marker }: { marker: MarkerType }) => {
   if (!markerPosition) return <></>;
 
   const targetElem = document.querySelector(YT_PROGRESS_BAR);
-  console.log("Marker targetElem", targetElem);
   if (!targetElem) return;
 
   return createPortal(
-    <div
-      style={{
-        position: "absolute",
-        top: "-2.5px",
-        left: markerPosition - 3,
-        height: "6px",
-        width: "6px",
-        borderRadius: "10px",
-        backgroundColor: "rgb(238, 238, 238)",
-        zIndex: "100",
-        border: "2px solid #EB3323",
-        cursor: "pointer",
+    <Tooltip
+      sx={{
+        padding: "5px 8px",
+        marginBottom: "4px !important",
+        borderRadius: 3,
+        backgroundColor: "rgba(45, 45, 45, 0.9)",
+        maxWidth: 300,
       }}
-    />,
+      title={
+        <Typography
+          level="title-sm"
+          sx={{
+            color: "white",
+            fontSize: 12,
+            lineHeight: "16px",
+          }}
+        >
+          {marker.properties.commentText
+            ? marker.properties.commentText
+            : "No comment"}
+        </Typography>
+      }
+    >
+      <Box
+        sx={{
+          position: "absolute",
+          top: "-2.5px",
+          left: markerPosition - 3,
+          height: "6px",
+          width: "6px",
+          borderRadius: "10px",
+          backgroundColor: "rgb(238, 238, 238)",
+          zIndex: "100",
+          border: "2px solid #EB3323",
+          cursor: "pointer",
+        }}
+      />
+    </Tooltip>,
     targetElem,
   );
 };
 
 const CommentField = ({
   marker,
-  closeTheCommentField,
+  handleCommentSave,
 }: {
   marker: MarkerType;
-  closeTheCommentField: () => void;
+  handleCommentSave: (markerId: string, text: string) => void;
 }) => {
-  const progressBarElem = document.querySelector(YT_PROGRESS_BAR);
-  if (!progressBarElem) return;
-  const markerTime = extractTimeFromYoutubeLink(marker.properties.linkUrl);
-  if (!markerTime) return <></>;
-  const markerPosition = getMarkerPosition(markerTime);
-  if (!markerPosition) return;
-  const progressBarPosition = getOffsetRectRelativeToBody(progressBarElem);
+  const [textareaValue, setTextareaValue] = useState("");
+  const youtubeContainer = document.getElementById("container");
+  if (!youtubeContainer) return;
+
   return (
-    <>
-      <div
-        contentEditable
-        style={{
+    <div
+      style={{
+        marginTop: 56,
+        width: "1px",
+        height: "56.25vw",
+        maxHeight: "calc(100vh - 169px)",
+        minHeight: "480px",
+      }}
+    >
+      <FormControl
+        sx={{
           position: "absolute",
-          top: progressBarPosition.top + 10,
-          left: progressBarPosition.left + markerPosition,
-          width: 200,
-          height: 32,
-          backgroundColor: "#00000099",
-          color: "white",
+          left: "50vw",
+          bottom: 60,
+          transform: "translate(-50%, 0px)",
+          zIndex: 100,
+          padding: "8px 12px",
+          width: 300,
         }}
-        onKeyDown={(e) => {
-          e.stopPropagation();
-        }}
-        onKeyUp={(e) => {
-          e.stopPropagation();
-        }}
-        onInput={(e) => {
-          e.stopPropagation();
-        }}
-        onChange={(e) => {
-          e.stopPropagation();
-        }}
-        onBlur={closeTheCommentField}
-      />
-    </>
+      >
+        <Textarea
+          autoFocus
+          size="lg"
+          name="Solid"
+          placeholder="Add your comment..."
+          variant="solid"
+          color="neutral"
+          minRows={3}
+          maxRows={7}
+          value={textareaValue}
+          onChange={(e) => setTextareaValue(e.target.value)}
+          sx={{
+            fontSize: 12,
+            lineHeight: "16px",
+            backgroundColor: "rgba(45, 45, 45, 0.85)",
+            borderRadius: 8,
+            "&:focus-within::before": {
+              boxSizing: "border-box",
+              content: '""',
+              display: "block",
+              position: "absolute",
+              pointerEvents: "none",
+              top: "0",
+              left: "0",
+              right: "0",
+              bottom: "0",
+              zIndex: "1",
+              borderRadius: "inherit",
+              boxShadow: "0px 0px 0px 2px rgba(12,153,255,1)",
+            },
+          }}
+          onBlur={() => {
+            handleCommentSave(marker.id, textareaValue);
+          }}
+        />
+      </FormControl>
+    </div>
   );
 };
+
+import createCache from "@emotion/cache";
+import { CacheProvider } from "@emotion/react";
+
+const styleElement = document.createElement("style");
+
+const styleCache = createCache({
+  key: "plasmo-joyui-cache",
+  prepend: true,
+  container: styleElement,
+});
+
+// Because we are using portals the styles need to be available globally
+export const getRootContainer = () =>
+  new Promise((resolve) => {
+    const checkInterval = setInterval(() => {
+      const rootContainerParent = document.body;
+      if (rootContainerParent) {
+        clearInterval(checkInterval);
+        const rootContainer = document.createElement("div");
+        rootContainerParent.appendChild(styleElement);
+        // rootContainer.setAttribute("id", "project-x-style-container");
+        rootContainerParent.appendChild(rootContainer);
+        resolve(rootContainer);
+      }
+    }, 137);
+  });
 
 const Wrapper = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <Youtube />
+      <CacheProvider value={styleCache}>
+        {/* https://github.com/mui/material-ui/issues/37470 */}
+        <CssVarsProvider
+          theme={extendTheme({ cssVarPrefix: "project-x" })}
+          colorSchemeSelector=":host"
+        >
+          <GlobalStyles
+            styles={{
+              "& .lucide": {
+                color: "var(--Icon-color)",
+                margin: "var(--Icon-margin)",
+                fontSize: "var(--Icon-fontSize, 20px)",
+              },
+            }}
+          />
+          <Youtube />
+        </CssVarsProvider>
+      </CacheProvider>
     </QueryClientProvider>
   );
 };
+
 
 export default Wrapper;

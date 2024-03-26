@@ -170,6 +170,7 @@ export const createYoutubeMarkData = async () => {
       desc: tabData.description,
       linkUrl,
       linkAlt,
+      commentText: "",
     },
     childBlocks: [],
     children: [],
