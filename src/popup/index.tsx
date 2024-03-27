@@ -4,27 +4,12 @@ import ListItem from "@mui/joy/ListItem";
 import ListItemButton from "@mui/joy/ListItemButton";
 import ListItemContent from "@mui/joy/ListItemContent";
 import Link from "@mui/joy/Link";
-import { Card, CardActions, IconButton, ListDivider } from "@mui/joy";
+import { ListDivider } from "@mui/joy";
 import Kbd from "~/components/joyui/Kbd";
 import { Storage } from "@plasmohq/storage";
 import { callContentScript } from "~/utils/extension";
-import { ArrowUpRight, Trash2 } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 const storage = new Storage();
-
-const HighlightTooltip = () => {
-  return (
-    <Card variant="outlined">
-      <CardActions>
-        <IconButton variant="plain">
-          <Trash2 />
-        </IconButton>
-        <IconButton variant="plain">
-          <Trash2 />
-        </IconButton>
-      </CardActions>
-    </Card>
-  );
-};
 
 function IndexPopup() {
   const [isTextSelected, setIsTextSelected] = useState(false);
@@ -124,7 +109,6 @@ function IndexPopup() {
           </ListItemButton>
         </ListItem>
       </List>
-      <HighlightTooltip />
     </>
   );
 }

@@ -42,6 +42,7 @@ export const SerializedBlockHighlightNodeSchema =
       highlightPath: z.string().url().nullable(),
       highlightRect: RectSchema,
       commentText: z.string(),
+      commentRect: RectSchema,
       contextRect: RectSchema,
     }),
   });
@@ -59,6 +60,7 @@ export class BlockHighlightNode extends BlockContainerNode {
   __highlightPath: string | null;
   __highlightRect: RectType;
   __commentText: string;
+  __commentRect: RectType;
   __contextRect: RectType;
 
   constructor({
@@ -70,12 +72,14 @@ export class BlockHighlightNode extends BlockContainerNode {
     highlightPath,
     highlightRect,
     commentText,
+    commentRect,
     contextRect,
   }: {
     highlightText: string;
     highlightPath: string | null;
     highlightRect: RectType;
     commentText: string;
+    commentRect: RectType;
     contextRect: RectType;
     open?: boolean;
     selected?: boolean;
@@ -87,6 +91,7 @@ export class BlockHighlightNode extends BlockContainerNode {
     this.__highlightPath = highlightPath;
     this.__highlightRect = highlightRect;
     this.__commentText = commentText;
+    this.__commentRect = commentRect;
     this.__contextRect = contextRect;
   }
 
@@ -100,6 +105,7 @@ export class BlockHighlightNode extends BlockContainerNode {
       highlightPath: node.__highlightPath,
       highlightRect: node.__highlightRect,
       commentText: node.__commentText,
+      commentRect: node.__commentRect,
       contextRect: node.__contextRect,
     });
   }
@@ -155,6 +161,7 @@ export class BlockHighlightNode extends BlockContainerNode {
         highlightPath: this.getHighlightPath(),
         highlightRect: this.getHighlightRect(),
         commentText: this.getCommentText(),
+        commentRect: this.getCommentRect(),
         contextRect: this.getContextRect(),
       },
     };
@@ -175,6 +182,9 @@ export class BlockHighlightNode extends BlockContainerNode {
   }
   getCommentText(): string {
     return this.getLatest().__commentText;
+  }
+  getCommentRect(): RectType {
+    return this.getLatest().__commentRect;
   }
   getContextRect(): RectType {
     return this.getLatest().__contextRect;

@@ -19,13 +19,13 @@ import {
   updateRemarkPost,
 } from "~/background/messages/postRemark";
 import type { SerializedBlockRemarkNode } from "~/nodes/BlockRemark";
-import type { RectType } from "~/utils/extension/highlight";
 import { createRemarkData } from "~/utils/extension/remark";
 
 const queryClient = new QueryClient();
 
 export const config: PlasmoCSConfig = {
-  matches: ["<all_urls>"],
+  // matches: ["<all_urls>"],
+  matches: ["http://localhost/*"],
   all_frames: true,
   run_at: "document_idle",
 };
