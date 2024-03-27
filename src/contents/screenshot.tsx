@@ -2,7 +2,6 @@
 import { type PlasmoCSConfig } from "plasmo";
 import { useEffect, useRef, useState } from "react";
 import { captureScreenshot } from "~/background/messages/captureScreenshot";
-import { createHighlightPost } from "~/background/messages/postHighlight";
 import { crop } from "~/utils/extension/screenshot";
 import { uploadImageToAWS } from "~/utils/extension/uploadImageToAWS";
 import {
@@ -15,6 +14,7 @@ import { CssVarsProvider, GlobalStyles, Snackbar } from "@mui/joy";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import createCache from "@emotion/cache";
 import { CacheProvider } from "@emotion/react";
+import { postWebAnnotation } from "~/background/messages/postWebAnnotation";
 
 export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
@@ -59,7 +59,11 @@ const Screenshot = () => {
       screenshotDimentions.current,
     );
     if (!screenshotData) return;
-    void createHighlightPost(screenshotData);
+    void postWebAnnotation({
+      updateType: "created",
+      updatedBlockId: screenshotData.id,
+      updatedBlock: screenshotData,
+    });
     setSnackState({ ...snackState, open: true });
   };
 

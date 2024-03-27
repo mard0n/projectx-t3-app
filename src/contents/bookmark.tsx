@@ -11,7 +11,6 @@ import { fetchBookmarks } from "~/background/messages/fetchBookmarks";
 import { fetchWebMetadata } from "~/background/messages/fetchWebMetadata";
 import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
 import { getTabData } from "~/background/messages/getTabTitle";
-import { postBookmark } from "~/background/messages/postBookmark";
 import {
   BLOCK_LINK_TYPE,
   type SerializedBlockLinkNode as BookmarkType,
@@ -26,6 +25,7 @@ import {
 } from "@tanstack/react-query";
 import { useStorage } from "@plasmohq/storage/hook";
 import { listenContentScriptTriggers } from "~/utils/extension";
+import { postWebAnnotation } from "~/background/messages/postWebAnnotation";
 
 export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
@@ -82,14 +82,11 @@ function Bookmark() {
 
   const createfetchBookmarksQuery = useMutation({
     mutationFn: (bookmark: BookmarkType) => {
-      const update = [
-        {
-          updateType: "created" as const,
-          updatedBlockId: bookmark.id,
-          updatedBlock: bookmark,
-        },
-      ];
-      return postBookmark(update);
+      return postWebAnnotation({
+        updateType: "created" as const,
+        updatedBlockId: bookmark.id,
+        updatedBlock: bookmark,
+      });
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["fetchBookmarks"] });
@@ -97,28 +94,22 @@ function Bookmark() {
   });
   const updatefetchBookmarksQuery = useMutation({
     mutationFn: (bookmark: BookmarkType) => {
-      const update = [
-        {
-          updateType: "updated" as const,
-          updatedBlockId: bookmark.id,
-          updatedBlock: bookmark,
-        },
-      ];
-      return postBookmark(update);
+      return postWebAnnotation({
+        updateType: "updated" as const,
+        updatedBlockId: bookmark.id,
+        updatedBlock: bookmark,
+      });
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["fetchBookmarks"] }),
   });
   const deletefetchBookmarksQuery = useMutation({
     mutationFn: (bookmarkId: string) => {
-      const update = [
-        {
-          updateType: "destroyed" as const,
-          updatedBlockId: bookmarkId,
-          updatedBlock: null,
-        },
-      ];
-      return postBookmark(update);
+      return postWebAnnotation({
+        updateType: "destroyed" as const,
+        updatedBlockId: bookmarkId,
+        updatedBlock: null,
+      });
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["fetchBookmarks"] }),

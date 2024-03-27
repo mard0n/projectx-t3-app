@@ -20,7 +20,6 @@ import type { PlasmoCSConfig } from "plasmo";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { fetchYoutube } from "~/background/messages/fetchYoutube";
-import { postYoutube } from "~/background/messages/postYoutube";
 import type { SerializedBlockLinkNode as MarkerType } from "~/nodes/BlockLink";
 import { uploadImageToAWS } from "~/utils/extension/uploadImageToAWS";
 import {
@@ -50,42 +49,33 @@ const Youtube = () => {
   });
   const createYoutubeMarkerQuery = useMutation({
     mutationFn: (youtubeMarker: MarkerType) => {
-      const update = [
-        {
-          updateType: "created" as const,
-          updatedBlockId: youtubeMarker.id,
-          updatedBlock: youtubeMarker,
-        },
-      ];
-      return postYoutube(update);
+      return postWebAnnotation({
+        updateType: "created" as const,
+        updatedBlockId: youtubeMarker.id,
+        updatedBlock: youtubeMarker,
+      });
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["fetchYoutubeMarkers"] }),
   });
   const updateYoutubeMarkerQuery = useMutation({
     mutationFn: (youtubeMarker: MarkerType) => {
-      const update = [
-        {
-          updateType: "updated" as const,
-          updatedBlockId: youtubeMarker.id,
-          updatedBlock: youtubeMarker,
-        },
-      ];
-      return postYoutube(update);
+      return postWebAnnotation({
+        updateType: "updated" as const,
+        updatedBlockId: youtubeMarker.id,
+        updatedBlock: youtubeMarker,
+      });
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["fetchYoutubeMarkers"] }),
   });
   const deleteYoutubeMarkerQuery = useMutation({
     mutationFn: (youtubeMarkerId: string) => {
-      const update = [
-        {
-          updateType: "destroyed" as const,
-          updatedBlockId: youtubeMarkerId,
-          updatedBlock: null,
-        },
-      ];
-      return postYoutube(update);
+      return postWebAnnotation({
+        updateType: "destroyed" as const,
+        updatedBlockId: youtubeMarkerId,
+        updatedBlock: null,
+      });
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["fetchYoutubeMarkers"] }),
@@ -508,6 +498,7 @@ import createCache from "@emotion/cache";
 import { CacheProvider } from "@emotion/react";
 import { useStorage } from "@plasmohq/storage/hook";
 import { listenContentScriptTriggers } from "~/utils/extension";
+import { postWebAnnotation } from "~/background/messages/postWebAnnotation";
 
 const styleElement = document.createElement("style");
 

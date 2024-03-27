@@ -13,11 +13,7 @@ import {
   useRef,
 } from "react";
 import { fetchRemarks } from "~/background/messages/fetchRemarks";
-import {
-  createRemarkPost,
-  deleteRemarkPost,
-  updateRemarkPost,
-} from "~/background/messages/postRemark";
+import { postWebAnnotation } from "~/background/messages/postWebAnnotation";
 import type { SerializedBlockRemarkNode } from "~/nodes/BlockRemark";
 import { createRemarkData } from "~/utils/extension/remark";
 
@@ -38,21 +34,33 @@ const Remark = () => {
 
   const createRemarkQuery = useMutation({
     mutationFn: (remark: SerializedBlockRemarkNode) => {
-      return createRemarkPost(remark);
+      return postWebAnnotation({
+        updateType: "created",
+        updatedBlockId: remark.id,
+        updatedBlock: remark,
+      });
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["fetchRemarks"] }),
   });
   const deleteRemarkQuery = useMutation({
     mutationFn: (remarkId: string) => {
-      return deleteRemarkPost(remarkId);
+      return postWebAnnotation({
+        updateType: "destroyed",
+        updatedBlockId: remarkId,
+        updatedBlock: null,
+      });
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["fetchRemarks"] }),
   });
   const updateRemarkQuery = useMutation({
     mutationFn: (remark: SerializedBlockRemarkNode) => {
-      return updateRemarkPost(remark);
+      return postWebAnnotation({
+        updateType: "updated",
+        updatedBlockId: remark.id,
+        updatedBlock: remark,
+      });
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["fetchRemarks"] }),

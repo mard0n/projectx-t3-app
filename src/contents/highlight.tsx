@@ -31,11 +31,6 @@ import {
   isAnchorBeforeFocus,
   checkIfSelectionInsideMainContentArea,
 } from "~/utils/extension/highlight";
-import {
-  createHighlightPost,
-  deleteHighlightPost,
-  updateHighlightPost,
-} from "~/background/messages/postHighlight";
 import type { SerializedBlockHighlightNode as HighlightType } from "~/nodes/BlockHighlight";
 import {
   Card,
@@ -50,16 +45,21 @@ import { GripVertical, Highlighter, MessageSquare, Trash } from "lucide-react";
 import createCache from "@emotion/cache";
 import { CacheProvider } from "@emotion/react";
 import { useStorage } from "@plasmohq/storage/hook";
+import { postWebAnnotation } from "~/background/messages/postWebAnnotation";
 
 const queryClient = new QueryClient();
 
 export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
+  exclude_matches: ["https://*.youtube.com/watch*"],
   all_frames: true,
   run_at: "document_idle",
 };
 
 const NewHighlight = () => {
+  const [_, setIsTextSelected] = useStorage("is-text-selected", false);
+  useStorage<boolean>("highlight-init", () => true);
+
   const { data: highlights } = useQuery({
     queryKey: ["fetchHighlights"],
     queryFn: fetchHighlights,
@@ -67,7 +67,11 @@ const NewHighlight = () => {
   const createHighlightQuery = useMutation({
     mutationFn: (highlight: HighlightType) => {
       highlightRef.current?.addNewHighlightElem(highlight);
-      return createHighlightPost(highlight);
+      return postWebAnnotation({
+        updateType: "created",
+        updatedBlockId: highlight.id,
+        updatedBlock: highlight,
+      });
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["fetchHighlights"] }),
@@ -75,14 +79,22 @@ const NewHighlight = () => {
   const deleteHighlightQuery = useMutation({
     mutationFn: (highlightId: string) => {
       highlightRef.current?.deleteHighlight(highlightId);
-      return deleteHighlightPost(highlightId);
+      return postWebAnnotation({
+        updateType: "destroyed",
+        updatedBlockId: highlightId,
+        updatedBlock: null,
+      });
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["fetchHighlights"] }),
   });
   const updateHighlightQuery = useMutation({
     mutationFn: (highlight: HighlightType) => {
-      return updateHighlightPost(highlight);
+      return postWebAnnotation({
+        updateType: "updated",
+        updatedBlockId: highlight.id,
+        updatedBlock: highlight,
+      });
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["fetchHighlights"] }),
@@ -96,8 +108,6 @@ const NewHighlight = () => {
   const [commentBeingEdited, setCommentBeingEdited] = useState<string | null>(
     null,
   );
-  const [_, setIsTextSelected] = useStorage("is-text-selected", false);
-  useStorage<boolean>("highlight-init", () => true);
 
   const highlightRef = useRef<ElementRef<typeof Highlights>>(null);
 
@@ -105,7 +115,7 @@ const NewHighlight = () => {
     setShowTooltip(false);
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) return;
-    const range = selection?.getRangeAt(0);
+    const range = selection.getRangeAt(0);
     if (!range) return;
     const newHighlightData = await createHighlightData(range, highlights);
     if (!newHighlightData) return;
