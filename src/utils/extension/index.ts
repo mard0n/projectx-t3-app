@@ -59,9 +59,7 @@ export const listenContentScriptTriggers = (
 ) => {
   chrome.runtime.onMessage.addListener(
     (msg: { type: CONTENT_SCRIPT_TYPES }) => {
-      if (msg.type === "highlight") {
-        callback(msg.type);
-      }
+      callback(msg.type);
       return true;
     },
   );

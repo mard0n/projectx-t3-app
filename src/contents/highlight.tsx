@@ -37,7 +37,6 @@ import {
   updateHighlightPost,
 } from "~/background/messages/postHighlight";
 import type { SerializedBlockHighlightNode as HighlightType } from "~/nodes/BlockHighlight";
-import { Storage } from "@plasmohq/storage";
 import {
   Card,
   FormControl,
@@ -48,9 +47,11 @@ import {
   Box,
 } from "@mui/joy";
 import { GripVertical, Highlighter, MessageSquare, Trash } from "lucide-react";
+import createCache from "@emotion/cache";
+import { CacheProvider } from "@emotion/react";
+import { useStorage } from "@plasmohq/storage/hook";
 
 const queryClient = new QueryClient();
-const storage = new Storage();
 
 export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
@@ -95,6 +96,8 @@ const NewHighlight = () => {
   const [commentBeingEdited, setCommentBeingEdited] = useState<string | null>(
     null,
   );
+  const [_, setIsTextSelected] = useStorage("is-text-selected", false);
+  useStorage<boolean>("highlight-init", () => true);
 
   const highlightRef = useRef<ElementRef<typeof Highlights>>(null);
 
@@ -107,12 +110,25 @@ const NewHighlight = () => {
     if (!newHighlightData) return;
     createHighlightQuery.mutate(newHighlightData);
   };
+  const handleHighlightComment = async () => {
+    setShowTooltip(false);
+    const selection = window.getSelection();
+    const range = selection?.getRangeAt(0);
+    if (!range) return;
+    const newHighlightData = await createHighlightData(range, highlights);
+    if (!newHighlightData) return;
+    setCommentBeingEdited(newHighlightData.id);
+    createHighlightQuery.mutate(newHighlightData);
+  };
 
   useEffect(() => {
     listenContentScriptTriggers((type) => {
       if (type === "highlight") {
         void handleHighlight();
       } else if (type === "highlight-comment") {
+        console.log("highligth comment triggered");
+
+        void handleHighlightComment();
       }
     });
 
@@ -125,14 +141,10 @@ const NewHighlight = () => {
 
       const selection = window.getSelection();
       if (!selection || selection.isCollapsed) {
-        void (async () => {
-          await storage.set("isTextSelected", false);
-        })();
+        void setIsTextSelected(false);
         return;
       }
-      void (async () => {
-        await storage.set("isTextSelected", true);
-      })();
+      void setIsTextSelected(true);
 
       // All of this just to get the end position of the selection.
       const focusNode = selection.focusNode;
@@ -541,9 +553,6 @@ const HighlightTooltip = ({
     </Card>
   );
 };
-
-import createCache from "@emotion/cache";
-import { CacheProvider } from "@emotion/react";
 
 const styleElement = document.createElement("style");
 

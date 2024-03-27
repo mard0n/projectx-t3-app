@@ -9,6 +9,12 @@ import {
   createScreenshotData,
   getTranslateValues,
 } from "~/utils/extension/screenshot";
+import { useStorage } from "@plasmohq/storage/hook";
+import { listenContentScriptTriggers } from "~/utils/extension";
+import { CssVarsProvider, GlobalStyles, Snackbar } from "@mui/joy";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import createCache from "@emotion/cache";
+import { CacheProvider } from "@emotion/react";
 
 export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
@@ -19,8 +25,8 @@ export const config: PlasmoCSConfig = {
 
 const Screenshot = () => {
   const screenshotArea = useRef<HTMLDivElement | null>(null);
-  const [isMouseDown, setIsMouseDown] = useState(false);
   const [activateScreenshotMode, setActivateScreenshotMode] = useState(false);
+  const [isMouseDown, setIsMouseDown] = useState(false);
   const [mouseDownPosition, setMouseDownPosition] = useState({
     clientX: 0,
     clientY: 0,
@@ -29,7 +35,12 @@ const Screenshot = () => {
     clientX: 0,
     clientY: 0,
   });
+  const [snackState, setSnackState] = useState<{
+    open: boolean;
+  }>({ open: false });
+  const { open } = snackState;
   const screenshotDimentions = useRef({ x: 0, y: 0, w: 0, h: 0 });
+  useStorage<boolean>("screenshot-init", () => true);
 
   const captureImage = async () => {
     // TODO prevent scroll while capturing. chrome.tabs.captureVisibleTab only captures visible area
@@ -49,7 +60,16 @@ const Screenshot = () => {
     );
     if (!screenshotData) return;
     void createHighlightPost(screenshotData);
+    setSnackState({ ...snackState, open: true });
   };
+
+  useEffect(() => {
+    listenContentScriptTriggers((type) => {
+      if (type === "screenshot") {
+        setActivateScreenshotMode(true);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
@@ -138,7 +158,49 @@ const Screenshot = () => {
         }}
         ref={screenshotArea}
       />
+      <Snackbar
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        open={open}
+        onClose={() => setSnackState({ ...snackState, open: false })}
+        autoHideDuration={3000}
+      >
+        Image is saved
+      </Snackbar>
     </>
   );
 };
-export default Screenshot;
+
+const queryClient = new QueryClient();
+const styleElement = document.createElement("style");
+
+const styleCache = createCache({
+  key: "plasmo-joyui-cache",
+  prepend: true,
+  container: styleElement,
+});
+
+export const getStyle = () => styleElement;
+
+const Wrapper = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <CacheProvider value={styleCache}>
+        {/* https://github.com/mui/material-ui/issues/37470 */}
+        <CssVarsProvider colorSchemeSelector={":host"}>
+          <GlobalStyles
+            styles={{
+              "& .lucide": {
+                color: "var(--Icon-color)",
+                margin: "var(--Icon-margin)",
+                fontSize: "var(--Icon-fontSize, 20px)",
+              },
+            }}
+          />
+          <Screenshot />
+        </CssVarsProvider>
+      </CacheProvider>
+    </QueryClientProvider>
+  );
+};
+
+export default Wrapper;

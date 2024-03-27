@@ -6,7 +6,7 @@ import {
   type SnackbarOrigin,
 } from "@mui/joy";
 import { type PlasmoCSConfig } from "plasmo";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { fetchBookmarks } from "~/background/messages/fetchBookmarks";
 import { fetchWebMetadata } from "~/background/messages/fetchWebMetadata";
 import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
@@ -24,6 +24,8 @@ import {
   useMutation,
   useQuery,
 } from "@tanstack/react-query";
+import { useStorage } from "@plasmohq/storage/hook";
+import { listenContentScriptTriggers } from "~/utils/extension";
 
 export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
@@ -121,6 +123,8 @@ function Bookmark() {
       queryClient.invalidateQueries({ queryKey: ["fetchBookmarks"] }),
   });
 
+  useStorage<boolean>("bookmark-init", () => true);
+
   const [snackState, setSnackState] = useState<SnackState>({
     open: false,
     vertical: "top",
@@ -161,6 +165,15 @@ function Bookmark() {
       // TODO Adding comment/note (permanent/linked or one time like just text)
     })();
   };
+
+  useEffect(() => {
+    listenContentScriptTriggers((type) => {
+      if (type === 'bookmark') {
+        void handleBookmark();
+      }
+    });
+  }, []);
+
   return (
     <Snackbar
       anchorOrigin={{ vertical, horizontal }}

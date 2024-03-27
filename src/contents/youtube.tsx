@@ -92,15 +92,7 @@ const Youtube = () => {
 
   const [markerBeingCommented, setMarkerBeingCommented] =
     useState<MarkerType | null>(null);
-
-  useEffect(() => {
-    // TODO Find a better way to add styles to a page. getStyles not working
-    document
-      .querySelectorAll(YT_CHAPTER_CONTAINER)
-      .forEach((node) => ((node as HTMLElement).style.flex = "none"));
-  }, []);
-
-  if (!markers) return;
+  useStorage<boolean>("youtube-init", () => true);
 
   const handleMarkerClick = () => {
     void (async () => {
@@ -116,15 +108,6 @@ const Youtube = () => {
       updateYoutubeMarkerQuery.mutate(newYoutubeMark);
     })();
   };
-  const handleMarkerRemove = () => {
-    void (async () => {
-      const activeMarker = await getActiveMarker(markers);
-      if (activeMarker) {
-        deleteYoutubeMarkerQuery.mutate(activeMarker.id);
-      }
-    })();
-  };
-
   const handleCommentClick = () => {
     void (async () => {
       const newYoutubeMark = await createYoutubeMarkData();
@@ -140,6 +123,32 @@ const Youtube = () => {
       }
       newYoutubeMark.properties.thumbnail = thumbnailLink;
       updateYoutubeMarkerQuery.mutate(newYoutubeMark);
+    })();
+  };
+
+  useEffect(() => {
+    // TODO Find a better way to add styles to a page. getStyles not working
+    document
+      .querySelectorAll(YT_CHAPTER_CONTAINER)
+      .forEach((node) => ((node as HTMLElement).style.flex = "none"));
+
+    listenContentScriptTriggers((type) => {
+      if (type === "youtube-mark") {
+        void handleMarkerClick();
+      } else if (type === "youtube-mark-comment") {
+        void handleCommentClick();
+      }
+    });
+  }, []);
+
+  if (!markers) return;
+
+  const handleMarkerRemove = () => {
+    void (async () => {
+      const activeMarker = await getActiveMarker(markers);
+      if (activeMarker) {
+        deleteYoutubeMarkerQuery.mutate(activeMarker.id);
+      }
     })();
   };
 
@@ -471,6 +480,8 @@ const CommentField = ({
 
 import createCache from "@emotion/cache";
 import { CacheProvider } from "@emotion/react";
+import { useStorage } from "@plasmohq/storage/hook";
+import { listenContentScriptTriggers } from "~/utils/extension";
 
 const styleElement = document.createElement("style");
 
@@ -520,6 +531,5 @@ const Wrapper = () => {
     </QueryClientProvider>
   );
 };
-
 
 export default Wrapper;
