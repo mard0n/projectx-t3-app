@@ -2,63 +2,23 @@
 import { type PlasmoCSConfig } from "plasmo";
 import { useEffect, useRef, useState } from "react";
 import { captureScreenshot } from "~/background/messages/captureScreenshot";
-import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
-import { getPreSignedUrl } from "~/background/messages/getPresignedUrl";
-import { postHighlight } from "~/background/messages/postHighlight";
-import {
-  type SerializedBlockHighlightNode,
-  BLOCK_HIGHLIGHT_TYPE,
-} from "~/nodes/BlockHighlight";
-import { type RouterInputs } from "~/utils/api";
+import { createHighlightPost } from "~/background/messages/postHighlight";
 import { crop } from "~/utils/extension/crop";
-import { getIndexWithinParent, getParentIdOrCreate } from "./highlight";
-
-const getTranslateValues = (
-  startPosition: { clientX: number; clientY: number },
-  currentPosition: { clientX: number; clientY: number },
-) => {
-  const { clientX: startX, clientY: startY } = startPosition;
-  const { clientX: currentX, clientY: currentY } = currentPosition;
-
-  let translateX = 0;
-  let translateY = 0;
-  let width = 0;
-  let height = 0;
-  width = Math.abs(currentX - startX);
-  height = Math.abs(currentY - startY);
-
-  if (currentX - startX > 0 && currentY - startY > 0) {
-    translateX = startX;
-    translateY = startY;
-  } else if (currentX - startX <= 0 && currentY - startY <= 0) {
-    translateX = currentX;
-    translateY = currentY;
-  } else if (currentX - startX <= 0 && currentY - startY > 0) {
-    translateX = currentX;
-    translateY = startY;
-  } else if (currentX - startX > 0 && currentY - startY <= 0) {
-    translateX = startX;
-    translateY = currentY;
-  }
-
-  return {
-    translateX,
-    translateY,
-    width,
-    height,
-  };
-};
+import { uploadImageToAWS } from "~/utils/extension/uploadImageToAWS";
+import {
+  createScreenshotData,
+  getTranslateValues,
+} from "~/utils/extension/screenshot";
 
 export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
+  exclude_matches: ["http://localhost:3000/*"],
   all_frames: true,
+  run_at: "document_idle",
 };
 
 const Screenshot = () => {
   const screenshotArea = useRef<HTMLDivElement | null>(null);
-  const [isShiftPressed, setIsShiftPressed] = useState(false);
-  const [isOptionPressed, setIsOptionPressed] = useState(false);
-  const [isSPressed, setIsSPressed] = useState(false);
   const [isMouseDown, setIsMouseDown] = useState(false);
   const [activateScreenshotMode, setActivateScreenshotMode] = useState(false);
   const [mouseDownPosition, setMouseDownPosition] = useState({
@@ -73,151 +33,61 @@ const Screenshot = () => {
 
   const captureImage = async () => {
     // TODO prevent scroll while capturing. chrome.tabs.captureVisibleTab only captures visible area
-    const fullImage = await captureScreenshot()
+    const fullImage = await captureScreenshot();
     if (!fullImage) return;
-
     const image = await crop(
       fullImage,
       screenshotDimentions.current,
       window.devicePixelRatio,
     );
     if (!image) return;
-
-    const file = new File([image], crypto.randomUUID(), {
-      lastModified: new Date().getTime(),
-      type: "image/jpeg",
-    });
-    const filename = file.name;
-    const fileType = "jpeg";
-    const fullFileName = `${filename}.${fileType}`;
-
-    const res = await getPreSignedUrl({ fullFileName });
-    if (!res?.url) return;
-
-    // It doesn't work when I move this fn into messages.
-    // Save the file into AWS
-    await fetch(res.url, {
-      method: "PUT",
-      body: image,
-    });
-
-    const link = `${process.env.PLASMO_PUBLIC_CLOUDFRONT_BASE_URL}/${fullFileName}`;
-
-    const currentUrl = await getCurrentUrl();
-    if (!currentUrl) return;
-
-    const parentId = await getParentIdOrCreate(currentUrl);
-    if (!parentId) return;
-
-    const indexWithinParent = await getIndexWithinParent(
-      screenshotDimentions.current.y,
+    const url = await uploadImageToAWS(image);
+    if (!url) return;
+    const screenshotData = await createScreenshotData(
+      url,
+      screenshotDimentions.current,
     );
-
-    const { x, y, w, h } = screenshotDimentions.current;
-
-    const data: SerializedBlockHighlightNode = {
-      type: BLOCK_HIGHLIGHT_TYPE,
-      id: crypto.randomUUID(),
-      parentId: parentId,
-      indexWithinParent: indexWithinParent,
-      open: true,
-      version: 1,
-      childBlocks: [],
-      webUrl: currentUrl,
-      properties: {
-        highlightText: `![Screenshot](${link})`,
-        highlightPath: null,
-        highlightRect: {
-          left: x,
-          top: y,
-          bottom: y + h,
-          right: x + w,
-          width: w,
-          height: h,
-          x: x,
-          y: y,
-        },
-      },
-      children: [],
-      direction: null,
-      format: "",
-      indent: 0,
-    };
-
-    console.log("screenshot data", data);
-
-    const update: RouterInputs["note"]["saveChanges"] = [
-      {
-        updateType: "created",
-        updatedBlockId: data.id,
-        updatedBlock: data,
-      },
-    ];
-
-    await postHighlight(update);
-  };
-
-  const handleMouseMove = (event: MouseEvent) => {
-    setMousePosition({ clientX: event.clientX, clientY: event.clientY });
-  };
-  const handleMouseDown = (event: MouseEvent) => {
-    setMouseDownPosition({ clientX: event.clientX, clientY: event.clientY });
-    setIsMouseDown(true);
-  };
-  const handleMouseUp = () => {
-    setIsMouseDown(false);
-    setActivateScreenshotMode((prevValue) => {
-      if (prevValue === true) {
-        const area = screenshotArea.current!;
-        area.style.display = "none";
-
-        // HACK: to prevent capturing screenshotArea; Fix later.
-        setTimeout(() => {
-          captureImage();
-        }, 100);
-      }
-      return false;
-    });
-  };
-  const handleKeyDown = (event: KeyboardEvent) => {
-    setIsShiftPressed(event.shiftKey);
-    setIsOptionPressed(event.altKey);
-    setIsSPressed(event.code === "KeyS");
-    if (event.code === "Escape") {
-      setActivateScreenshotMode(false);
-    }
-  };
-  const handleKeyUp = (event: KeyboardEvent) => {
-    setIsShiftPressed(event.shiftKey);
-    setIsOptionPressed(event.altKey);
-    setIsSPressed(event.code === "KeyS");
+    if (!screenshotData) return;
+    void createHighlightPost(screenshotData);
   };
 
   useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      setMousePosition({ clientX: event.clientX, clientY: event.clientY });
+    };
+    const handleMouseDown = (event: MouseEvent) => {
+      setMouseDownPosition({ clientX: event.clientX, clientY: event.clientY });
+      setIsMouseDown(true);
+    };
+    const handleMouseUp = () => {
+      setIsMouseDown(false);
+      setActivateScreenshotMode((prevValue) => {
+        if (prevValue === true) {
+          const area = screenshotArea.current!;
+          area.style.display = "none";
+
+          // HACK: to prevent capturing screenshotArea; Fix later.
+          setTimeout(() => {
+            captureImage();
+          }, 100);
+        }
+        return false;
+      });
+    };
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mousedown", handleMouseDown);
     document.addEventListener("mouseup", handleMouseUp);
-    document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("keyup", handleKeyUp);
 
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mousedown", handleMouseDown);
       document.removeEventListener("mouseup", handleMouseUp);
-      document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("keyup", handleKeyUp);
     };
   }, [activateScreenshotMode]);
 
   useEffect(() => {
-    if (isShiftPressed && isOptionPressed && isSPressed) {
-      setActivateScreenshotMode(true);
-    }
-  }, [isShiftPressed, isOptionPressed, isSPressed]);
-
-  useEffect(() => {
     if (activateScreenshotMode) {
-      document.documentElement.style.cursor = "grab";
+      document.documentElement.style.cursor = "crosshair";
       document.documentElement.style.userSelect = "none";
     } else {
       document.documentElement.style.cursor = "unset";
