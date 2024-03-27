@@ -148,6 +148,9 @@ export class BlockHighlightNode extends BlockContainerNode {
       quoteDecorator,
       containerNodes,
     );
+    container.setId(serializedNode.id);
+    container.setOpen(serializedNode.open);
+    container.setWebUrl(serializedNode.webUrl);
     return container;
   }
 

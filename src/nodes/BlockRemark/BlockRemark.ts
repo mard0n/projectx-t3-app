@@ -108,6 +108,9 @@ export class BlockRemarkNode extends BlockContainerNode {
     );
 
     container.append(contentNode, childContainerNode);
+    container.setId(serializedNode.id);
+    container.setOpen(serializedNode.open);
+    container.setWebUrl(serializedNode.webUrl);
     return container;
   }
 

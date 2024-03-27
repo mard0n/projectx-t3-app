@@ -157,6 +157,9 @@ export class BlockLinkNode extends BlockContainerNode {
     });
 
     container.append(content, childContainer);
+    container.setId(serializedNode.id);
+    container.setOpen(serializedNode.open);
+    container.setWebUrl(serializedNode.webUrl);
     return container;
   }
 
