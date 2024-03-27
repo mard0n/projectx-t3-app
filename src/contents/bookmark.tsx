@@ -77,7 +77,6 @@ function Bookmark() {
     queryKey: ["fetchBookmarks"],
     queryFn: fetchBookmarks,
   });
-  console.log("bookmark", bookmark);
 
   const createfetchBookmarksQuery = useMutation({
     mutationFn: (bookmark: BookmarkType) => {
@@ -163,28 +162,25 @@ function Bookmark() {
     })();
   };
   return (
-    <>
-      {/* <Button onClick={handleBookmark}>Bookmark</Button> */}
-      <Snackbar
-        anchorOrigin={{ vertical, horizontal }}
-        open={open}
-        onClose={handleClose}
-        endDecorator={
-          bookmark?.id ? (
-            <Button
-              onClick={handleDelete}
-              size="sm"
-              variant="outlined"
-              color="danger"
-            >
-              Delete
-            </Button>
-          ) : null
-        }
-      >
-        {snackState.text}
-      </Snackbar>
-    </>
+    <Snackbar
+      anchorOrigin={{ vertical, horizontal }}
+      open={open}
+      onClose={handleClose}
+      endDecorator={
+        bookmark?.id ? (
+          <Button
+            onClick={handleDelete}
+            size="sm"
+            variant="outlined"
+            color="danger"
+          >
+            Delete
+          </Button>
+        ) : null
+      }
+    >
+      {snackState.text}
+    </Snackbar>
   );
 }
 

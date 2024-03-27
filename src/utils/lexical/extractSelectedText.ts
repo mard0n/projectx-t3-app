@@ -139,7 +139,6 @@ function $cloneAndSliceAndSerializeTheNode(
   clone = $isTextNode(clone)
     ? $sliceSelectedTextNodeContent(selection, clone)
     : clone;
-  console.log("clone", clone);
 
   const serialized = $serializeTheNode(clone);
   return serialized;

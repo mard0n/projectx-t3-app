@@ -4,7 +4,6 @@ import {
   type SerializedBlockRemarkNode,
   BLOCK_REMARK_TYPE,
 } from "~/nodes/BlockRemark";
-import { getIndexWithinParent } from ".";
 import type { RectType } from "./highlight";
 
 export const createRemarkData = async (remarkRect: RectType) => {
@@ -16,14 +15,14 @@ export const createRemarkData = async (remarkRect: RectType) => {
   const webMetadata = await fetchWebMetadata();
   if (!webMetadata) return;
 
-  const indexWithinParent = await getIndexWithinParent(remarkRect.y);
+  // const indexWithinParent = await getIndexWithinHighlightsAndScreenshots(remarkRect.y);
 
   // TODO: need to figure out ways to sync this data and BlockRemarkParagraph or easier way to create data
   const newRemark: SerializedBlockRemarkNode = {
     type: BLOCK_REMARK_TYPE,
     id: remarkId,
     parentId: webMetadata.defaultNoteId,
-    indexWithinParent: indexWithinParent,
+    indexWithinParent: 0,
     open: true,
     version: 1,
     childBlocks: [],

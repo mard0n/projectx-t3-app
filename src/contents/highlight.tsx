@@ -17,9 +17,7 @@ import {
 } from "react";
 import { fetchHighlights } from "~/background/messages/fetchHighlights";
 import {
-  deserializeSelectionPath,
   getOffsetRectRelativeToBody,
-  isAnchorBeforeFocus,
   listenContentScriptTriggers,
 } from "~/utils/extension";
 import {
@@ -29,6 +27,9 @@ import {
   activateHighlight,
   applyHighlightText,
   createHighlightData,
+  deserializeSelectionPath,
+  isAnchorBeforeFocus,
+  checkIfSelectionInsideMainContentArea,
 } from "~/utils/extension/highlight";
 import {
   createHighlightPost,
@@ -163,8 +164,10 @@ const NewHighlight = () => {
       // console.log("mouseup");
       const selection = window.getSelection();
       if (!selection || selection.isCollapsed) return;
-
-      setShowTooltip(true);
+      const range = selection.getRangeAt(0);
+      if (checkIfSelectionInsideMainContentArea(range)) {
+        setShowTooltip(true);
+      }
     };
     document.addEventListener("mousedown", handleMouseDown);
     document.addEventListener("selectionchange", handleSelectionChange);
@@ -206,7 +209,6 @@ const NewHighlight = () => {
     if (!currentHighlight) return;
     currentHighlight.properties.commentText = text;
     currentHighlight.properties.commentRect = rect;
-    console.log("currentHighlight", currentHighlight);
 
     updateHighlightQuery.mutate(currentHighlight);
   };

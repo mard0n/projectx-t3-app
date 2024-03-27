@@ -1,6 +1,5 @@
 import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
 import { getTabData } from "~/background/messages/getTabTitle";
-import { uploadImageToAWS } from "~/utils/extension/uploadImageToAWS";
 import {
   BLOCK_LINK_TYPE,
   type SerializedBlockLinkNode,

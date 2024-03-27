@@ -27,8 +27,6 @@ export async function fetchBookmarks() {
     },
   });
 
-  console.log("fetchBookmarks res", res);
-
   return res;
 }
 

@@ -3,7 +3,7 @@ import { type PlasmoCSConfig } from "plasmo";
 import { useEffect, useRef, useState } from "react";
 import { captureScreenshot } from "~/background/messages/captureScreenshot";
 import { createHighlightPost } from "~/background/messages/postHighlight";
-import { crop } from "~/utils/extension/crop";
+import { crop } from "~/utils/extension/screenshot";
 import { uploadImageToAWS } from "~/utils/extension/uploadImageToAWS";
 import {
   createScreenshotData,

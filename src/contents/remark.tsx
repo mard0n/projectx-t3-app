@@ -35,7 +35,6 @@ const Remark = () => {
     queryKey: ["fetchRemarks"],
     queryFn: fetchRemarks,
   });
-  console.log("remarks", remarks);
 
   const createRemarkQuery = useMutation({
     mutationFn: (remark: SerializedBlockRemarkNode) => {
@@ -60,7 +59,6 @@ const Remark = () => {
   });
 
   const [activeRemark, setActiveRemark] = useState(false);
-  console.log("activeRemark", activeRemark);
 
   const handleActiveRemarkMode = (e: MouseEvent) => {
     void (async () => {

@@ -23,7 +23,6 @@ export async function createRemarkPost(remark: SerializedBlockRemarkNode) {
       updatedBlock: remark,
     },
   ];
-  console.log("newRemarkUpdate", newRemarkUpdate);
 
   const res = await sendToBackground<Request, Response>({
     name: "postRemark",

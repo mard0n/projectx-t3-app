@@ -59,7 +59,6 @@ export default function Notes() {
   const notes = api.note.getAll.useQuery(undefined, {
     refetchOnWindowFocus: false,
   });
-  console.log("notes", notes.data);
 
   const saveChanges = api.note.saveChanges.useMutation();
 
