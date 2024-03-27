@@ -1,3 +1,5 @@
+import { fetchWebMetadata } from "~/background/messages/fetchWebMetadata";
+import { fetchYoutube } from "~/background/messages/fetchYoutube";
 import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
 import { getTabData } from "~/background/messages/getTabTitle";
 import {
@@ -137,7 +139,6 @@ export const captureCurrentYoutubeFrame = () => {
 
 export function convertSecondstoTime(sec: number) {
   if (!sec) return;
-
   const dateObj = new Date(sec * 1000);
   const hours = dateObj.getUTCHours();
   const minutes = dateObj.getUTCMinutes();
@@ -149,6 +150,22 @@ export function convertSecondstoTime(sec: number) {
   const timeString = hourStr + minStr + secStr;
   return timeString;
 }
+
+const getIndexWithinYoutubeMarkers = async (currentTime: number) => {
+  const markers = await fetchYoutube();
+  markers.sort((a, b) => a.indexWithinParent - b.indexWithinParent);
+
+  const indexOfNextSibling =
+    markers.find((m) => {
+      const markTime = extractTimeFromYoutubeLink(m.properties.linkUrl);
+      if (!markTime) return;
+      return markTime >= currentTime;
+    })?.indexWithinParent ?? 0;
+
+  const indexWithinParent = indexOfNextSibling + 0.001; // TODO: Find a better way to sort
+  return indexWithinParent;
+};
+
 export const createYoutubeMarkData = async () => {
   const currentTime = getCurrentProgressInSec();
   const currentUrl = await getCurrentUrl();
@@ -162,14 +179,19 @@ export const createYoutubeMarkData = async () => {
       ? `${convertSecondstoTime(currentTime)} - ${chapterText}`
       : linkUrl;
 
+  const webMetadata = await fetchWebMetadata();
+  if (!webMetadata) return;
+
+  const indexWithinParent = await getIndexWithinYoutubeMarkers(currentTime);
+
   const newYoutubeHighlight: SerializedBlockLinkNode = {
     type: BLOCK_LINK_TYPE,
     id: crypto.randomUUID(),
-    parentId: null,
-    indexWithinParent: 0,
+    parentId: webMetadata.defaultNoteId,
+    indexWithinParent: indexWithinParent,
     open: true,
     version: 1,
-    webUrl: currentUrl, // TO get the time/position
+    webUrl: currentUrl,
     properties: {
       linkType: "block-link-youtube",
       title: tabData.title,
