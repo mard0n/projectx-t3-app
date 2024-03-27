@@ -15,6 +15,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import createCache from "@emotion/cache";
 import { CacheProvider } from "@emotion/react";
 import { postWebAnnotation } from "~/background/messages/postWebAnnotation";
+import { fetchWebMetadata } from "~/background/messages/fetchWebMetadata";
+import { fetchHighlights } from "~/background/messages/fetchHighlights";
 
 export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
@@ -42,8 +44,26 @@ const Screenshot = () => {
   const screenshotDimentions = useRef({ x: 0, y: 0, w: 0, h: 0 });
   useStorage<boolean>("screenshot-init", () => true);
 
+  useEffect(() => {
+    // prefetching. to increase the performance
+    void fetchWebMetadata();
+    void fetchHighlights();
+  }, []);
+
   const captureImage = async () => {
     // TODO prevent scroll while capturing. chrome.tabs.captureVisibleTab only captures visible area
+    const screenshotData = await createScreenshotData(
+      screenshotDimentions.current,
+    );
+    if (!screenshotData) return;
+    void postWebAnnotation({
+      updateType: "created",
+      updatedBlockId: screenshotData.id,
+      updatedBlock: screenshotData,
+    });
+
+    setSnackState({ ...snackState, open: true });
+
     const fullImage = await captureScreenshot();
     if (!fullImage) return;
     const image = await crop(
@@ -54,17 +74,12 @@ const Screenshot = () => {
     if (!image) return;
     const url = await uploadImageToAWS(image);
     if (!url) return;
-    const screenshotData = await createScreenshotData(
-      url,
-      screenshotDimentions.current,
-    );
-    if (!screenshotData) return;
+    screenshotData.properties.highlightText = `![Screenshot](${url})`;
     void postWebAnnotation({
-      updateType: "created",
+      updateType: "updated",
       updatedBlockId: screenshotData.id,
       updatedBlock: screenshotData,
     });
-    setSnackState({ ...snackState, open: true });
   };
 
   useEffect(() => {

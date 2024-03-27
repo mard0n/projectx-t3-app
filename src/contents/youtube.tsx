@@ -32,6 +32,12 @@ import {
   YT_CONTROLS,
   captureCurrentYoutubeFrame,
 } from "~/utils/extension/youtube";
+import createCache from "@emotion/cache";
+import { CacheProvider } from "@emotion/react";
+import { useStorage } from "@plasmohq/storage/hook";
+import { listenContentScriptTriggers } from "~/utils/extension";
+import { postWebAnnotation } from "~/background/messages/postWebAnnotation";
+import { fetchWebMetadata } from "~/background/messages/fetchWebMetadata";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +99,7 @@ const Youtube = () => {
       const newYoutubeMark = await createYoutubeMarkData();
       if (!newYoutubeMark) return;
       createYoutubeMarkerQuery.mutate(newYoutubeMark);
+
       const thumbnailImage = await captureCurrentYoutubeFrame();
       let thumbnailLink;
       if (thumbnailImage) {
@@ -122,6 +129,11 @@ const Youtube = () => {
       updateYoutubeMarkerQuery.mutate(newYoutubeMark);
     })();
   };
+
+  useEffect(() => {
+    // prefetching. to increase the performance
+    void fetchWebMetadata();
+  }, []);
 
   useEffect(() => {
     // TODO Find a better way to add styles to a page. getStyles not working
@@ -493,12 +505,6 @@ const CommentField = ({
     </div>
   );
 };
-
-import createCache from "@emotion/cache";
-import { CacheProvider } from "@emotion/react";
-import { useStorage } from "@plasmohq/storage/hook";
-import { listenContentScriptTriggers } from "~/utils/extension";
-import { postWebAnnotation } from "~/background/messages/postWebAnnotation";
 
 const styleElement = document.createElement("style");
 

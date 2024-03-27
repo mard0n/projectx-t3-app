@@ -115,6 +115,11 @@ function Bookmark() {
       queryClient.invalidateQueries({ queryKey: ["fetchBookmarks"] }),
   });
 
+  useEffect(() => {
+    // prefetching. to increase the performance
+    void fetchWebMetadata();
+  }, []);
+
   useStorage<boolean>("bookmark-init", () => true);
 
   const [snackState, setSnackState] = useState<SnackState>({

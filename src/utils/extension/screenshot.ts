@@ -6,10 +6,12 @@ import {
 } from "~/nodes/BlockHighlight";
 import { getIndexWithinHighlightsAndScreenshots } from "./highlight";
 
-export const createScreenshotData = async (
-  link: string,
-  screenshotDimentions: { x: number; y: number; w: number; h: number },
-) => {
+export const createScreenshotData = async (screenshotDimentions: {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}) => {
   const currentUrl = await getCurrentUrl();
   if (!currentUrl) return;
   const webMetadata = await fetchWebMetadata();
@@ -38,7 +40,7 @@ export const createScreenshotData = async (
     childBlocks: [],
     webUrl: currentUrl,
     properties: {
-      highlightText: `![Screenshot](${link})`,
+      highlightText: ``,
       highlightPath: null,
       highlightRect: screenshotRect,
       commentText: "",

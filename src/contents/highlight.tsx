@@ -46,6 +46,7 @@ import createCache from "@emotion/cache";
 import { CacheProvider } from "@emotion/react";
 import { useStorage } from "@plasmohq/storage/hook";
 import { postWebAnnotation } from "~/background/messages/postWebAnnotation";
+import { fetchWebMetadata } from "~/background/messages/fetchWebMetadata";
 
 const queryClient = new QueryClient();
 
@@ -133,6 +134,11 @@ const NewHighlight = () => {
   };
 
   useEffect(() => {
+    // prefetching. to increase the performance
+    void fetchWebMetadata();
+  }, []);
+
+  useEffect(() => {
     listenContentScriptTriggers((type) => {
       if (type === "highlight") {
         void handleHighlight();
@@ -140,7 +146,6 @@ const NewHighlight = () => {
         void handleHighlightComment();
       }
     });
-
     const handleKeypress = (e: KeyboardEvent) => {
       if (e.altKey && e.shiftKey && e.code === "KeyH") {
         void handleHighlightComment();
@@ -148,6 +153,13 @@ const NewHighlight = () => {
         void handleHighlight();
       }
     };
+    document.addEventListener("keypress", handleKeypress);
+    return () => {
+      document.removeEventListener("keypress", handleKeypress);
+    };
+  }, [highlights]);
+
+  useEffect(() => {
     const handleMouseDown = () => {
       // console.log("mousedown");
       setShowTooltip(false);
@@ -197,7 +209,7 @@ const NewHighlight = () => {
         setShowTooltip(true);
       }
     };
-    document.addEventListener("keypress", handleKeypress);
+
     document.addEventListener("mousedown", handleMouseDown);
     document.addEventListener("selectionchange", handleSelectionChange);
     document.addEventListener("mouseup", handleMouseUp);
