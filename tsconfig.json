@@ -30,12 +30,8 @@
     ".plasmo/index.d.ts",
     ".eslintrc.cjs",
     "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    "**/*.cjs",
-    "**/*.mjs",
-    "**/*.js",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "src"
   ],
   "exclude": ["node_modules", "build", "generateFragment.js"]
 }
