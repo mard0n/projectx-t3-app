@@ -104,6 +104,7 @@ const NewHighlight = () => {
   const handleHighlight = async () => {
     setShowTooltip(false);
     const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) return;
     const range = selection?.getRangeAt(0);
     if (!range) return;
     const newHighlightData = await createHighlightData(range, highlights);
@@ -126,12 +127,17 @@ const NewHighlight = () => {
       if (type === "highlight") {
         void handleHighlight();
       } else if (type === "highlight-comment") {
-        console.log("highligth comment triggered");
-
         void handleHighlightComment();
       }
     });
 
+    const handleKeypress = (e: KeyboardEvent) => {
+      if (e.altKey && e.shiftKey && e.code === "KeyH") {
+        void handleHighlightComment();
+      } else if (e.altKey && e.code === "KeyH") {
+        void handleHighlight();
+      }
+    };
     const handleMouseDown = () => {
       // console.log("mousedown");
       setShowTooltip(false);
@@ -181,6 +187,7 @@ const NewHighlight = () => {
         setShowTooltip(true);
       }
     };
+    document.addEventListener("keypress", handleKeypress);
     document.addEventListener("mousedown", handleMouseDown);
     document.addEventListener("selectionchange", handleSelectionChange);
     document.addEventListener("mouseup", handleMouseUp);

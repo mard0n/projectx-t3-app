@@ -86,7 +86,8 @@ function IndexPopup() {
             >
               <ListItemContent>Comment</ListItemContent>
               <Kbd>⌥</Kbd>
-              <Kbd>C</Kbd>
+              <Kbd>⇧</Kbd>
+              <Kbd>H</Kbd>
             </ListItemButton>
           </ListItem>
         ) : null}
@@ -111,7 +112,7 @@ function IndexPopup() {
             <ListItemButton onClick={handleYoutubeMarkClick}>
               <ListItemContent>Mark</ListItemContent>
               <Kbd>⌥</Kbd>
-              <Kbd>S</Kbd>
+              <Kbd>M</Kbd>
             </ListItemButton>
           </ListItem>
         ) : null}
@@ -120,7 +121,8 @@ function IndexPopup() {
             <ListItemButton onClick={handleYoutubeCommentClick}>
               <ListItemContent>Mark and comment</ListItemContent>
               <Kbd>⌥</Kbd>
-              <Kbd>S</Kbd>
+              <Kbd>⇧</Kbd>
+              <Kbd>M</Kbd>
             </ListItemButton>
           </ListItem>
         ) : null}

@@ -91,8 +91,9 @@ function Bookmark() {
       ];
       return postBookmark(update);
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["fetchBookmarks"] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["fetchBookmarks"] });
+    },
   });
   const updatefetchBookmarksQuery = useMutation({
     mutationFn: (bookmark: BookmarkType) => {
@@ -144,35 +145,45 @@ function Bookmark() {
     }
   };
 
-  const handleBookmark = () => {
-    void (async () => {
-      if (bookmark) {
-        setSnackState({
-          ...snackState,
-          open: true,
-          text: "Page is already saved",
-        });
-        return;
-      }
-      const newBookmark = await createBookmarkData();
-      if (!newBookmark) return;
-
-      createfetchBookmarksQuery.mutate(newBookmark);
-
-      setSnackState({ ...snackState, open: true, text: "Page is saved" });
-
-      // TODO stop timer/start over when component is hovered
-      // TODO Adding comment/note (permanent/linked or one time like just text)
-    })();
-  };
-
   useEffect(() => {
+    const handleBookmark = () => {
+      void (async () => {
+        if (bookmark) {
+          setSnackState({
+            ...snackState,
+            open: true,
+            text: "Page is already saved",
+          });
+          return;
+        }
+        const newBookmark = await createBookmarkData();
+        if (!newBookmark) return;
+
+        createfetchBookmarksQuery.mutate(newBookmark);
+
+        setSnackState({ ...snackState, open: true, text: "Page is saved" });
+
+        // TODO stop timer/start over when component is hovered
+        // TODO Adding comment/note (permanent/linked or one time like just text)
+      })();
+    };
+
     listenContentScriptTriggers((type) => {
-      if (type === 'bookmark') {
+      if (type === "bookmark") {
         void handleBookmark();
       }
     });
-  }, []);
+
+    const handleKeypress = (e: KeyboardEvent) => {
+      if (e.altKey && e.code === "KeyB") {
+        void handleBookmark();
+      }
+    };
+    document.addEventListener("keypress", handleKeypress);
+    return () => {
+      document.removeEventListener("keypress", handleKeypress);
+    };
+  }, [bookmark]);
 
   return (
     <Snackbar

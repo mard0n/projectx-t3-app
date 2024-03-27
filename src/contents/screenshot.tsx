@@ -69,6 +69,16 @@ const Screenshot = () => {
         setActivateScreenshotMode(true);
       }
     });
+
+    const handleKeypress = (e: KeyboardEvent) => {
+      if (e.altKey && e.code === "KeyS") {
+        void setActivateScreenshotMode(true);
+      }
+    };
+    document.addEventListener("keypress", handleKeypress);
+    return () => {
+      document.removeEventListener("keypress", handleKeypress);
+    };
   }, []);
 
   useEffect(() => {

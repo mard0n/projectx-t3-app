@@ -8,6 +8,7 @@ import {
   Typography,
   Box,
   extendTheme,
+  FormHelperText,
 } from "@mui/joy";
 import {
   QueryClient,
@@ -96,6 +97,9 @@ const Youtube = () => {
 
   const handleMarkerClick = () => {
     void (async () => {
+      if (!markers) return;
+      const activeMarker = await getActiveMarker(markers);
+      if (activeMarker) return;
       const newYoutubeMark = await createYoutubeMarkData();
       if (!newYoutubeMark) return;
       createYoutubeMarkerQuery.mutate(newYoutubeMark);
@@ -110,6 +114,9 @@ const Youtube = () => {
   };
   const handleCommentClick = () => {
     void (async () => {
+      if (!markers) return;
+      const activeMarker = await getActiveMarker(markers);
+      if (activeMarker) return;
       const newYoutubeMark = await createYoutubeMarkData();
       if (!newYoutubeMark) return;
       createYoutubeMarkerQuery.mutate(newYoutubeMark);
@@ -131,7 +138,9 @@ const Youtube = () => {
     document
       .querySelectorAll(YT_CHAPTER_CONTAINER)
       .forEach((node) => ((node as HTMLElement).style.flex = "none"));
+  }, []);
 
+  useEffect(() => {
     listenContentScriptTriggers((type) => {
       if (type === "youtube-mark") {
         void handleMarkerClick();
@@ -139,7 +148,19 @@ const Youtube = () => {
         void handleCommentClick();
       }
     });
-  }, []);
+
+    const handleKeypress = (e: KeyboardEvent) => {
+      if (e.altKey && e.shiftKey && e.code === "KeyM") {
+        void handleCommentClick();
+      } else if (e.altKey && e.code === "KeyM") {
+        void handleMarkerClick();
+      }
+    };
+    document.addEventListener("keypress", handleKeypress);
+    return () => {
+      document.removeEventListener("keypress", handleKeypress);
+    };
+  }, [markers]);
 
   if (!markers) return;
 
@@ -155,7 +176,6 @@ const Youtube = () => {
   const handleCommentSave = (markerId: string, text: string) => {
     setMarkerBeingCommented(null);
     const marker = markers.find((mrkr) => mrkr.id === markerId);
-
     if (!marker) return;
     marker.properties.commentText = text;
     updateYoutubeMarkerQuery.mutate(marker);
@@ -279,7 +299,7 @@ const MarkerControl = ({
                   lineHeight: "16px",
                 }}
               >
-                Mark and add a comment (⌥ + c)
+                Mark and add a comment (⌥ + ⇧ + m)
               </Typography>
             }
           >
@@ -472,7 +492,13 @@ const CommentField = ({
           onBlur={() => {
             handleCommentSave(marker.id, textareaValue);
           }}
+          onKeyDown={(e) => {
+            if (e.metaKey && e.shiftKey && e.code === "Enter") {
+              handleCommentSave(marker.id, textareaValue);
+            }
+          }}
         />
+        <FormHelperText>Press ⌘ ⇧ Enter to save</FormHelperText>
       </FormControl>
     </div>
   );
