@@ -7,7 +7,7 @@ import {
   type LexicalNode,
   type SerializedLexicalNode,
   type Spread,
-  LexicalEditor,
+  type LexicalEditor,
   $getNodeByKey,
 } from "lexical";
 import { type ReactNode } from "react";
@@ -15,16 +15,14 @@ import { type CustomTheme } from "~/utils/lexical/theme";
 import Markdown from "react-markdown";
 import {
   Card,
-  CardActions,
   CardContent,
   FormControl,
-  FormHelperText,
   FormLabel,
   Stack,
   Textarea,
   Typography,
 } from "@mui/joy";
-import { $findParentBlockContainer, $isBlockContainerNode } from "../Block";
+import { $findParentBlockContainer } from "../Block";
 import { $isBlockHighlightNode } from ".";
 
 export type SerializedBlockQuoteDecoratorNode = Spread<
@@ -67,7 +65,7 @@ function BlockQuoteComponent({
 
   // TODO: figure out why drizzle db:push fails when component exist
   return (
-    <Stack spacing={1} sx={{ pb: 1 }}>
+    <Stack spacing={1} sx={{ pb: 2 }}>
       <Card variant="soft">
         <CardContent>
           <Markdown

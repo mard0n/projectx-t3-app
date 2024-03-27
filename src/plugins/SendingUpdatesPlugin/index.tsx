@@ -34,6 +34,8 @@ import {
 } from "~/nodes/BlockRemark";
 import {
   $isBlockLinkNode,
+  BlockLinkContentNode,
+  BlockLinkNode,
   SerializedBlockLinkNodeSchema,
 } from "~/nodes/BlockLink";
 
@@ -110,6 +112,7 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
         BlockContentNode,
         BlockChildContainerNode,
         BlockTextContentNode,
+        BlockLinkNode,
       ])
     ) {
       throw new Error(
@@ -125,6 +128,7 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
         BlockContentNode,
         BlockChildContainerNode,
         BlockTextContentNode,
+        BlockLinkContentNode,
       ].map((Node) =>
         editor.registerMutationListener(
           Node,
@@ -193,51 +197,52 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
           },
         ),
       ),
-      ...[BlockTextNode, BlockHighlightNode, BlockNoteNode].map((Node) => {
-        return editor.registerMutationListener(
-          Node,
-          (mutations, { prevEditorState }) => {
-            editor.getEditorState().read(() => {
-              for (const [nodeKey, mutation] of mutations) {
-                const node = $getNodeByKey(nodeKey);
+      ...[BlockTextNode, BlockHighlightNode, BlockLinkNode, BlockNoteNode].map(
+        (Node) => {
+          return editor.registerMutationListener(
+            Node,
+            (mutations, { prevEditorState }) => {
+              editor.getEditorState().read(() => {
+                for (const [nodeKey, mutation] of mutations) {
+                  const node = $getNodeByKey(nodeKey);
+                  if (!node || mutation === "destroyed") {
+                    prevEditorState.read(() => {
+                      const prevNode = $getNodeByKey(nodeKey);
+                      if (!prevNode || !$isBlockContainerNode(prevNode)) return;
 
-                if (!node || mutation === "destroyed") {
-                  prevEditorState.read(() => {
-                    const prevNode = $getNodeByKey(nodeKey);
-                    if (!prevNode || !$isBlockContainerNode(prevNode)) return;
-
-                    updatesRef.current.set(`${nodeKey}:destroyed`, {
-                      updateType: "destroyed",
-                      updatedBlockId: prevNode.getId(),
-                      updatedBlock: null,
+                      updatesRef.current.set(`${nodeKey}:destroyed`, {
+                        updateType: "destroyed",
+                        updatedBlockId: prevNode.getId(),
+                        updatedBlock: null,
+                      });
                     });
-                  });
-                  continue;
-                }
+                    continue;
+                  }
 
-                if (
-                  !(
-                    $isBlockTextNode(node) ||
-                    $isBlockHighlightNode(node) ||
-                    $isBlockRemarkNode(node) ||
-                    $isBlockLinkNode(node)
+                  if (
+                    !(
+                      $isBlockTextNode(node) ||
+                      $isBlockHighlightNode(node) ||
+                      $isBlockRemarkNode(node) ||
+                      $isBlockLinkNode(node)
+                    )
+                    // $isBlockNoteNode(node) ||
                   )
-                  // $isBlockNoteNode(node) ||
-                )
-                  continue;
+                    continue;
 
-                updatesRef.current.set(`${nodeKey}:${mutation}`, {
-                  updateType: mutation,
-                  updatedBlockId: node.getId(),
-                  updatedBlock: node.exportJSON(),
-                });
-              }
-              // First setupdates then debounce Promise/async
-              throttleUpdate(updatesRef.current, updatesRef);
-            });
-          },
-        );
-      }),
+                  updatesRef.current.set(`${nodeKey}:${mutation}`, {
+                    updateType: mutation,
+                    updatedBlockId: node.getId(),
+                    updatedBlock: node.exportJSON(),
+                  });
+                }
+                // First setupdates then debounce Promise/async
+                throttleUpdate(updatesRef.current, updatesRef);
+              });
+            },
+          );
+        },
+      ),
     );
   }, [editor]);
 

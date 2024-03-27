@@ -205,6 +205,9 @@ export class BlockLinkNode extends BlockContainerNode {
   getCommentText(): string {
     return this.getLatest().__commentText;
   }
+  setCommentText(commentText: string) {
+    this.getWritable().__commentText = commentText;
+  }
 }
 
 export function $createBlockLinkNode(

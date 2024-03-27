@@ -1,14 +1,30 @@
 import { addClassNamesToElement } from "@lexical/utils";
 import {
+  AspectRatio,
+  Card,
+  CardContent,
+  FormControl,
+  FormLabel,
+  Link,
+  Stack,
+  Textarea,
+  Typography,
+} from "@mui/joy";
+import {
   DecoratorNode,
   type NodeKey,
   type EditorConfig,
   type LexicalNode,
   type SerializedLexicalNode,
   type Spread,
+  type LexicalEditor,
+  $getNodeByKey,
 } from "lexical";
 import { type ReactNode } from "react";
 import { type CustomTheme } from "~/utils/lexical/theme";
+import { $findParentBlockContainer } from "../Block";
+import { $isBlockHighlightNode } from "../BlockHighlight";
+import { $isBlockLinkNode } from ".";
 
 export type SerializedBlockLinkDecoratorNode = Spread<
   {
@@ -28,30 +44,81 @@ function BlockLinkComponent({
   linkUrl,
   linkAlt,
   thumbnail,
+  commentText,
+  handleCommentChange,
 }: {
   title: string;
   desc?: string;
   linkUrl: string;
   linkAlt: string;
   thumbnail?: string;
+  commentText: string;
+  handleCommentChange: (comment: string) => void;
 }) {
   // return null;
   return (
-    <div>
-      <div>
-        <a href={linkUrl}>
-
-        <h3>{title}</h3>
-        {desc ? <small>{desc}</small> : null}
-        </a>
-        <a href={linkUrl}>{linkAlt}</a>
-      </div>
-      {thumbnail ? (
-        <div>
-          <img src={thumbnail} alt="image" />
-        </div>
+    <Stack spacing={1} sx={{ pb: 2 }}>
+      <Card orientation="horizontal">
+        <Stack spacing={2}>
+          <Stack spacing={1}>
+            <Typography
+              level="title-md"
+              sx={{
+                "white-space": "nowrap",
+                overflow: "hidden",
+                "text-overflow": "ellipsis",
+              }}
+            >
+              {title}
+            </Typography>
+            {desc ? (
+              <Typography
+                level="body-sm"
+                sx={{
+                  display: "-webkit-box",
+                  "-webkit-box-orient": "vertical",
+                  "-webkit-line-clamp": "2",
+                  overflow: "hidden",
+                }}
+              >
+                {desc}
+              </Typography>
+            ) : null}
+          </Stack>
+          <Stack>
+            <Link
+              overlay
+              underline="none"
+              href={linkUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              level="title-sm"
+              sx={{ fontWeight: "var(--joy-fontWeight-lg)" }}
+            >
+              {linkAlt}
+            </Link>
+          </Stack>
+        </Stack>
+        {thumbnail ? (
+          <AspectRatio ratio="21/9" flex={true} sx={{ flexBasis: 400 }}>
+            <img src={thumbnail} alt="image" />
+          </AspectRatio>
+        ) : null}
+      </Card>
+      {commentText ? (
+        <CardContent>
+          <FormControl>
+            <FormLabel>Comment</FormLabel>
+            <Textarea
+              defaultValue={commentText}
+              placeholder="Add your comment..."
+              minRows={1}
+              onBlur={(e) => handleCommentChange(e.target.value)}
+            />
+          </FormControl>
+        </CardContent>
       ) : null}
-      </div>
+    </Stack>
   );
 }
 
@@ -169,7 +236,18 @@ export class BlockLinkDecoratorNode extends DecoratorNode<ReactNode> {
     return this.getLatest().__commentText;
   }
 
-  decorate(): ReactNode {
+  handleCommentChange(comment: string, editor: LexicalEditor) {
+    editor.update(() => {
+      const node = $getNodeByKey(this.getKey());
+      if (!node) return;
+      const blockNode = $findParentBlockContainer(node);
+      if (blockNode && $isBlockLinkNode(blockNode)) {
+        blockNode.setCommentText(comment);
+      }
+    });
+  }
+
+  decorate(_editor: LexicalEditor): ReactNode {
     return (
       <BlockLinkComponent
         title={this.__title}
@@ -177,6 +255,10 @@ export class BlockLinkDecoratorNode extends DecoratorNode<ReactNode> {
         linkUrl={this.__linkUrl}
         linkAlt={this.__linkAlt}
         thumbnail={this.__thumbnail}
+        commentText={this.__commentText}
+        handleCommentChange={(comment: string) =>
+          this.handleCommentChange(comment, _editor)
+        }
       />
     );
   }

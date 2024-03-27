@@ -8,6 +8,7 @@ import Layout from "~/components/Layout";
 
 import "@fontsource/inter";
 import GlobalStyles from "@mui/joy/GlobalStyles";
+import { CssVarsProvider } from "@mui/joy";
 
 const MyApp: AppType = ({ Component, pageProps }) => {
   return (
@@ -17,18 +18,20 @@ const MyApp: AppType = ({ Component, pageProps }) => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <Layout>
-        <GlobalStyles
-          styles={{
-            "& .lucide": {
-              color: "var(--Icon-color)",
-              margin: "var(--Icon-margin)",
-              fontSize: "var(--Icon-fontSize, 20px)",
-              width: "1em",
-              height: "1em",
-            },
-          }}
-        />
-        <Component {...pageProps} />
+        <CssVarsProvider>
+          <GlobalStyles
+            styles={{
+              "& .lucide": {
+                color: "var(--Icon-color)",
+                margin: "var(--Icon-margin)",
+                fontSize: "var(--Icon-fontSize, 20px)",
+                width: "1em",
+                height: "1em",
+              },
+            }}
+          />
+          <Component {...pageProps} />
+        </CssVarsProvider>
       </Layout>
     </>
   );
