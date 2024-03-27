@@ -1,5 +1,5 @@
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { addClassNamesToElement, mergeRegister } from "@lexical/utils";
+import { addClassNamesToElement } from "@lexical/utils";
 import {
   DecoratorNode,
   type NodeKey,
@@ -7,41 +7,56 @@ import {
   type LexicalNode,
   type SerializedLexicalNode,
   type Spread,
-  CLICK_COMMAND,
-  COMMAND_PRIORITY_LOW,
+  LexicalEditor,
+  $getNodeByKey,
 } from "lexical";
-import { useEffect, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { type CustomTheme } from "~/utils/lexical/theme";
 import Markdown from "react-markdown";
+import {
+  Card,
+  CardActions,
+  CardContent,
+  FormControl,
+  FormHelperText,
+  FormLabel,
+  Stack,
+  Textarea,
+  Typography,
+} from "@mui/joy";
+import { $findParentBlockContainer, $isBlockContainerNode } from "../Block";
+import { $isBlockHighlightNode } from ".";
 
 export type SerializedBlockQuoteDecoratorNode = Spread<
   {
     highlightText: string;
-    highlightContext: string;
+    commentText: string;
   },
   SerializedLexicalNode
 >;
 
 function BlockQuoteComponent({
   highlightText,
-  highlightContext,
+  commentText,
+  handleCommentChange,
 }: {
   highlightText: string;
-  highlightContext?: string;
+  commentText: string;
+  handleCommentChange: (comment: string) => void;
 }) {
   const [editor] = useLexicalComposerContext();
 
-  useEffect(() => {
-    return mergeRegister(
-      editor.registerCommand(
-        CLICK_COMMAND,
-        (event: MouseEvent) => {
-          return false;
-        },
-        COMMAND_PRIORITY_LOW,
-      ),
-    );
-  }, [editor]);
+  // useEffect(() => {
+  //   return mergeRegister(
+  //     editor.registerCommand(
+  //       CLICK_COMMAND,
+  //       (event: MouseEvent) => {
+  //         return false;
+  //       },
+  //       COMMAND_PRIORITY_LOW,
+  //     ),
+  //   );
+  // }, [editor]);
 
   // useEffect(() => {
   //   const pbElem = editor.getElementByKey(nodeKey);
@@ -51,18 +66,58 @@ function BlockQuoteComponent({
   // }, [editor, isSelected, nodeKey]);
 
   // TODO: figure out why drizzle db:push fails when component exist
-  return <Markdown>{highlightText}</Markdown>;
+  return (
+    <Stack spacing={1} sx={{ pb: 1 }}>
+      <Card variant="soft">
+        <CardContent>
+          <Markdown
+            components={{
+              h1(props) {
+                return <Typography {...props} color="neutral" level="h3" />;
+              },
+              h2(props) {
+                return <Typography {...props} color="neutral" level="h4" />;
+              },
+              h3(props) {
+                return <Typography {...props} color="neutral" level="h4" />;
+              },
+              p(props) {
+                return (
+                  <Typography {...props} color="neutral" level="body-md" />
+                );
+              },
+            }}
+          >
+            {highlightText}
+          </Markdown>
+        </CardContent>
+      </Card>
+      {commentText ? (
+        <CardContent>
+          <FormControl>
+            <FormLabel>Comment</FormLabel>
+            <Textarea
+              defaultValue={commentText}
+              placeholder="Add your comment..."
+              minRows={1}
+              onBlur={(e) => handleCommentChange(e.target.value)}
+            />
+          </FormControl>
+        </CardContent>
+      ) : null}
+    </Stack>
+  );
   // return null;
 }
 
 export class BlockQuoteDecoratorNode extends DecoratorNode<ReactNode> {
   __highlightText: string;
-  __highlightContext: string | undefined;
+  __commentText: string;
 
-  constructor(highlightText: string, highlightContext?: string, key?: NodeKey) {
+  constructor(highlightText: string, commentText: string, key?: string) {
     super(key);
     this.__highlightText = highlightText;
-    this.__highlightContext = highlightContext;
+    this.__commentText = commentText;
   }
 
   static getType(): string {
@@ -72,7 +127,7 @@ export class BlockQuoteDecoratorNode extends DecoratorNode<ReactNode> {
   static clone(node: BlockQuoteDecoratorNode): BlockQuoteDecoratorNode {
     return new BlockQuoteDecoratorNode(
       node.__highlightText,
-      node?.__highlightContext,
+      node.__commentText,
       node.__key,
     );
   }
@@ -82,7 +137,7 @@ export class BlockQuoteDecoratorNode extends DecoratorNode<ReactNode> {
   ): BlockQuoteDecoratorNode {
     const node = $createBlockQuoteDecoratorNode(
       serializedNode.highlightText,
-      serializedNode.highlightContext,
+      serializedNode.commentText,
     );
     return node;
   }
@@ -90,8 +145,8 @@ export class BlockQuoteDecoratorNode extends DecoratorNode<ReactNode> {
   exportJSON(): SerializedBlockQuoteDecoratorNode {
     return {
       ...super.exportJSON(),
-      highlightText: this.getHighlightedText() ?? "",
-      highlightContext: this.getHighlightedParagraph() ?? "",
+      highlightText: this.getHighlightText() ?? "",
+      commentText: this.getCommentText() ?? "",
       version: 1,
     };
   }
@@ -116,28 +171,42 @@ export class BlockQuoteDecoratorNode extends DecoratorNode<ReactNode> {
     return false;
   }
 
-  getHighlightedParagraph() {
-    return this.getLatest().__highlightContext;
-  }
-
-  setHighlightedParagraph(highlightContext: string) {
-    this.getWritable().__highlightContext = highlightContext;
-  }
-
-  getHighlightedText() {
+  getHighlightText() {
     return this.getLatest().__highlightText;
   }
 
-  setHighlightedText(highlightText: string) {
+  setHighlightText(highlightText: string) {
     this.getWritable().__highlightText = highlightText;
   }
 
+  getCommentText() {
+    return this.getLatest().__commentText;
+  }
+
+  setCommentText(commentText: string) {
+    this.getWritable().__commentText = commentText;
+  }
+
+  handleCommentChange(comment: string, editor: LexicalEditor) {
+    editor.update(() => {
+      const node = $getNodeByKey(this.getKey());
+      if (!node) return;
+      const blockNode = $findParentBlockContainer(node);
+      if (blockNode && $isBlockHighlightNode(blockNode)) {
+        blockNode.setCommentText(comment);
+      }
+    });
+  }
+
   // TODO: figure out why drizzle db:push fails when component exist
-  decorate(): ReactNode {
+  decorate(_editor: LexicalEditor): ReactNode {
     return (
       <BlockQuoteComponent
-        highlightContext={this.__highlightContext}
         highlightText={this.__highlightText}
+        commentText={this.__commentText}
+        handleCommentChange={(comment: string) =>
+          this.handleCommentChange(comment, _editor)
+        }
       />
     );
   }
@@ -148,9 +217,9 @@ export class BlockQuoteDecoratorNode extends DecoratorNode<ReactNode> {
 
 export function $createBlockQuoteDecoratorNode(
   highlightText: string,
-  highlightContext: string | undefined,
+  commentText: string,
 ): BlockQuoteDecoratorNode {
-  return new BlockQuoteDecoratorNode(highlightText, highlightContext);
+  return new BlockQuoteDecoratorNode(highlightText, commentText);
 }
 
 export function $isBlockQuoteDecoratorNode(

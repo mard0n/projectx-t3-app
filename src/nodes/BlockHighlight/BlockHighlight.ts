@@ -135,7 +135,7 @@ export class BlockHighlightNode extends BlockContainerNode {
   ): BlockHighlightNode {
     const quoteDecorator = $createBlockQuoteDecoratorNode(
       serializedNode.properties.highlightText,
-      undefined,
+      serializedNode.properties.commentText,
     );
 
     const containerNodes =
@@ -185,6 +185,9 @@ export class BlockHighlightNode extends BlockContainerNode {
   }
   getCommentText(): string {
     return this.getLatest().__commentText;
+  }
+  setCommentText(commentText: string) {
+    this.getWritable().__commentText = commentText;
   }
   getCommentRect(): RectType {
     return this.getLatest().__commentRect;

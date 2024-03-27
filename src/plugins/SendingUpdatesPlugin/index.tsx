@@ -1,7 +1,7 @@
 import React, { type FC, useEffect, useRef } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { mergeRegister } from "@lexical/utils";
-import { $getNodeByKey, TextNode, LineBreakNode } from "lexical";
+import { $getNodeByKey, TextNode, LineBreakNode, LexicalNode } from "lexical";
 import { throttle } from "~/utils/lexical";
 import {
   BlockContainerNode,
@@ -19,15 +19,23 @@ import {
 } from "~/nodes/BlockText";
 import { type Prettify } from "~/utils/types";
 import {
+  $isBlockHighlightNode,
   BlockHighlightNode,
   SerializedBlockHighlightNodeSchema,
 } from "~/nodes/BlockHighlight";
 import {
+  $isBlockNoteNode,
   BlockNoteNode,
   SerializedBlockNoteNodeSchema,
 } from "~/nodes/BlockNote";
-import { SerializedBlockRemarkNodeSchema } from "~/nodes/BlockRemark";
-import { SerializedBlockLinkNodeSchema } from "~/nodes/BlockLink";
+import {
+  $isBlockRemarkNode,
+  SerializedBlockRemarkNodeSchema,
+} from "~/nodes/BlockRemark";
+import {
+  $isBlockLinkNode,
+  SerializedBlockLinkNodeSchema,
+} from "~/nodes/BlockLink";
 
 export const updatedBlocksSchema = z.union([
   z.object({
@@ -139,8 +147,12 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
 
                       if (
                         updatedParentNode &&
-                        $isBlockTextNode(updatedParentNode)
+                        ($isBlockTextNode(updatedParentNode) ||
+                          $isBlockHighlightNode(updatedParentNode) ||
+                          $isBlockLinkNode(updatedParentNode) ||
+                          $isBlockNoteNode(updatedParentNode))
                       ) {
+                        // $isBlockRemarkNode(updatedParentNode)
                         updatesRef.current.set(
                           `${updatedParentNode.getKey()}:updated`,
                           {
@@ -157,7 +169,14 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
 
                 const parentContainer = $findParentBlockContainer(node);
 
-                if (parentContainer && $isBlockTextNode(parentContainer)) {
+                if (
+                  parentContainer &&
+                  ($isBlockTextNode(parentContainer) ||
+                    $isBlockHighlightNode(parentContainer) ||
+                    $isBlockRemarkNode(parentContainer) ||
+                    $isBlockLinkNode(parentContainer))
+                  // $isBlockNoteNode(parentContainer) ||
+                ) {
                   updatesRef.current.set(
                     `${parentContainer.getKey()}:${mutation}`,
                     {
@@ -196,7 +215,15 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
                   continue;
                 }
 
-                if (!$isBlockContainerNode(node) || !$isBlockTextNode(node))
+                if (
+                  !(
+                    $isBlockTextNode(node) ||
+                    $isBlockHighlightNode(node) ||
+                    $isBlockRemarkNode(node) ||
+                    $isBlockLinkNode(node)
+                  )
+                  // $isBlockNoteNode(node) ||
+                )
                   continue;
 
                 updatesRef.current.set(`${nodeKey}:${mutation}`, {
