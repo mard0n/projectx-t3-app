@@ -8,7 +8,7 @@ import {
 import { type PlasmoCSConfig } from "plasmo";
 import { useEffect, useState } from "react";
 import { fetchBookmarks } from "~/background/messages/fetchBookmarks";
-import { fetchWebMetadata } from "~/background/messages/fetchWebMetadata";
+import { fetchWebMetadata, preFetchWebMetadata } from "~/background/messages/fetchWebMetadata";
 import { getCurrentUrl } from "~/background/messages/getCurrentUrl";
 import { getTabData } from "~/background/messages/getTabTitle";
 import {
@@ -116,8 +116,9 @@ function Bookmark() {
   });
 
   useEffect(() => {
-    // prefetching. to increase the performance
-    void fetchWebMetadata();
+    // prefetching. to increase the performance. We are using preFetch instead of fetch
+    // to prevent creating unnecessary webMetadata and BlockNode on visit (before annotating)
+    void preFetchWebMetadata();
   }, []);
 
   useStorage<boolean>("bookmark-init", () => true);

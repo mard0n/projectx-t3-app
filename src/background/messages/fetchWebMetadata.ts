@@ -17,6 +17,19 @@ const handler: PlasmoMessaging.MessageHandler<Request, Response> = async (
   res.send(response);
 };
 
+export async function preFetchWebMetadata() {
+  const currentUrl = await getCurrentUrl();
+
+  if (!currentUrl) return;
+  await sendToBackground<Request, Response>({
+    name: "fetchWebMetadata",
+    body: {
+      url: currentUrl,
+    },
+  });
+}
+
+
 export async function fetchWebMetadata() {
   const currentUrl = await getCurrentUrl();
 

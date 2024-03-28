@@ -46,7 +46,7 @@ import createCache from "@emotion/cache";
 import { CacheProvider } from "@emotion/react";
 import { useStorage } from "@plasmohq/storage/hook";
 import { postWebAnnotation } from "~/background/messages/postWebAnnotation";
-import { fetchWebMetadata } from "~/background/messages/fetchWebMetadata";
+import { preFetchWebMetadata } from "~/background/messages/fetchWebMetadata";
 
 const queryClient = new QueryClient();
 
@@ -134,8 +134,9 @@ const NewHighlight = () => {
   };
 
   useEffect(() => {
-    // prefetching. to increase the performance
-    void fetchWebMetadata();
+    // prefetching. to increase the performance. We are using preFetch instead of fetch
+    // to prevent creating unnecessary webMetadata and BlockNode on visit (before annotating)
+    void preFetchWebMetadata();
   }, []);
 
   useEffect(() => {

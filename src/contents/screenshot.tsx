@@ -15,7 +15,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import createCache from "@emotion/cache";
 import { CacheProvider } from "@emotion/react";
 import { postWebAnnotation } from "~/background/messages/postWebAnnotation";
-import { fetchWebMetadata } from "~/background/messages/fetchWebMetadata";
+import { preFetchWebMetadata } from "~/background/messages/fetchWebMetadata";
 import { fetchHighlights } from "~/background/messages/fetchHighlights";
 
 export const config: PlasmoCSConfig = {
@@ -45,8 +45,9 @@ const Screenshot = () => {
   useStorage<boolean>("screenshot-init", () => true);
 
   useEffect(() => {
-    // prefetching. to increase the performance
-    void fetchWebMetadata();
+    // prefetching. to increase the performance. We are using preFetch instead of fetch
+    // to prevent creating unnecessary webMetadata and BlockNode on visit (before annotating)
+    void preFetchWebMetadata();
     void fetchHighlights();
   }, []);
 
