@@ -1,13 +1,17 @@
 import React, { type FC, useEffect, useRef } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { mergeRegister } from "@lexical/utils";
-import { $getNodeByKey, TextNode, LineBreakNode, LexicalNode } from "lexical";
+import {
+  $getNodeByKey,
+  TextNode,
+  LineBreakNode,
+  type LexicalNode,
+} from "lexical";
 import { throttle } from "~/utils/lexical";
 import {
   BlockContainerNode,
   BlockContentNode,
   BlockChildContainerNode,
-  $isBlockContainerNode,
 } from "~/nodes/Block";
 import { z } from "zod";
 import { $findParentBlockContainer } from "~/nodes/Block";
@@ -28,10 +32,6 @@ import {
   BlockNoteNode,
   SerializedBlockNoteNodeSchema,
 } from "~/nodes/BlockNote";
-import {
-  $isBlockRemarkNode,
-  SerializedBlockRemarkNodeSchema,
-} from "~/nodes/BlockRemark";
 import {
   $isBlockLinkNode,
   BlockLinkContentNode,
@@ -57,12 +57,6 @@ export const updatedBlocksSchema = z.union([
         format: true,
       }),
       SerializedBlockNoteNodeSchema.omit({
-        children: true,
-        indent: true,
-        direction: true,
-        format: true,
-      }),
-      SerializedBlockRemarkNodeSchema.omit({
         children: true,
         indent: true,
         direction: true,
@@ -113,6 +107,7 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
         BlockChildContainerNode,
         BlockTextContentNode,
         BlockLinkNode,
+        BlockNoteNode,
       ])
     ) {
       throw new Error(
@@ -156,7 +151,6 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
                           $isBlockLinkNode(updatedParentNode) ||
                           $isBlockNoteNode(updatedParentNode))
                       ) {
-                        // $isBlockRemarkNode(updatedParentNode)
                         updatesRef.current.set(
                           `${updatedParentNode.getKey()}:updated`,
                           {
@@ -171,15 +165,15 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
                   continue;
                 }
 
-                const parentContainer = $findParentBlockContainer(node);
+                const parentContainer = $findParentBlockContainer(
+                  node,
+                ) as LexicalNode | null;
 
                 if (
-                  parentContainer &&
-                  ($isBlockTextNode(parentContainer) ||
-                    $isBlockHighlightNode(parentContainer) ||
-                    $isBlockRemarkNode(parentContainer) ||
-                    $isBlockLinkNode(parentContainer))
-                  // $isBlockNoteNode(parentContainer) ||
+                  $isBlockTextNode(parentContainer) ||
+                  $isBlockHighlightNode(parentContainer) ||
+                  $isBlockLinkNode(parentContainer) ||
+                  $isBlockNoteNode(parentContainer)
                 ) {
                   updatesRef.current.set(
                     `${parentContainer.getKey()}:${mutation}`,
@@ -208,7 +202,16 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
                   if (!node || mutation === "destroyed") {
                     prevEditorState.read(() => {
                       const prevNode = $getNodeByKey(nodeKey);
-                      if (!prevNode || !$isBlockContainerNode(prevNode)) return;
+                      if (
+                        !prevNode ||
+                        !(
+                          $isBlockTextNode(prevNode) ||
+                          $isBlockHighlightNode(prevNode) ||
+                          $isBlockLinkNode(prevNode) ||
+                          $isBlockNoteNode(prevNode)
+                        )
+                      )
+                        return;
 
                       updatesRef.current.set(`${nodeKey}:destroyed`, {
                         updateType: "destroyed",
@@ -223,10 +226,9 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
                     !(
                       $isBlockTextNode(node) ||
                       $isBlockHighlightNode(node) ||
-                      $isBlockRemarkNode(node) ||
-                      $isBlockLinkNode(node)
+                      $isBlockLinkNode(node) ||
+                      $isBlockNoteNode(node)
                     )
-                    // $isBlockNoteNode(node) ||
                   )
                     continue;
 
