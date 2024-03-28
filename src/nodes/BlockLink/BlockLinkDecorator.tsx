@@ -57,7 +57,7 @@ function BlockLinkComponent({
 }) {
   // return null;
   return (
-    <Stack spacing={1} sx={{ pb: 2 }}>
+    <Stack spacing={1}>
       <Card orientation="horizontal">
         <Stack spacing={2}>
           <Stack spacing={1}>

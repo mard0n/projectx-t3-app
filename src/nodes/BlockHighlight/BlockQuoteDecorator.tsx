@@ -65,7 +65,7 @@ function BlockQuoteComponent({
 
   // TODO: figure out why drizzle db:push fails when component exist
   return (
-    <Stack spacing={1} sx={{ pb: 2 }}>
+    <Stack spacing={1}>
       <Card variant="soft">
         <CardContent>
           <Markdown

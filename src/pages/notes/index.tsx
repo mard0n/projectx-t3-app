@@ -43,6 +43,8 @@ import {
   BlockLinkDecoratorNode,
   BlockLinkNode,
 } from "~/nodes/BlockLink";
+import { AddNewBlockPlugin } from "~/plugins/AddNewBlockPlugin";
+import { type SerializedTextNode } from "lexical";
 
 function onError(error: Error) {
   console.error(error);
