@@ -48,7 +48,10 @@ import { $convertSelectionIntoLexicalContent } from "~/utils/lexical/extractSele
 import { $createBlockTextNode, BlockTextNode } from "~/nodes/BlockText";
 import { BlockHighlightNode } from "~/nodes/BlockHighlight";
 import { BlockLinkNode } from "~/nodes/BlockLink";
-import { $createBlockNoteNode } from "~/nodes/BlockNote/BlockNote";
+import {
+  $createBlockNoteNode,
+  BlockNoteNode,
+} from "~/nodes/BlockNote/BlockNote";
 
 const HierarchicalBlockPlugin = ({}) => {
   const [editor] = useLexicalComposerContext();
@@ -70,6 +73,14 @@ const HierarchicalBlockPlugin = ({}) => {
     }
 
     return mergeRegister(
+      // To make sure there is no empty BlockNote
+      editor.registerNodeTransform(BlockNoteNode, (node) => {
+        const children = node.getChildren();
+
+        if (!children.length) {
+          node.remove();
+        }
+      }),
       ...[
         BlockContainerNode,
         BlockHighlightNode,
