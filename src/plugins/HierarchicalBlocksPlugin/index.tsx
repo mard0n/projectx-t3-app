@@ -8,7 +8,6 @@ import {
 import type {
   TextNode,
   ElementNode,
-  LexicalNode,
   TextFormatType,
   SerializedLexicalNode,
   LineBreakNode,
@@ -22,7 +21,6 @@ import {
   INDENT_CONTENT_COMMAND,
   OUTDENT_CONTENT_COMMAND,
   KEY_TAB_COMMAND,
-  $getRoot,
   COPY_COMMAND,
   CUT_COMMAND,
   PASTE_COMMAND,
@@ -32,21 +30,25 @@ import {
   FORMAT_TEXT_COMMAND,
   DELETE_LINE_COMMAND,
   INSERT_LINE_BREAK_COMMAND,
+  $getRoot,
 } from "lexical";
 import { $findMatchingParent, mergeRegister } from "@lexical/utils";
 import {
   BlockContainerNode,
   BlockContentNode,
   BlockChildContainerNode,
-  $isBlockChildContainerNode,
   $createBlockChildContainerNode,
   $isBlockContainerNode,
   $isBlockContentNode,
   $getSelectedBlocks,
+  $isBlockChildContainerNode,
 } from "~/nodes/Block";
 import { $findParentBlockContainer } from "~/nodes/Block";
 import { $convertSelectionIntoLexicalContent } from "~/utils/lexical/extractSelectedText";
 import { $createBlockTextNode, BlockTextNode } from "~/nodes/BlockText";
+import { BlockHighlightNode } from "~/nodes/BlockHighlight";
+import { BlockLinkNode } from "~/nodes/BlockLink";
+import { $createBlockNoteNode } from "~/nodes/BlockNote/BlockNote";
 
 const HierarchicalBlockPlugin = ({}) => {
   const [editor] = useLexicalComposerContext();
@@ -57,6 +59,9 @@ const HierarchicalBlockPlugin = ({}) => {
         BlockContainerNode,
         BlockContentNode,
         BlockChildContainerNode,
+        BlockTextNode,
+        BlockHighlightNode,
+        BlockLinkNode,
       ])
     ) {
       throw new Error(
@@ -65,7 +70,12 @@ const HierarchicalBlockPlugin = ({}) => {
     }
 
     return mergeRegister(
-      ...[BlockContainerNode, BlockTextNode].map((BlockNode) => {
+      ...[
+        BlockContainerNode,
+        BlockHighlightNode,
+        BlockTextNode,
+        BlockLinkNode,
+      ].map((BlockNode) => {
         return mergeRegister(
           // To make sure the Editor is never empty
           editor.registerMutationListener(BlockNode, () => {
@@ -78,9 +88,21 @@ const HierarchicalBlockPlugin = ({}) => {
               }
             });
           }),
+          // To make sure BlockNode is always inside BlockNote
+          editor.registerNodeTransform(BlockNode, (node) => {
+            const parentNode = node.getParentContainer();
+            console.log("node", node);
+            console.log("parentNode", parentNode);
+
+            if (!parentNode) {
+              const newChildContainerNode = $createBlockNoteNode();
+              node.insertAfter(newChildContainerNode);
+              newChildContainerNode.append(node);
+            }
+          }),
           // To make sure there is always childContainer
           editor.registerNodeTransform(BlockNode, (node) => {
-            const children = node.getChildren<LexicalNode>();
+            const children = node.getChildren();
             const blockChildContainer = children.find((node) =>
               $isBlockChildContainerNode(node),
             );
@@ -89,22 +111,6 @@ const HierarchicalBlockPlugin = ({}) => {
               node.append(newChildContainerNode);
             }
           }),
-          // // To make sure that blockContent contains an element not direct text
-          // editor.registerNodeTransform(BlockNode, (node) => {
-          //   const children = node.getChildren<LexicalNode>();
-          //   const blockContent = children.find((node) =>
-          //     $isBlockContentNode(node),
-          //   );
-          //   if (
-          //     blockContent &&
-          //     $isBlockContentNode(blockContent) &&
-          //     !blockContent.getChildren().length
-          //   ) {
-          //     const newContentNode = $createParagraphNode();
-          //     blockContent.append(newContentNode);
-          //     node.append(blockContent);
-          //   }
-          // }),
           // When title is deleted, upwrap the childContent into a sibling or parent or root
           editor.registerNodeTransform(BlockNode, (node) => {
             const containerNode = node;
@@ -277,7 +283,7 @@ const HierarchicalBlockPlugin = ({}) => {
           const selectedBlocks = $getSelectedBlocks(selection).reverse(); // To work with insertAfter
 
           for (const paragraph of selectedBlocks) {
-            const parentContainerNode = paragraph.getParentCPContainer();
+            const parentContainerNode = paragraph.getParentContainer();
             parentContainerNode?.insertAfter(paragraph);
           }
           return true;

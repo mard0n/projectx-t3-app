@@ -24,7 +24,7 @@ import {
   type BlockContentNode,
 } from ".";
 import type { Prettify } from "~/utils/types";
-import { type BlockNoteNode } from "../BlockNote";
+import { $isBlockNoteNode, type BlockNoteNode } from "../BlockNote";
 
 export const BLOCK_CONTAINER_TYPE = "block-container" as const;
 
@@ -173,7 +173,7 @@ export class BlockContainerNode extends ElementNode {
   }
 
   exportJSON(): SerializedBlockContainerNode {
-    const parentBlockContainerNodeId = this.getParentCPContainer()?.getId();
+    const parentBlockContainerNodeId = this.getParentContainer()?.getId();
 
     return {
       ...super.exportJSON(),
@@ -207,15 +207,17 @@ export class BlockContainerNode extends ElementNode {
     return super.getParent();
   }
 
-  getParentCPContainer(): BlockContainerNode | BlockNoteNode | undefined {
+  getParentContainer() {
     const parent = this.getLatest().getParent<
-      BlockChildContainerNode | RootNode
+      BlockChildContainerNode | BlockNoteNode | RootNode
     >();
     if ($isBlockChildContainerNode(parent)) {
       const parentContainer = parent.getParent();
       if (parentContainer) {
         return parentContainer;
       }
+    } else if($isBlockNoteNode(parent)) {
+      return parent
     }
   }
 

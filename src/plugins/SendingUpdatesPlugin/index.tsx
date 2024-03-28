@@ -24,6 +24,7 @@ import {
 import { type Prettify } from "~/utils/types";
 import {
   $isBlockHighlightNode,
+  BlockHighlightContentNode,
   BlockHighlightNode,
   SerializedBlockHighlightNodeSchema,
 } from "~/nodes/BlockHighlight";
@@ -106,6 +107,10 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
         BlockContentNode,
         BlockChildContainerNode,
         BlockTextContentNode,
+        BlockHighlightContentNode,
+        BlockLinkContentNode,
+        BlockTextNode,
+        BlockHighlightNode,
         BlockLinkNode,
         BlockNoteNode,
       ])
@@ -124,6 +129,7 @@ const SendingUpdatesPlugin: FC<SendingUpdatesPluginProps> = ({
         BlockChildContainerNode,
         BlockTextContentNode,
         BlockLinkContentNode,
+        BlockHighlightContentNode,
       ].map((Node) =>
         editor.registerMutationListener(
           Node,
