@@ -54,11 +54,14 @@
   cursor: pointer;
 }
 
-/* only show if block-content is hovered and block child container has children */
+/* only show if block-content is hovered and block child container has children and open */
 .block-container:after {
   display: none;
 }
-.block-container:hover:has(> .block-child-container > div):after {
+.block-container.open:hover:has(> .block-child-container > div):after {
+  display: block;
+}
+.block-container.closed:has(> .block-child-container > div):after {
   display: block;
 }
 
