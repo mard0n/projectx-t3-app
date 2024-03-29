@@ -1,5 +1,5 @@
 import { addClassNamesToElement } from "@lexical/utils";
-import type { BlockContainerNode } from ".";
+import { type BlockContainerNode } from ".";
 import type {
   SerializedElementNode,
   NodeKey,
@@ -7,9 +7,11 @@ import type {
   TextNode,
   Spread,
   EditorConfig,
+  DOMExportOutput,
+  LexicalEditor,
 } from "lexical";
 import { ElementNode } from "lexical";
-import type { CustomTheme } from "~/utils/lexical/theme";
+import { type CustomTheme } from "~/utils/lexical/theme";
 
 type SerializedBlockChildContainerNode = Spread<object, SerializedElementNode>;
 
@@ -32,10 +34,7 @@ export class BlockChildContainerNode extends ElementNode {
   createDOM(config: EditorConfig): HTMLElement {
     const dom = document.createElement("div");
     const theme = config.theme as CustomTheme;
-    const className = theme.block.childContainer;
-    if (className !== undefined) {
-      addClassNamesToElement(dom, className);
-    }
+    addClassNamesToElement(dom, theme.block.childContainer);
 
     const children = this.getChildren();
     if (!children.length) {
@@ -65,6 +64,30 @@ export class BlockChildContainerNode extends ElementNode {
       type: CHILD_CONTAINER_TYPE,
       version: 1,
     };
+  }
+
+  // static importDOM(): DOMConversionMap<HTMLDivElement> | null {
+  //   return {
+  //     div: (domNode: HTMLDivElement) => {
+  //       if (!domNode.classList.contains(customTheme.block.childContainer)) {
+  //         return null;
+  //       }
+  //       return {
+  //         conversion: (element: HTMLElement): DOMConversionOutput => {
+  //           const node = $createBlockChildContainerNode();
+  //           console.log("convertBlockContentNode node", node);
+  //           return { node };
+  //         },
+  //         priority: 1,
+  //       };
+  //     },
+  //   };
+  // }
+
+  exportDOM(editor: LexicalEditor): DOMExportOutput {
+    const element = this.createDOM(editor._config);
+    console.log("BlockChildContainerNode exportDOM element", element);
+    return { element };
   }
 
   // Mutation

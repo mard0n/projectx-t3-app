@@ -5,16 +5,15 @@ import type {
   LexicalEditor,
   RootNode,
   LexicalNode,
-  RangeSelection,
+  DOMExportOutput,
 } from "lexical";
 import { $parseSerializedNode, ElementNode } from "lexical";
 import { z } from "zod";
 import {
   SerializedElementNodeSchema,
   hasToggleElemClicked,
-  selectOnlyTopNodes,
 } from "~/utils/lexical";
-import type { CustomTheme } from "~/utils/lexical/theme";
+import { type CustomTheme } from "~/utils/lexical/theme";
 import {
   $createBlockChildContainerNode,
   $createBlockContentNode,
@@ -103,21 +102,12 @@ export class BlockContainerNode extends ElementNode {
   createDOM(config: EditorConfig, editor: LexicalEditor): HTMLDivElement {
     const dom = document.createElement("div");
     const theme = config.theme as CustomTheme;
-    const className = theme.block.container;
-    if (className !== undefined) {
-      addClassNamesToElement(dom, className);
-    }
+    addClassNamesToElement(dom, theme.block.container);
 
     if (this.__open) {
       dom.classList.add("open");
     } else {
       dom.classList.add("closed");
-    }
-
-    if (this.__selected) {
-      dom.classList.add("selected");
-    } else {
-      dom.classList.remove("selected");
     }
 
     dom.addEventListener("click", (event) => {
@@ -187,6 +177,33 @@ export class BlockContainerNode extends ElementNode {
     };
   }
 
+  // static importDOM(): DOMConversionMap<HTMLDivElement> | null {
+  //   return {
+  //     div: (domNode: HTMLDivElement) => {
+  //       console.log("domNode", domNode);
+  //       if (!domNode.classList.contains(customTheme.block.container)) {
+  //         console.log("doesn't contain block-container");
+  //         return null;
+  //       }
+  //       return {
+  //         conversion: (element: HTMLElement): DOMConversionOutput => {
+  //           const node = $createBlockContainerNode();
+  //           console.log("convertBlockContainerNode node", node);
+
+  //           return { node };
+  //         },
+  //         priority: 1,
+  //       };
+  //     },
+  //   };
+  // }
+
+  exportDOM(editor: LexicalEditor): DOMExportOutput {
+    const element = this.createDOM(editor._config, editor);
+    console.log("BlockContainerNode exportDOM element", element);
+    return { element };
+  }
+
   getBlockContentNode() {
     return this.getLatest()
       .getChildren()
@@ -216,8 +233,8 @@ export class BlockContainerNode extends ElementNode {
       if (parentContainer) {
         return parentContainer;
       }
-    } else if($isBlockNoteNode(parent)) {
-      return parent
+    } else if ($isBlockNoteNode(parent)) {
+      return parent;
     }
   }
 
@@ -276,20 +293,4 @@ export function $findParentBlockContainer(node: LexicalNode) {
       return $isBlockContainerNode(node);
     },
   );
-}
-
-export function $getSelectedBlocks(selection: RangeSelection) {
-  const nodes = selection.getNodes();
-
-  const blocks = [
-    ...new Set(
-      nodes.flatMap((node) => {
-        const result = $findParentBlockContainer(node);
-        return !!result ? [result] : [];
-      }),
-    ),
-  ];
-
-  const onlyTopNodes = selectOnlyTopNodes(blocks);
-  return onlyTopNodes;
 }

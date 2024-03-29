@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { mergeRegister } from "@lexical/utils";
 import {
-  $getSelectedBlocks,
+  $findParentBlockContainer,
   $isBlockContainerNode,
   BlockChildContainerNode,
   BlockContainerNode,
@@ -19,7 +19,9 @@ import {
   KEY_ENTER_COMMAND,
   COMMAND_PRIORITY_HIGH,
   $getNodeByKey,
+  type RangeSelection,
 } from "lexical";
+import { selectOnlyTopNodes } from "~/utils/lexical";
 
 const SelectBlocksPlugin = ({}) => {
   const [editor] = useLexicalComposerContext();
@@ -167,5 +169,21 @@ const SelectBlocksPlugin = ({}) => {
 
   return null;
 };
+
+export function $getSelectedBlocks(selection: RangeSelection) {
+  const nodes = selection.getNodes();
+
+  const blocks = [
+    ...new Set(
+      nodes.flatMap((node) => {
+        const result = $findParentBlockContainer(node);
+        return !!result ? [result] : [];
+      }),
+    ),
+  ];
+
+  const onlyTopNodes = selectOnlyTopNodes(blocks);
+  return onlyTopNodes;
+}
 
 export { SelectBlocksPlugin };

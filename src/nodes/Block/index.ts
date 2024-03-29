@@ -5,7 +5,6 @@ export {
   SerializedBlockContainerNodeSchema,
   BLOCK_CONTAINER_TYPE,
   $findParentBlockContainer,
-  $getSelectedBlocks
 } from "./Container";
 export {
   $createBlockContentNode,

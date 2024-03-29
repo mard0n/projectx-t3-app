@@ -8,10 +8,12 @@ import type {
   SerializedElementNode,
   TextNode,
   LineBreakNode,
+  LexicalEditor,
+  DOMExportOutput,
 } from "lexical";
 import { ElementNode, $isTextNode } from "lexical";
 import { type BlockContainerNode } from ".";
-import type { CustomTheme } from "~/utils/lexical/theme";
+import { type CustomTheme } from "~/utils/lexical/theme";
 
 export type SerializedContentNode = Spread<object, SerializedElementNode>;
 
@@ -34,10 +36,7 @@ export class BlockContentNode extends ElementNode {
   createDOM(config: EditorConfig): HTMLElement {
     const dom = document.createElement("div");
     const theme = config.theme as CustomTheme;
-    const className = theme.block.content;
-    if (className !== undefined) {
-      addClassNamesToElement(dom, className);
-    }
+    addClassNamesToElement(dom, theme.block.content);
     return dom;
   }
 
@@ -56,6 +55,31 @@ export class BlockContentNode extends ElementNode {
       type: CONTENT_TYPE,
       version: 1,
     };
+  }
+
+  // static importDOM(): DOMConversionMap<HTMLDivElement> | null {
+  //   return {
+  //     div: (domNode: HTMLDivElement) => {
+  //       console.log("domNode", domNode);
+  //       if (!domNode.classList.contains(customTheme.block.content)) {
+  //         return null;
+  //       }
+  //       return {
+  //         conversion: (element: HTMLElement): DOMConversionOutput => {
+  //           const node = $createBlockContentNode();
+  //           console.log("convertBlockContentNode node", node);
+  //           return { node };
+  //         },
+  //         priority: 1,
+  //       };
+  //     },
+  //   };
+  // }
+
+  exportDOM(editor: LexicalEditor): DOMExportOutput {
+    const element = this.createDOM(editor._config);
+    console.log("BlockContentNode exportDOM element", element);
+    return { element };
   }
 
   // Mutation

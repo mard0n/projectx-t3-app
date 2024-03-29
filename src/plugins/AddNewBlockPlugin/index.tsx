@@ -18,7 +18,6 @@ import { $createBlockTextNode } from "~/nodes/BlockText";
 import { $isBlockNoteNode, type BlockNoteNode } from "~/nodes/BlockNote";
 import { $createBlockNoteNode } from "~/nodes/BlockNote/BlockNote";
 
-
 // TODO Make it reusable. So you can use it in Drag and drop
 function getFocusedElem(target: HTMLElement, editor: LexicalEditor) {
   return new Promise<{
@@ -120,7 +119,7 @@ const AddNewBlockPlugin = ({}) => {
     const handleClick = () => {
       if (targetBlockElemRef.current && isHotKeyActivated.current) {
         editor.update(() => {
-          const blockTextNode = $createBlockTextNode("p");
+          const blockTextNode = $createBlockTextNode({ tag: "p" });
           if ($isBlockNoteNode(targetBlockElemRef.current?.node)) {
             const blockNoteNode = $createBlockNoteNode().append(blockTextNode);
             if (targetBlockElemRef.current.positionTop) {

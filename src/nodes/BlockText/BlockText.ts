@@ -1,13 +1,14 @@
-import {
-  type NodeKey,
-  type EditorConfig,
-  type LexicalNode,
-  type LexicalEditor,
-  type SerializedTextNode,
-  type TextNode,
-  type LineBreakNode,
-  $parseSerializedNode,
+import type {
+  NodeKey,
+  EditorConfig,
+  LexicalNode,
+  LexicalEditor,
+  SerializedTextNode,
+  TextNode,
+  LineBreakNode,
+  DOMExportOutput,
 } from "lexical";
+import { $parseSerializedNode } from "lexical";
 import { z } from "zod";
 import {
   $createBlockChildContainerNode,
@@ -75,12 +76,9 @@ export class BlockTextNode extends BlockContainerNode {
     const dom = super.createDOM(config, editor);
     const tag = this.__tag;
     const theme = config.theme as CustomTheme;
-    const blockTextClassNames = theme.blockText;
-    if (blockTextClassNames) {
-      const tagName = blockTextClassNames[tag];
-      const blockContainer = blockTextClassNames.container;
-      addClassNamesToElement(dom, blockContainer, tagName);
-    }
+    const blockContainer = theme.blockText.container;
+    const tagName = theme.blockText.tags[tag];
+    addClassNamesToElement(dom, blockContainer, tagName);
     return dom;
   }
 
@@ -101,11 +99,11 @@ export class BlockTextNode extends BlockContainerNode {
         return $parseSerializedNode(node);
       }) as BlockContainerNode[]) || [];
 
-    const container = $createBlockTextNode(
-      serializedNode.properties.tag,
-      contentChildren,
-      containerNodes,
-    );
+    const container = $createBlockTextNode({
+      tag: serializedNode.properties.tag,
+      contentChildren: contentChildren,
+      childBlocks: containerNodes,
+    });
     container.setId(serializedNode.id);
     container.setOpen(serializedNode.open);
     container.setWebUrl(serializedNode.webUrl);
@@ -129,17 +127,56 @@ export class BlockTextNode extends BlockContainerNode {
     };
   }
 
+  // static importDOM(): DOMConversionMap<HTMLDivElement> | null {
+  //   return {
+  //     div: (domNode: HTMLDivElement) => {
+  //       if (!domNode.classList.contains(customTheme.blockText.container)) {
+  //         return null;
+  //       }
+  //       return {
+  //         conversion: (element: HTMLElement): DOMConversionOutput => {
+  //           let tag: BlockTextTagType = "p";
+  //           for (const [key, value] of Object.entries(
+  //             customTheme.blockText.tags,
+  //           ) as Entries<typeof customTheme.blockText.tags>) {
+  //             if (element.className.includes(value)) {
+  //               tag = key;
+  //             }
+  //           }
+  //           const node = $createBlockTextNode({ tag, includeChildren: false });
+  //           return { node };
+  //         },
+  //         priority: 2,
+  //       };
+  //     },
+  //   };
+  // }
+
+  exportDOM(editor: LexicalEditor): DOMExportOutput {
+    const element = this.createDOM(editor._config, editor);
+    return { element };
+  }
+
   getTag(): BlockTextTagType {
     return this.__tag;
   }
 }
 
-export function $createBlockTextNode(
-  tag: BlockTextTagType,
-  contentChildren?: (TextNode | LineBreakNode)[],
-  childBlocks?: BlockContainerNode[],
-): BlockTextNode {
+export function $createBlockTextNode({
+  tag,
+  contentChildren,
+  childBlocks,
+  includeChildren = true,
+}: {
+  tag: BlockTextTagType;
+  contentChildren?: (TextNode | LineBreakNode)[];
+  childBlocks?: BlockContainerNode[];
+  includeChildren?: boolean;
+}): BlockTextNode {
   const container = new BlockTextNode({ tag });
+  if (!includeChildren) {
+    return container;
+  }
   const content = $createBlockTextContentNode(tag);
   const childContainer = $createBlockChildContainerNode();
 

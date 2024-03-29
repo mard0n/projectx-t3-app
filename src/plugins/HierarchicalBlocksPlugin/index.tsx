@@ -11,6 +11,8 @@ import type {
   TextFormatType,
   SerializedLexicalNode,
   LineBreakNode,
+  LexicalEditor,
+  PasteCommandType,
 } from "lexical";
 import {
   COMMAND_PRIORITY_NORMAL,
@@ -31,8 +33,10 @@ import {
   DELETE_LINE_COMMAND,
   INSERT_LINE_BREAK_COMMAND,
   $getRoot,
+  $setSelection,
+  $isNodeSelection,
 } from "lexical";
-import { $findMatchingParent, mergeRegister } from "@lexical/utils";
+import { mergeRegister } from "@lexical/utils";
 import {
   BlockContainerNode,
   BlockContentNode,
@@ -40,11 +44,14 @@ import {
   $createBlockChildContainerNode,
   $isBlockContainerNode,
   $isBlockContentNode,
-  $getSelectedBlocks,
   $isBlockChildContainerNode,
 } from "~/nodes/Block";
 import { $findParentBlockContainer } from "~/nodes/Block";
-import { $convertSelectionIntoLexicalContent } from "~/utils/lexical/extractSelectedText";
+import {
+  $convertSelectionIntoHTMLContent,
+  $convertSelectionIntoLexicalContent,
+  $customInsertGeneratedNodes,
+} from "~/utils/lexical/clipboard";
 import { $createBlockTextNode, BlockTextNode } from "~/nodes/BlockText";
 import { BlockHighlightNode } from "~/nodes/BlockHighlight";
 import { BlockLinkNode } from "~/nodes/BlockLink";
@@ -52,6 +59,7 @@ import {
   $createBlockNoteNode,
   BlockNoteNode,
 } from "~/nodes/BlockNote/BlockNote";
+import { $getSelectedBlocks } from "../SelectBlocksPlugin";
 
 const HierarchicalBlockPlugin = ({}) => {
   const [editor] = useLexicalComposerContext();
@@ -92,7 +100,7 @@ const HierarchicalBlockPlugin = ({}) => {
           editor.registerMutationListener(BlockNode, () => {
             editor.update(() => {
               if ($getRoot().isEmpty()) {
-                const containerNode = $createBlockTextNode("p");
+                const containerNode = $createBlockTextNode({ tag: "p" });
                 $getRoot().append(containerNode);
                 const firstDecendent = containerNode.getFirstDescendant();
                 $isElementNode(firstDecendent) && firstDecendent.select();
@@ -102,9 +110,6 @@ const HierarchicalBlockPlugin = ({}) => {
           // To make sure BlockNode is always inside BlockNote
           editor.registerNodeTransform(BlockNode, (node) => {
             const parentNode = node.getParentContainer();
-            console.log("node", node);
-            console.log("parentNode", parentNode);
-
             if (!parentNode) {
               const newChildContainerNode = $createBlockNoteNode();
               node.insertAfter(newChildContainerNode);
@@ -216,7 +221,10 @@ const HierarchicalBlockPlugin = ({}) => {
               TextNode | LineBreakNode
             >(); // TODO: Do proper type check
 
-            const newTextBlock = $createBlockTextNode("p", contentTexts);
+            const newTextBlock = $createBlockTextNode({
+              tag: "p",
+              contentChildren: contentTexts,
+            });
             insertedNode.remove();
 
             if (!containerNode?.getOpen()) {
@@ -441,30 +449,7 @@ const HierarchicalBlockPlugin = ({}) => {
         (event) => {
           if (!event) return false;
           event.preventDefault();
-
-          const clipboardData =
-            event instanceof InputEvent || event instanceof KeyboardEvent
-              ? null
-              : event.clipboardData;
-
-          if (clipboardData === null) return false;
-
-          const selection = $getSelection();
-          if (!$isRangeSelection(selection)) return false;
-
-          const lexicalString = $convertSelectionIntoLexicalContent(
-            selection,
-            editor,
-          );
-          console.log("lexicalString", lexicalString);
-
-          if (lexicalString !== null) {
-            clipboardData.setData(
-              "application/x-lexical-editor",
-              lexicalString,
-            );
-          }
-
+          copy(event, editor);
           return true;
         },
         COMMAND_PRIORITY_NORMAL,
@@ -472,21 +457,9 @@ const HierarchicalBlockPlugin = ({}) => {
       editor.registerCommand(
         CUT_COMMAND,
         (event) => {
-          // copy(event, editor, selectedBlocks);
-
-          // editor.update(() => {
-          //   const selection = $getSelection();
-          //   if (selectedBlocks?.length) {
-          //     selectedBlocks.forEach((node) => node.remove());
-          //     setSelectedBlocks(null);
-          //     return;
-          //   }
-          //   if ($isRangeSelection(selection)) {
-          //     selection.removeText();
-          //   } else if ($isNodeSelection(selection)) {
-          //     selection.getNodes().forEach((node) => node.remove());
-          //   }
-          // });
+          if (!event) return false;
+          event.preventDefault();
+          cut(event, editor);
           return true;
         },
         COMMAND_PRIORITY_NORMAL,
@@ -494,132 +467,9 @@ const HierarchicalBlockPlugin = ({}) => {
       editor.registerCommand(
         PASTE_COMMAND,
         (event) => {
-          // TODO: Revise the copy and paste.
-          const selection = $getSelection();
-
-          if (!$isRangeSelection(selection)) return false;
-
+          if (!event) return false;
           event.preventDefault();
-
-          const clipboardData =
-            event instanceof InputEvent || event instanceof KeyboardEvent
-              ? null
-              : event.clipboardData;
-
-          if (clipboardData === null) return false;
-
-          const lexicalString = clipboardData.getData(
-            "application/x-lexical-editor",
-          );
-          console.log("paste lexicalString", lexicalString);
-
-          if (!lexicalString) return true;
-
-          let payload: {
-            namespace: string;
-            nodes: SerializedLexicalNode[];
-          } | null = null;
-
-          try {
-            payload = JSON.parse(lexicalString, (key, value) => {
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-              return key !== "id" ? value : null; // To make sure on paste new ids are created
-            }) as {
-              namespace: string;
-              nodes: SerializedLexicalNode[];
-            };
-          } catch {
-            // Fail silently.
-            return true;
-          }
-          console.log("editor._config.namespace", editor._config.namespace);
-
-          if (
-            payload?.namespace === editor._config.namespace &&
-            Array.isArray(payload?.nodes)
-          ) {
-            const nodes = $generateNodesFromSerializedNodes(payload?.nodes);
-            console.log("paste nodes", nodes);
-
-            function findFocusableNode(node: BlockContainerNode | ElementNode) {
-              let nodeToFocus = null;
-              if ($isBlockContainerNode(node)) {
-                nodeToFocus = node.getBlockContentNode().getLastDescendant()!;
-              } else {
-                nodeToFocus = node.getLastDescendant()!;
-              }
-
-              return nodeToFocus as ElementNode | TextNode;
-            }
-
-            let nextFocusNode = selection.anchor.getNode() as
-              | TextNode
-              | ElementNode;
-
-            for (const pasteNode of nodes) {
-              const nextFocusContainer =
-                $findParentBlockContainer(nextFocusNode);
-
-              if (!nextFocusContainer) return false;
-
-              if (
-                $isBlockContainerNode(pasteNode) &&
-                $isBlockContainerNode(nextFocusContainer) &&
-                !nextFocusContainer
-                  .getBlockContentNode()
-                  .getTextContentSize() &&
-                !nextFocusContainer.getBlockChildContainerNode().getChildren()
-                  .length
-              ) {
-                nextFocusContainer.insertAfter(pasteNode);
-                nextFocusContainer.remove();
-                nextFocusNode = findFocusableNode(pasteNode);
-                continue;
-              }
-
-              if ($isBlockContainerNode(pasteNode)) {
-                // Special case
-                if (
-                  !nextFocusContainer.getBlockContentNode().getChildrenSize() &&
-                  !pasteNode.getBlockChildContainerNode().getChildren().length
-                ) {
-                  const focusContent = nextFocusContainer.getBlockContentNode();
-                  const pasteContent = pasteNode.getBlockContentNode();
-                  focusContent.insertAfter(pasteContent);
-                  focusContent.remove();
-                  nextFocusNode = findFocusableNode(pasteNode);
-                  continue;
-                }
-
-                nextFocusContainer.insertAfter(pasteNode);
-                nextFocusNode = findFocusableNode(pasteNode);
-              } else if ($isElementNode(pasteNode)) {
-                const focusElementNode = $findMatchingParent(
-                  nextFocusNode,
-                  (node): node is ElementNode =>
-                    $isElementNode(node) && !$isBlockContentNode(node),
-                );
-                focusElementNode?.insertAfter(pasteNode);
-                nextFocusNode = pasteNode;
-                if (!focusElementNode?.getTextContentSize()) {
-                  focusElementNode?.remove();
-                }
-              } else if ($isTextNode(pasteNode)) {
-                if ($isElementNode(nextFocusNode)) {
-                  nextFocusNode.append(pasteNode);
-                  nextFocusNode = pasteNode;
-                } else if ($isTextNode(nextFocusNode)) {
-                  nextFocusNode.insertAfter(pasteNode);
-                  nextFocusNode = pasteNode;
-                }
-              } else {
-                console.error("no appropriate place to paste");
-              }
-            }
-            nextFocusNode.selectEnd();
-            return true;
-          }
-
+          paste(event, editor);
           return true;
         },
         COMMAND_PRIORITY_NORMAL,
@@ -628,6 +478,138 @@ const HierarchicalBlockPlugin = ({}) => {
   }, [editor]);
 
   return <></>;
+};
+
+const copy = (event: ClipboardEvent | KeyboardEvent, editor: LexicalEditor) => {
+  const clipboardData =
+    event instanceof InputEvent || event instanceof KeyboardEvent
+      ? null
+      : event.clipboardData;
+
+  if (clipboardData === null) return false;
+
+  const selection = $getSelection();
+  if (!$isRangeSelection(selection)) return false;
+
+  const lexicalString = $convertSelectionIntoLexicalContent(selection, editor);
+  if (lexicalString !== null) {
+    clipboardData.setData("application/x-lexical-editor", lexicalString);
+  }
+
+  const htmlString = $convertSelectionIntoHTMLContent(selection, editor);
+  if (htmlString !== null) {
+    clipboardData.setData("text/html", htmlString);
+  }
+  const plainString = selection.getTextContent();
+  clipboardData.setData("text/plain", plainString);
+};
+
+const cut = (event: ClipboardEvent | KeyboardEvent, editor: LexicalEditor) => {
+  copy(event, editor);
+
+  editor.update(() => {
+    const selection = $getSelection();
+    if ($isRangeSelection(selection)) {
+      const selectedBlocks = $getSelectedBlocks(selection);
+      if (selectedBlocks?.length > 1) {
+        selectedBlocks.forEach((node) => node.remove());
+        $setSelection(null);
+        return;
+      }
+      selection.removeText();
+    } else if ($isNodeSelection(selection)) {
+      selection.getNodes().forEach((node) => node.remove());
+    }
+  });
+};
+
+const paste = (event: PasteCommandType, editor: LexicalEditor) => {
+  // TODO: Revise the copy and paste.
+  const selection = $getSelection();
+
+  if (!selection || !$isRangeSelection(selection)) return;
+
+  event.preventDefault();
+
+  const clipboardData =
+    event instanceof InputEvent || event instanceof KeyboardEvent
+      ? null
+      : event.clipboardData;
+
+  if (clipboardData === null) return false;
+
+  const lexicalString = clipboardData.getData("application/x-lexical-editor");
+  if (lexicalString) {
+    let payload: {
+      namespace: string;
+      nodes: SerializedLexicalNode[];
+    } | null = null;
+
+    try {
+      payload = JSON.parse(lexicalString, (key, value) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        return key !== "id" ? value : null; // To make sure on paste new ids are created
+      }) as {
+        namespace: string;
+        nodes: SerializedLexicalNode[];
+      };
+    } catch {
+      // Fail silently.
+      return true;
+    }
+
+    if (
+      payload?.namespace === editor._config.namespace &&
+      Array.isArray(payload?.nodes)
+    ) {
+      const nodes = $generateNodesFromSerializedNodes(payload?.nodes);
+      return $customInsertGeneratedNodes(nodes, selection);
+    }
+  }
+
+  // TODO Handle the pasting with style and html better from external websites
+  // const htmlString = clipboardData.getData("text/html");
+  // console.log("htmlString", htmlString);
+
+  // if (htmlString) {
+  //   try {
+  //     const parser = new DOMParser();
+  //     const dom = parser.parseFromString(htmlString, "text/html");
+  //     const nodes = $generateNodesFromDOM(editor, dom);
+  //     console.log("nodes", nodes);
+  //     return true;
+  //     // return customInsertGeneratedNodes(nodes, selection);
+  //   } catch {
+  //     // Fail silently.
+  //   }
+  // }
+
+  // Multi-line plain text in rich text mode pasted as separate paragraphs
+  // instead of single paragraph with linebreaks.
+  // Webkit-specific: Supports read 'text/uri-list' in clipboard.
+  const text =
+    clipboardData.getData("text/plain") ||
+    clipboardData.getData("text/uri-list");
+  if (text != null) {
+    if ($isRangeSelection(selection)) {
+      // const parts = text.split(/(\r?\n)/);
+      // if (parts[parts.length - 1] === "") {
+      //   parts.pop();
+      // }
+      // for (const part of parts) {
+      //   if (part === "\n" || part === "\r\n") {
+      //     selection.insertParagraph();
+      //   } else if (part === "\t") {
+      //     selection.insertNodes([$createTabNode()]);
+      //   } else {
+      //     selection.insertText(part);
+      //   } else {
+      //     selection.insertRawText(text);
+      //   }
+      // }
+      selection.insertText(text);
+    }
+  }
 };
 
 export { HierarchicalBlockPlugin };

@@ -3,3 +3,7 @@ export type Prettify<T> = {
 } & object;
 
 export type UnwrapArray<T> = T extends (infer U)[] ? U : never;
+
+export type Entries<T> = {
+  [K in keyof T]: [K, T[K]];
+}[keyof T][];

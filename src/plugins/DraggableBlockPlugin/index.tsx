@@ -17,10 +17,10 @@ import { createPortal } from "react-dom";
 import {
   type BlockContainerNode,
   $findParentBlockContainer,
-  $getSelectedBlocks,
 } from "~/nodes/Block";
 import { getOffsetRectRelativeToBody } from "~/utils/extension";
 import { eventFiles } from "~/utils/lexical";
+import { $getSelectedBlocks } from "../SelectBlocksPlugin";
 
 function setDragCirclePosition(
   targetElem: HTMLElement | null,

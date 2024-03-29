@@ -9,10 +9,12 @@ export const customTheme = {
   blockText: {
     container: "block-text-container",
     content: "block-text-content",
-    h1: "block-h1",
-    h2: "block-h2",
-    h3: "block-h3",
-    p: "block-p",
+    tags: {
+      h1: "block-h1",
+      h2: "block-h2",
+      h3: "block-h3",
+      p: "block-p",
+    },
   },
   blockHighlight: {
     container: "block-highlight-container",
