@@ -83,7 +83,12 @@ export class BlockTextNode extends BlockContainerNode {
   }
 
   updateDOM(prevNode: BlockTextNode, dom: HTMLDivElement): boolean {
-    return super.updateDOM(prevNode, dom);
+    super.updateDOM(prevNode, dom);
+    if (prevNode.__tag === this.__tag) return false;
+
+    // Returning true tells Lexical that this node needs its
+    // DOM element replacing with a new copy from createDOM.
+    return true;
   }
 
   static importJSON(serializedNode: SerializedBlockTextNode): BlockTextNode {
@@ -160,6 +165,10 @@ export class BlockTextNode extends BlockContainerNode {
   getTag(): BlockTextTagType {
     return this.__tag;
   }
+
+  setTag(tag: BlockTextTagType) {
+    this.getWritable().__tag = tag;
+  }
 }
 
 export function $createBlockTextNode({
@@ -177,7 +186,7 @@ export function $createBlockTextNode({
   if (!includeChildren) {
     return container;
   }
-  const content = $createBlockTextContentNode(tag);
+  const content = $createBlockTextContentNode();
   const childContainer = $createBlockChildContainerNode();
 
   if (contentChildren?.length) {

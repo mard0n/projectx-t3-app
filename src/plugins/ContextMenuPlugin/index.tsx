@@ -13,6 +13,7 @@ import {
   ListItem,
   MenuItem,
   MenuList,
+  Tooltip,
   Typography,
 } from "@mui/joy";
 import { Heading1, Heading2, Heading3, Type } from "lucide-react";
@@ -24,7 +25,11 @@ import {
 } from "lexical";
 import { ClickAwayListener } from "@mui/base/ClickAwayListener";
 import { $getSelectedBlocks } from "../SelectBlocksPlugin";
-import { $createBlockTextNode, type BlockTextTagType } from "~/nodes/BlockText";
+import {
+  $createBlockTextNode,
+  $isBlockTextNode,
+  type BlockTextTagType,
+} from "~/nodes/BlockText";
 
 const ContextMenuPlugin = () => {
   const [editor] = useLexicalComposerContext();
@@ -117,18 +122,11 @@ const ContextMenuPlugin = () => {
   const handleTextTransform = (tag: BlockTextTagType) => {
     editor.update(() => {
       menuState.selectedNodes.forEach((node) => {
-        const nodeContentChildren = node.getBlockContentNode().getChildren();
-        const nodeChildBlocks = node.getBlockChildContainerNode().getChildren();
-        const header1 = $createBlockTextNode({
-          tag: tag,
-          contentChildren: nodeContentChildren,
-          childBlocks: nodeChildBlocks,
-        });
-        node.insertAfter(header1);
-        node.remove();
-        // header1.getFirstDescendant()?.selectEnd();
-        hideContextMenu();
+        if ($isBlockTextNode(node)) {
+          node.setTag(tag);
+        }
       });
+      hideContextMenu();
     });
   };
 
@@ -208,26 +206,32 @@ const ContextMenuPlugin = () => {
               id: "1",
               icon: <Heading1 />,
               eventHandler: () => handleTextTransform("h1"),
+              tooltipText: "Heading 1 (⌥ 1)",
             },
             {
               id: "2",
               icon: <Heading2 />,
               eventHandler: () => handleTextTransform("h2"),
+              tooltipText: "Heading 2 (⌥ 2)",
             },
             {
               id: "3",
               icon: <Heading3 />,
               eventHandler: () => handleTextTransform("h3"),
+              tooltipText: "Heading 3 (⌥ 3)",
             },
             {
               id: "4",
               icon: <Type />,
               eventHandler: () => handleTextTransform("p"),
+              tooltipText: "Paragraph (⌥ 4)",
             },
           ].map((menu) => {
             return (
               <ListItem key={menu.id} onClick={menu.eventHandler}>
-                <IconButton>{menu.icon}</IconButton>
+                <Tooltip title={menu.tooltipText}>
+                  <IconButton>{menu.icon}</IconButton>
+                </Tooltip>
               </ListItem>
             );
           })}

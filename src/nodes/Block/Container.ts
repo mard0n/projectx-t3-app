@@ -110,6 +110,12 @@ export class BlockContainerNode extends ElementNode {
       dom.classList.add("closed");
     }
 
+    if (this.__selected) {
+      dom.classList.add("selected");
+    } else {
+      dom.classList.remove("selected");
+    }
+
     dom.addEventListener("click", (event) => {
       console.log("createDOM click event");
       if (hasToggleElemClicked(event)) {

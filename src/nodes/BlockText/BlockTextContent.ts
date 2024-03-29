@@ -9,21 +9,18 @@ import type {
 } from "lexical";
 import { type CustomTheme } from "~/utils/lexical/theme";
 import { BlockContentNode, type SerializedContentNode } from "../Block";
-import { type BlockTextTagType } from ".";
+import { $isBlockTextNode, type BlockTextTagType } from ".";
 
 export type SerializedBlockTextContentNode = Spread<
-  { tag: BlockTextTagType },
+  object,
   SerializedContentNode
 >;
 
 const BLOCK_HEADER_CONTENT_TYPE = "block-text-content" as const;
 
 export class BlockTextContentNode extends BlockContentNode {
-  __tag: BlockTextTagType;
-
-  constructor(tag: BlockTextTagType, key?: NodeKey) {
+  constructor(key?: NodeKey) {
     super(key);
-    this.__tag = tag;
   }
 
   static getType(): string {
@@ -31,14 +28,20 @@ export class BlockTextContentNode extends BlockContentNode {
   }
 
   static clone(node: BlockTextContentNode): BlockTextContentNode {
-    return new BlockTextContentNode(node.__tag, node.__key);
+    return new BlockTextContentNode(node.__key);
   }
 
   // View
   createDOM(config: EditorConfig): HTMLElement {
     const parentDom = super.createDOM(config);
 
-    const tag = this.__tag;
+    const parent = this.getParent();
+    if (!$isBlockTextNode(parent)) {
+      console.error("BlockTextContentNode used outside of BlockTextNode");
+      return parentDom;
+    }
+
+    const tag = parent.getTag();
     const dom = document.createElement(tag);
     const theme = config.theme as CustomTheme;
     addClassNamesToElement(dom, parentDom.className, theme.blockText.content);
@@ -52,14 +55,13 @@ export class BlockTextContentNode extends BlockContentNode {
   static importJSON(
     serializedNode: SerializedBlockTextContentNode,
   ): BlockTextContentNode {
-    const node = $createBlockTextContentNode(serializedNode.tag);
+    const node = $createBlockTextContentNode();
     return node;
   }
 
   exportJSON(): SerializedBlockTextContentNode {
     return {
       ...super.exportJSON(),
-      tag: this.getTag(),
       type: BLOCK_HEADER_CONTENT_TYPE,
       version: 1,
     };
@@ -123,16 +125,10 @@ export class BlockTextContentNode extends BlockContentNode {
     console.log("exportDOM element", element);
     return { element };
   }
-
-  getTag(): BlockTextTagType {
-    return this.__tag;
-  }
 }
 
-export function $createBlockTextContentNode(
-  tag: BlockTextTagType,
-): BlockTextContentNode {
-  return new BlockTextContentNode(tag);
+export function $createBlockTextContentNode(): BlockTextContentNode {
+  return new BlockTextContentNode();
 }
 
 export function $isBlockTextContentNode(
