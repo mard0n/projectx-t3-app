@@ -12,6 +12,7 @@
 @import "../nodes/BlockNote/styles.css";
 @import "../nodes/BlockText/styles.css";
 @import "../nodes/BlockHighlight/styles.css";
+@import "../nodes/BlockLink/styles.css";
 @import "../plugins/DraggableBlockPlugin/styles.css";
 @import "../plugins/SelectBlocksPlugin/styles.css";
 

@@ -1,24 +1,30 @@
-.block-highlight-content {
+.block-highlight-content,
+.block-link-content {
   padding-top: 16px;
   padding-bottom: 16px;
   position: relative;
 }
-.block-highlight-container::before {
+.block-highlight-container::before,
+.block-link-container::before {
   top: 41px;
 }
-.block-highlight-container.open:after {
+.block-highlight-container.open:after,
+.block-link-container.open:after {
   top: 40.5px;
 }
-.block-highlight-container.closed::after {
+.block-highlight-container.closed::after,
+.block-link-container.closed::after {
   top: 39px;
 }
-.block-highlight-content .container {
+.block-highlight-content .container,
+.block-link-content .container {
   position: relative;
   border: 2px solid #b4a7c9;
   padding: 16px 24px 16px 32px;
   background-color: white;
 }
-.block-highlight-content .container .drop-shadow {
+.block-highlight-content .container .drop-shadow,
+.block-link-content .container .drop-shadow {
   position: absolute;
   top: 10px;
   left: 10px;
@@ -30,10 +36,14 @@
 
 .block-highlight-content h1:first-child,
 .block-highlight-content h2:first-child,
-.block-highlight-content h3:first-child {
+.block-highlight-content h3:first-child,
+.block-link-content h1:first-child,
+.block-link-content h2:first-child,
+.block-link-content h3:first-child {
   padding-top: 0;
 }
-.block-highlight-content h1 {
+.block-highlight-content h1,
+.block-link-content h1 {
   font-family: "Inter", sans-serif;
   font-size: 24px;
   line-height: 32px;
@@ -42,7 +52,8 @@
   padding-top: 16px;
   padding-bottom: 8px;
 }
-.block-highlight-content h2 {
+.block-highlight-content h2,
+.block-link-content h2 {
   font-family: "Inter", sans-serif;
   font-size: 20px;
   line-height: 30px;
@@ -51,7 +62,8 @@
   padding-top: 12px;
   padding-bottom: 6px;
 }
-.block-highlight-content h3 {
+.block-highlight-content h3,
+.block-link-content h3 {
   font-family: "Inter", sans-serif;
   font-size: 18px;
   line-height: 24px;
@@ -59,6 +71,14 @@
   font-weight: 700;
   padding-top: 8px;
   padding-bottom: 4px;
+}
+.block-highlight-content p,
+.block-link-content p {
+  font-family: "Inter", sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  font-style: italic;
+  font-weight: 400;
 }
 
 /* .block-highlight-content img {
@@ -76,7 +96,8 @@
   border-radius: 4px;
 }
 
-.block-highlight-content .comment {
+.block-highlight-content .comment,
+.block-link-content .comment {
   position: absolute;
   left: calc(100%);
   top: 0;
@@ -84,13 +105,15 @@
   padding-left: 40px;
   padding-right: 20px;
 }
-.block-highlight-content .comment .comment-container {
+.block-highlight-content .comment .comment-container,
+.block-link-content .comment .comment-container {
   border: 2px dotted #b4a7c9;
   position: relative;
   padding: 16px;
   background-color: white;
 }
-.block-highlight-content .comment .drop-shadow-dotted {
+.block-highlight-content .comment .drop-shadow-dotted,
+.block-link-content .comment .drop-shadow-dotted {
   outline: 2px dotted #260a78;
   position: absolute;
   top: 8px;
@@ -99,7 +122,8 @@
   height: 100%;
   z-index: -1;
 }
-.block-highlight-content .link-box {
+.block-highlight-content .link-box,
+.block-link-content .link-box {
   display: none;
   position: absolute;
   top: 0;
@@ -107,6 +131,13 @@
   padding: 6px;
   background-color: #b4a7c9;
 }
-.block-highlight-content:hover .link-box {
+.block-highlight-content:hover .link-box,
+.block-link-content:hover .link-box {
   display: block;
+}
+
+.block-highlight-content a,
+.block-link-content a {
+  color: #3611a4;
+  font-weight: 600;
 }

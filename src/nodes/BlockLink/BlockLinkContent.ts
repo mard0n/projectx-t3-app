@@ -1,5 +1,10 @@
 import { addClassNamesToElement } from "@lexical/utils";
-import { type NodeKey, type Spread, type LexicalNode, type EditorConfig } from "lexical";
+import {
+  type NodeKey,
+  type Spread,
+  type LexicalNode,
+  type EditorConfig,
+} from "lexical";
 import type { CustomTheme } from "~/utils/lexical/theme";
 import { BlockContentNode, type SerializedContentNode } from "../Block";
 
@@ -9,7 +14,6 @@ export type SerializedBlockLinkContentNode = Spread<
 >;
 
 const BLOCK_LINK_CONTENT_TYPE = "block-link-content" as const;
-
 
 export class BlockLinkContentNode extends BlockContentNode {
   constructor(key?: NodeKey) {
@@ -27,14 +31,10 @@ export class BlockLinkContentNode extends BlockContentNode {
   // View
   createDOM(config: EditorConfig): HTMLElement {
     const parentDom = super.createDOM(config);
-    const parentClassName = parentDom.className;
-
     const dom = document.createElement("div");
     const theme = config.theme as CustomTheme;
     const classNames = theme.blockLink.content;
-    if (classNames && parentClassName) {
-      addClassNamesToElement(dom, parentClassName);
-    }
+    addClassNamesToElement(dom, parentDom.className, classNames);
     return dom;
   }
 
