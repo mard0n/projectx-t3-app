@@ -5,9 +5,7 @@ import {
   BLOCK_HIGHLIGHT_TYPE,
   type SerializedBlockHighlightNode,
 } from "~/nodes/BlockHighlight";
-import {
-  getOffsetRectRelativeToBody,
-} from "~/utils/extension";
+import { getOffsetRectRelativeToBody } from "~/utils/extension";
 import {
   generateFragment,
   processTextFragmentDirective,
@@ -61,7 +59,6 @@ export function serializeSelectionPath(range: Range) {
     // reportSuccess();
     return url;
   } else {
-
     // reportFailure(result.status);
     // return `Could not create URL ${result.status}`;
     return "";
@@ -476,7 +473,7 @@ export function getSelectionParams(range: Range): {
   path: string;
   rect: RectType;
 } {
-  const turndownService = new TurndownService();
+  const turndownService = new TurndownService({ codeBlockStyle: "fenced" });
   const html = range.cloneContents();
   const text = turndownService.turndown(html);
   const path = serializeSelectionPath(range);

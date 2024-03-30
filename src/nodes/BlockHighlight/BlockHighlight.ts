@@ -133,10 +133,7 @@ export class BlockHighlightNode extends BlockContainerNode {
   static importJSON(
     serializedNode: SerializedBlockHighlightNode,
   ): BlockHighlightNode {
-    const quoteDecorator = $createBlockQuoteDecoratorNode(
-      serializedNode.properties.highlightText,
-      serializedNode.properties.commentText,
-    );
+    const quoteDecorator = $createBlockQuoteDecoratorNode();
 
     const containerNodes =
       (serializedNode.childBlocks?.map((node) => {
