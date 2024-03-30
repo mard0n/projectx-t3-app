@@ -37,14 +37,14 @@ import {
   BlockHighlightNode,
   BlockQuoteDecoratorNode,
 } from "~/nodes/BlockHighlight";
-import Link from "next/link";
 import {
   BlockLinkContentNode,
   BlockLinkDecoratorNode,
   BlockLinkNode,
 } from "~/nodes/BlockLink";
 import { AddNewBlockPlugin } from "~/plugins/AddNewBlockPlugin";
-import { type SerializedTextNode } from "lexical";
+import { ShortcutsPlugin } from "~/plugins/ShortcutsPlugin";
+import { ContextMenuPlugin } from "~/plugins/ContextMenuPlugin";
 
 function onError(error: Error) {
   console.error(error);
@@ -67,9 +67,6 @@ export default function Notes() {
   if (notes.isLoading) {
     return (
       <div className="flex min-h-screen px-2">
-        <aside className="min-w-80 border-r pt-8">
-          <Link href="/notes">All notes</Link>
-        </aside>
         <main className="flex-grow p-8">Loading...</main>
       </div>
     );
@@ -77,9 +74,6 @@ export default function Notes() {
 
   if (notes.isError) {
     <div className="flex min-h-screen px-2">
-      <aside className="min-w-80 border-r pt-8">
-        <Link href="/notes">All notes</Link>
-      </aside>
       <main className="flex-grow p-8">Failed. Try again later</main>
     </div>;
   }
@@ -159,27 +153,27 @@ export default function Notes() {
   };
 
   return (
-    <main className="flex-grow px-6 py-5">
-      <LexicalComposer initialConfig={initialConfig}>
-        <PlainTextPlugin
-          contentEditable={
-            <div className="editor max-w-3xl" ref={onRef}>
-              <ContentEditable />
-            </div>
-          }
-          placeholder={<div>Enter some text...</div>}
-          ErrorBoundary={LexicalErrorBoundary}
-        />
-        <HierarchicalBlockPlugin />
-        <HistoryPlugin />
-        <SelectBlocksPlugin />
-        <SendingUpdatesPlugin handleUpdates={handleUpdates} />
-        {editorRef ? <DraggableBlockPlugin editorRef={editorRef} /> : <></>}
-        {/* <ShortcutsPlugin /> */}
-        <TreeViewPlugin />
-        {/* <LexicalClickableLinkPlugin /> */}
-        {/* <LexicalAutoLinkPlugin /> */}
-      </LexicalComposer>
-    </main>
+    <LexicalComposer initialConfig={initialConfig}>
+      <PlainTextPlugin
+        contentEditable={
+          <div className="editor" ref={onRef}>
+            <ContentEditable />
+          </div>
+        }
+        placeholder={<div>Enter some text...</div>}
+        ErrorBoundary={LexicalErrorBoundary}
+      />
+      <HierarchicalBlockPlugin />
+      <HistoryPlugin />
+      <SelectBlocksPlugin />
+      <SendingUpdatesPlugin handleUpdates={handleUpdates} />
+      {editorRef ? <DraggableBlockPlugin editorRef={editorRef} /> : <></>}
+      <ShortcutsPlugin />
+      <AddNewBlockPlugin />
+      <ContextMenuPlugin />
+      {/* <TreeViewPlugin /> */}
+      {/* <LexicalClickableLinkPlugin /> */}
+      {/* <LexicalAutoLinkPlugin /> */}
+    </LexicalComposer>
   );
 }
