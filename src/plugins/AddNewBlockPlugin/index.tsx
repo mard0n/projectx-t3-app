@@ -76,7 +76,7 @@ function showTargetLine(
   );
 
   const y = positionTop ? top : top + height;
-  targetLineElem.style.transform = `translate(${left + paddingLeft}px, calc(${y}px - 50%))`;
+  targetLineElem.style.transform = `translate(${left + paddingLeft}px, calc(${y + 4}px - 50%))`;
   targetLineElem.style.width = `${width - paddingLeft + 24}px`;
   targetLineElem.style.opacity = "1";
   document.body.style.cursor = "cell";

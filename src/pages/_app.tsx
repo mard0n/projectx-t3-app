@@ -4,11 +4,12 @@ import { api } from "~/utils/api";
 
 import "~/styles/globals.css";
 import Head from "next/head";
-import Layout from "~/components/Layout";
 
 import "@fontsource/inter";
+import "@fontsource/libre-baskerville";
 import GlobalStyles from "@mui/joy/GlobalStyles";
 import { CssVarsProvider } from "@mui/joy";
+import Layout from "~/components/Layout";
 
 const MyApp: AppType = ({ Component, pageProps }) => {
   return (

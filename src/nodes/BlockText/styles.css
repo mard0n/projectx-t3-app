@@ -1,24 +1,35 @@
 .block-h1 h1 {
+  font-family: "Libre Baskerville", serif;
+  font-size: 32px;
+  line-height: 48px;
+  font-weight: 700;
+  padding-top: 16px;
+  padding-bottom: 8px;
+}
+
+.block-h2 h2 {
+  font-family: "Libre Baskerville", serif;
   font-size: 24px;
   line-height: 36px;
-  font-weight: 600;
-  margin-bottom: 4px;
+  font-weight: 700;
+  padding-top: 16px;
+  padding-bottom: 8px;
 }
-.block-h2 h2 {
+.block-h3 h3 {
+  font-family: "Inter", sans-serif;
   font-size: 20px;
   line-height: 28px;
   font-weight: 600;
-}
-.block-h3 h3 {
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 600;
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 
 .block-p {
+  font-family: "Inter", sans-serif;
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;
+  padding-top: 8px;
 }
 
 .textBold {
@@ -35,58 +46,51 @@
 }
 
 .block-container.block-h1:before {
-  top: calc(17px);
+  top: calc(37px);
 }
 
 .block-container.block-h1.open:after {
-  top: calc(16.5px);
+  top: calc(36.5px);
 }
 
 .block-container.block-h1.closed:after {
-  top: calc(15px);
+  top: calc(35px);
 }
 
-
-
 .block-container.block-h2:before {
-  top: calc(11px);
+  top: calc(31px);
 }
 
 .block-container.block-h2.open:after {
-  top: calc(10.5px);
+  top: calc(30.5px);
 }
 
 .block-container.block-h2.closed:after {
-  top: calc(9px);
+  top: calc(29px);
 }
 
-
-
-
 .block-container.block-h3:before {
-  top: calc(9px);
+  top: calc(19px);
 }
 
 .block-container.block-h3.open:after {
-  top: calc(8.5px);
+  top: calc(18.5px);
 }
 
 .block-container.block-h3.closed:after {
-  top: calc(7px);
+  top: calc(17px);
 }
 
-
-
 .block-container.block-p:before {
-  top: calc(9px);
+  top: calc(17px);
 }
 
 .block-container.block-p.open:after {
-  top: calc(8.5px);
+  top: calc(16.5px);
 }
 
 .block-container.block-p.closed:after {
-  top: calc(7px);
+  top: calc(15px);
 }
 
 .inline-link {

@@ -23,6 +23,9 @@ dependencies:
   '@fontsource/inter':
     specifier: ^5.0.17
     version: 5.0.17
+  '@fontsource/libre-baskerville':
+    specifier: ^5.0.12
+    version: 5.0.12
   '@lexical/clipboard':
     specifier: ^0.12.5
     version: 0.12.6(lexical@0.12.6)
@@ -1444,6 +1447,10 @@ packages:
 
   /@fontsource/inter@5.0.17:
     resolution: {integrity: sha512-2meBGx1kt7u5LwzGc5Sz5rka6ZDrydg6nT3x6Wkt310vHXUchIywrO8pooWMzZdHYcyFY/cv4lEpJZgMD94bCg==}
+    dev: false
+
+  /@fontsource/libre-baskerville@5.0.12:
+    resolution: {integrity: sha512-y+3d/p8lRlwQFKcjWxnEAsk0pYDEyy4Eda2CVq3TO0gYltcr4MpZl0X4UqrX6pjsMGhCwJPUZTbM2cm04YlNUg==}
     dev: false
 
   /@humanwhocodes/config-array@0.11.14:
