@@ -1,11 +1,11 @@
 import React from "react";
-import Breadcrumb from "./Breadcrumb";
 
 // interface NavbarProps {}
 
 const Navbar = () => {
+
   return (
-    <div className="text-2xl font-medium">
+    <div className="flex items-center justify-between text-2xl font-medium">
       <svg
         width="115"
         height="25"
@@ -45,6 +45,7 @@ const Navbar = () => {
       </svg>
 
       {/* <Breadcrumb /> */}
+      <div id="add-new-note-button"></div>
     </div>
   );
 };

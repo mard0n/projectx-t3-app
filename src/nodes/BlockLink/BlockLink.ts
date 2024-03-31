@@ -126,14 +126,7 @@ export class BlockLinkNode extends BlockContainerNode {
   }
 
   static importJSON(serializedNode: SerializedBlockLinkNode): BlockLinkNode {
-    const contentDecorator = $createBlockLinkDecoratorNode({
-      title: serializedNode.properties.title,
-      desc: serializedNode.properties.desc,
-      linkUrl: serializedNode.properties.linkUrl,
-      linkAlt: serializedNode.properties.linkAlt,
-      thumbnail: serializedNode.properties.thumbnail,
-      commentText: serializedNode.properties.commentText,
-    });
+    const contentDecorator = $createBlockLinkDecoratorNode();
 
     const content = $createBlockContentNode().append(contentDecorator);
 

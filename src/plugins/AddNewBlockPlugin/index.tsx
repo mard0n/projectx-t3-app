@@ -8,15 +8,17 @@ import {
 } from "~/nodes/Block";
 import {
   $getNearestNodeFromDOMNode,
+  $getRoot,
   type LexicalEditor,
   type LexicalNode,
 } from "lexical";
-import { Divider } from "@mui/joy";
+import { Divider, Tooltip } from "@mui/joy";
 import { getOffsetRectRelativeToBody } from "~/utils/extension";
 import { Plus } from "lucide-react";
 import { $createBlockTextNode } from "~/nodes/BlockText";
 import { $isBlockNoteNode, type BlockNoteNode } from "~/nodes/BlockNote";
 import { $createBlockNoteNode } from "~/nodes/BlockNote/BlockNote";
+import { createPortal } from "react-dom";
 
 // TODO Make it reusable. So you can use it in Drag and drop
 function getFocusedElem(target: HTMLElement, editor: LexicalEditor) {
@@ -100,7 +102,7 @@ const AddNewBlockPlugin = ({}) => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.altKey) {
+      if (e.metaKey) {
         isHotKeyActivated.current = true;
         if (targetBlockElemRef.current && dividerRef.current) {
           showTargetLine(
@@ -199,22 +201,47 @@ const AddNewBlockPlugin = ({}) => {
     };
   }, [editor]);
 
+  const handleCreateNewNote = () => {
+    editor.update(() => {
+      const note = $createBlockNoteNode();
+      const blockText = $createBlockTextNode({ tag: "p" });
+      note.append(blockText);
+      const root = $getRoot();
+      root.getFirstChild()?.insertBefore(note);
+      note.selectEnd();
+    });
+  };
+
   return (
-    <Divider
-      ref={dividerRef}
-      sx={{
-        position: "absolute",
-        opacity: 0,
-        top: 0,
-        left: 0,
-        "--Divider-lineColor": (theme) => theme.palette.primary.plainColor,
-        "--Divider-thickness": "2px",
-        "--Divider-childPosition": `calc(100%)`,
-        pointerEvents: "none",
-      }}
-    >
-      <Plus color="var(--joy-palette-primary-500, #0B6BCB)" />
-    </Divider>
+    <>
+      <Divider
+        ref={dividerRef}
+        sx={{
+          position: "absolute",
+          opacity: 0,
+          top: 0,
+          left: 0,
+          "--Divider-lineColor": (theme) => theme.palette.primary.plainColor,
+          "--Divider-thickness": "2px",
+          "--Divider-childPosition": `calc(100%)`,
+          pointerEvents: "none",
+        }}
+      >
+        <Plus color="var(--joy-palette-primary-500, #0B6BCB)" />
+      </Divider>
+      {createPortal(
+        <Tooltip title={"Hold ⌘ to add a new note"}>
+          <button
+            className=" border-2 border-solid border-[#B4A7C9] px-4 py-[6px] text-base font-semibold text-[#260A78] hover:bg-[#F8F4FF]"
+            type="button"
+            onClick={handleCreateNewNote}
+          >
+            Add a new note
+          </button>
+        </Tooltip>,
+        document.getElementById("add-new-note-button")!,
+      )}
+    </>
   );
 };
 
