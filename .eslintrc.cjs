@@ -4,7 +4,7 @@ const config = {
   parserOptions: {
     project: true,
   },
-  plugins: ["@typescript-eslint"],
+  plugins: ["@typescript-eslint", "drizzle"],
   extends: [
     "plugin:@next/next/recommended",
     "plugin:@typescript-eslint/recommended-type-checked",
@@ -30,6 +30,8 @@ const config = {
         checksVoidReturn: { attributes: false },
       },
     ],
+    "drizzle/enforce-delete-with-where": "error",
+    "drizzle/enforce-update-with-where": "error",
   },
 };
 

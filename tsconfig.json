@@ -31,7 +31,10 @@
     ".eslintrc.cjs",
     "next-env.d.ts",
     ".next/types/**/*.ts",
-    "src"
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.cjs",
+    "**/*.js",
   ],
   "exclude": ["node_modules", "build", "generateFragment.js"]
 }

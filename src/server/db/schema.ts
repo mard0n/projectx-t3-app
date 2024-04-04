@@ -5,6 +5,7 @@ import {
   json,
   mysqlEnum,
   mysqlTable,
+  mysqlTableCreator,
   varchar,
 } from "drizzle-orm/mysql-core";
 import { z } from "zod";
@@ -31,8 +32,11 @@ const propertySchemas = z.union([
 ]);
 type PropertiesType = z.infer<typeof propertySchemas>;
 
+
+export const createTable = mysqlTableCreator((name) => `projectx_${name}`);
+
 /* TODO: I would create different table for highlights and notes but recursively fetching and joining might be bit problematic */
-export const notes = mysqlTable("notes", {
+export const notes = createTable("notes", {
   id: varchar("id", { length: 36 })
     .primaryKey()
     .default(sql`(UUID())`),
@@ -64,7 +68,7 @@ export const parentIdToNotesRelations = relations(notes, ({ one, many }) => ({
   }),
 }));
 
-export const webMetadata = mysqlTable("webMetadata", {
+export const webMetadata = createTable("webMetadata", {
   webUrl: varchar("webUrl", { length: 512 }).primaryKey(),
   defaultNoteId: varchar("defaultNoteId", { length: 36 }).references(
     () => notes.id,
